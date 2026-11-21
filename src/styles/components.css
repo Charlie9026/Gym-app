@@ -1,0 +1,564 @@
+/*
+ * Components: pills and sliding highlights, tab bar, dialogs and toasts, Morph Select,
+ * switches, set rows and set menu, rest timer and rest chip, stat cards, chart.
+ */
+
+.check {
+  width: 38px; height: 38px; border-radius: 10px;
+  border: 1px solid var(--edge); background: var(--field); color: var(--muted); font-weight: 800;
+  transition: background-color .15s ease, transform .12s ease;
+}
+
+.check { display: grid; place-items: center; }
+
+.check svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+
+.check.on { background: var(--good); border-color: var(--good); color: var(--on-good); animation: check-pop 480ms cubic-bezier(0.34, 1.56, 0.64, 1); }
+
+/* Completing a set: the box springs in and the tick draws itself. */
+@keyframes check-pop { from { scale: .7; } }
+
+.check.on .tick { stroke-dasharray: 1; animation: tick-draw 320ms ease-out 80ms backwards; }
+
+@keyframes tick-draw { from { stroke-dashoffset: 1; } }
+
+.rest-bar {
+  position: fixed; left: 50%; transform: translateX(-50%); z-index: 15;
+  bottom: calc(92px + env(safe-area-inset-bottom, 0px));
+  width: min(608px, calc(100% - 32px));
+  display: flex; justify-content: space-between; align-items: center;
+  border-radius: 18px; padding: 8px 8px 8px 10px;
+  font-weight: 700; font-variant-numeric: tabular-nums;
+  /* Nearly solid so the set rows behind don't show through. */
+  background: color-mix(in srgb, var(--panel) 96%, transparent);
+}
+
+.rest-bar.over { background: var(--good); border-color: var(--good); color: var(--on-good); }
+
+.rest-bar.over .btn-ghost { color: var(--on-good); }
+
+/* Modal sheet */
+.modal-backdrop {
+  position: fixed; inset: 0; background: var(--scrim);
+  display: flex; align-items: flex-end; justify-content: center; z-index: 20;
+}
+
+.modal {
+  background: var(--glass-strong);
+  width: 100%; max-width: 640px; height: 85dvh;
+  border-radius: 24px 24px 0 0; display: flex; flex-direction: column; gap: 12px;
+  padding-block: 18px env(safe-area-inset-bottom, 0px);
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+
+.modal-header { display: flex; justify-content: space-between; align-items: center; }
+
+.modal-header h2 { margin: 0; color: var(--text); text-transform: none; font-size: 1.25rem; letter-spacing: 0; font-weight: 800; }
+
+.chips {
+  position: relative; display: flex; gap: 6px; overflow-x: auto; padding: 2px; margin: -2px; flex-shrink: 0; scrollbar-width: none;
+  --spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.chips::-webkit-scrollbar { display: none; }
+
+.chip {
+  border: 1px solid var(--edge); background: var(--field); border-radius: 999px;
+  padding: 7px 13px; white-space: nowrap; font-size: .82rem; font-weight: 600; color: var(--muted);
+  position: relative; z-index: 1; transition: color .28s ease, border-color .28s ease, background-color .28s ease;
+}
+
+.chip:hover:not(.active) { color: var(--text); }
+
+.chip.active { background: transparent; border-color: transparent; color: var(--on-accent); font-weight: 700; }
+
+/* Sliding highlight behind the active chip (same spring as the tab bar). */
+.chip-pill {
+  position: absolute; top: 0; left: 0; z-index: 0; border-radius: 999px; pointer-events: none;
+  background: var(--accent); box-shadow: 0 4px 14px var(--accent-glow), inset 0 1px 0 rgba(255, 255, 255, .2);
+  opacity: 0;
+  transition: transform 520ms var(--spring), width 520ms var(--spring), height 520ms var(--spring), opacity .2s ease;
+}
+
+.chip-pill.ready { opacity: 1; }
+
+.chip-pill.no-anim { transition: none; }
+
+.pick-list { list-style: none; margin: 0; padding: 0; overflow-y: auto; flex: 1; border-radius: var(--radius-sm); }
+
+.pick-item {
+  width: 100%; display: flex; justify-content: space-between; text-align: left; font-weight: 600;
+  border: none; background: transparent; padding: 14px 6px; border-bottom: 1px solid var(--line);
+}
+
+.pick-item:hover { color: var(--accent); }
+
+.pick-item .muted { font-weight: 500; }
+
+.pick-item.create { color: var(--accent); }
+
+/* Progress */
+/* Neumorphic stat cards (adapted from Forever AI "Stat Cards") */
+.neu-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; padding: 6px 4px 10px; }
+
+.neu-card {
+  min-width: 0; aspect-ratio: 1.35; border-radius: 20px; padding: 10px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; text-align: center;
+  background: var(--neu-fill);
+  box-shadow: 7px 7px 16px var(--neu-dark), -6px -6px 14px var(--neu-light), inset 0 1px 0 var(--sheen);
+  transition: box-shadow 160ms ease;
+}
+
+.neu-card.neu-pulse {
+  box-shadow: 10px 10px 22px var(--neu-dark), -8px -8px 18px var(--neu-light), inset 0 1px 0 var(--sheen);
+}
+
+.neu-icon {
+  display: grid; place-items: center; width: 32px; height: 32px; border-radius: 50%; margin-bottom: 3px;
+  color: var(--accent); background: var(--neu-fill);
+  box-shadow: inset 3px 3px 7px var(--neu-dark), inset -3px -3px 7px var(--neu-light);
+}
+
+.neu-icon svg { width: 16px; height: 16px; }
+
+.neu-val { font-size: 1.25rem; font-weight: 800; line-height: 1.05; font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+.neu-unit { font-size: .8rem; font-weight: 600; color: var(--muted); }
+
+.neu-lbl { font-size: .62rem; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
+
+.neu-sub { font-size: .7rem; color: var(--muted); max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.chart-title { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 4px; font-weight: 700; }
+
+.trend { color: var(--good); background: var(--good-soft); padding: 2px 8px; border-radius: 999px; font-size: .75rem; font-weight: 700; }
+
+.trend.down { color: var(--danger); background: var(--danger-soft); }
+
+.chart-wrap { position: relative; }
+
+.chart { width: 100%; height: auto; display: block; touch-action: pan-y; overflow: visible; }
+
+.chart .grid { stroke: var(--line); stroke-width: 1; }
+
+.chart .axis-label { fill: var(--muted); font-size: 11px; font-family: var(--font); }
+
+.chart .area-top { stop-color: var(--accent); stop-opacity: .32; }
+
+.chart .area-bottom { stop-color: var(--accent); stop-opacity: 0; }
+
+.chart .line { fill: none; stroke: var(--accent); stroke-width: 2.5; stroke-linejoin: round; stroke-linecap: round; }
+
+.chart .dot { fill: var(--accent); stroke: var(--bg); stroke-width: 2; }
+
+.chart .crosshair { stroke: var(--muted); stroke-width: 1; stroke-dasharray: 3 3; }
+
+.tooltip {
+  position: absolute; pointer-events: none; background: var(--glass-strong);
+  border: 1px solid var(--edge); border-radius: 10px; padding: 6px 10px;
+  box-shadow: 0 6px 18px var(--shadow); white-space: nowrap;
+  backdrop-filter: var(--blur); -webkit-backdrop-filter: var(--blur);
+}
+
+/* Settings */
+/* Segmented switch (kg/lb): a ChipGroup with variant="segmented". */
+.chips.seg { display: inline-flex; align-self: flex-start; gap: 0; margin: 0; padding: 3px; border-radius: 12px; background: var(--field); border: 1px solid var(--edge); overflow: visible; }
+
+.chips.seg .chip { border: 0; background: transparent; padding: 8px 26px; border-radius: 9px; font-size: .95rem; font-weight: 700; }
+
+.chips.seg .chip-pill { border-radius: 9px; }
+
+/* Floating tab bar */
+.tabbar {
+  position: fixed; z-index: 10;
+  left: 50%; transform: translateX(-50%);
+  bottom: calc(12px + env(safe-area-inset-bottom, 0px));
+  width: min(480px, calc(100% - 24px - env(safe-area-inset-left, 0px) - env(safe-area-inset-right, 0px)));
+  display: flex; padding: 6px; gap: 2px;
+  border-radius: 999px;
+  background: var(--glass-strong);
+  --spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+/* Clips the highlight to the bar, so the spring's overshoot squashes at the ends. */
+.tabbar-track {
+  position: absolute; inset: 0; border-radius: inherit; overflow: hidden; pointer-events: none;
+}
+
+.tabbar-blob {
+  position: absolute; top: 6px; bottom: 6px; left: 0; width: 0;
+  border-radius: 999px; background: var(--accent);
+  box-shadow: 0 6px 18px var(--accent-glow), inset 0 1px 0 rgba(255, 255, 255, .22);
+  opacity: 0;
+  transition: transform 520ms var(--spring), width 520ms var(--spring), background-color .3s ease, opacity .2s ease;
+}
+
+.tabbar-blob.ready { opacity: 1; }
+
+.tabbar-blob.no-anim { transition: none; }
+
+.tabbar button {
+  position: relative; z-index: 1; flex: 1;
+  display: flex; flex-direction: column; align-items: center; gap: 2px;
+  background: none; border: none; padding: 7px 0 6px; border-radius: 999px;
+  font-size: .66rem; font-weight: 600; color: var(--muted);
+  transition: color .28s ease;
+}
+
+.tabbar button .tab-icon { display: grid; transition: transform .28s var(--spring); }
+
+.tabbar button:hover:not(.active) { color: var(--text); }
+
+.tabbar button.active { color: var(--on-accent); font-weight: 700; }
+
+.tabbar button.active .tab-icon { transform: translateY(-2px); }
+
+.live-dot { position: absolute; top: 6px; right: calc(50% - 16px); width: 8px; height: 8px; border-radius: 50%; background: var(--good); box-shadow: 0 0 0 2px var(--bg); }
+
+/* Dialogs & toasts */
+.center-modal { align-items: center; padding: 16px; z-index: 30; }
+
+.dialog {
+  background: var(--glass-strong);
+  border-radius: var(--radius); padding: 20px;
+  width: 100%; max-width: 380px; display: flex; flex-direction: column; gap: 16px;
+}
+
+.dialog p { margin: 0; font-size: 1rem; line-height: 1.45; font-weight: 600; }
+
+.toast {
+  position: fixed; left: 50%; transform: translateX(-50%); z-index: 40;
+  top: calc(14px + env(safe-area-inset-top, 0px));
+  width: max-content; max-width: calc(100% - 32px);
+  background: var(--glass-strong); padding: 11px 18px; border-radius: 999px; font-weight: 700;
+  display: flex; align-items: center; gap: 14px;
+  animation: toast-in 420ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes toast-in { from { translate: 0 -18px; opacity: 0; scale: .96; } }
+
+.toast.has-undo { padding: 6px 6px 6px 18px; }
+
+.toast-undo {
+  border: 0; border-radius: 999px; padding: 7px 14px; font-weight: 800;
+  background: var(--accent); color: var(--on-accent); box-shadow: 0 4px 14px var(--accent-glow);
+}
+
+.dialog-detail { margin-top: -8px !important; font-weight: 500 !important; }
+
+.rest-spacer { height: 64px; flex-shrink: 0; }
+
+.chip-stat {
+  font-size: .8rem; color: var(--muted); padding: 5px 11px; border-radius: 999px;
+  background: var(--glass); border: 1px solid var(--edge);
+  backdrop-filter: var(--blur); -webkit-backdrop-filter: var(--blur);
+}
+
+.chip-stat strong { color: var(--text); font-variant-numeric: tabular-nums; }
+
+.chips.wrap { flex-wrap: wrap; overflow: visible; }
+
+/* ---------- Set pills (History, Progress) ---------- */
+.set-pills { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+
+.set-pill {
+  font-size: .82rem; padding: 6px 10px; border-radius: 10px; white-space: nowrap;
+  background: var(--field); border: 1px solid var(--edge); font-variant-numeric: tabular-nums;
+}
+
+.set-pill strong { font-weight: 700; }
+
+.set-pill .unit, .set-pill .x { color: var(--muted); font-weight: 500; }
+
+.muscle-badge {
+  display: grid; place-items: center; flex-shrink: 0; width: 38px; height: 38px; border-radius: 12px;
+  font-size: .68rem; font-weight: 800; letter-spacing: .04em;
+  background: var(--accent-soft); color: var(--accent);
+}
+
+/* ---------- Morph Select (adapted from Forever AI "Morph Select") ---------- */
+.ms { position: relative; display: flex; flex-direction: column; gap: 6px; z-index: 5; }
+
+.ms[data-open="true"] { z-index: 25; }
+
+.ms-label { font-size: .75rem; font-weight: 700; color: var(--muted); padding-left: 2px; }
+
+.ms-sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+
+.ms-btn {
+  display: flex; align-items: center; gap: 12px; width: 100%; text-align: left;
+  padding: 10px 14px 10px 10px; border-radius: 16px; font-weight: 700; font-size: 1rem;
+  background: var(--glass); border: 1px solid var(--edge); color: var(--text);
+  backdrop-filter: var(--blur); -webkit-backdrop-filter: var(--blur);
+  box-shadow: inset 0 1px 0 var(--sheen), 0 10px 26px var(--shadow);
+  transition: border-color .2s ease;
+}
+
+.ms[data-open="true"] .ms-btn { border-color: var(--accent); }
+
+.ms-badge {
+  flex: none; display: grid; place-items: center; width: 34px; height: 34px; border-radius: 11px;
+  font-size: .66rem; font-weight: 800; letter-spacing: .04em;
+  background: var(--accent-soft); color: var(--accent);
+  animation: ms-pop .35s cubic-bezier(.3, 1.4, .4, 1);
+}
+
+.ms-badge.small { width: 28px; height: 28px; border-radius: 9px; font-size: .6rem; animation: none; }
+
+@keyframes ms-pop { from { transform: scale(.6); opacity: .3; } }
+
+.ms-v { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.ms-ch {
+  flex: none; width: 9px; height: 9px; border: solid var(--muted); border-width: 0 2px 2px 0;
+  rotate: 45deg; translate: 0 -2px; transition: rotate .3s ease, translate .3s ease, border-color .2s ease;
+}
+
+.ms[data-open="true"] .ms-ch { rotate: -135deg; translate: 0 2px; border-color: var(--accent); }
+
+.ms-list {
+  position: absolute; top: calc(100% + 6px); left: 0; right: 0;
+  margin: 0; padding: 5px; list-style: none; outline: 0;
+  max-height: min(340px, 55dvh); overflow-y: auto; overscroll-behavior: contain;
+  /* solid panel so the page behind never shows through the options */
+  border-radius: 16px; background: var(--panel); border: 1px solid var(--edge);
+  box-shadow: inset 0 1px 0 var(--sheen), 0 18px 40px var(--shadow);
+  /* grows out of the button's bottom edge */
+  transform-origin: 50% 0; transform: scaleY(.4) translateY(-12px); opacity: 0; visibility: hidden;
+  transition: transform .35s cubic-bezier(.3, 1.4, .4, 1), opacity .2s ease, visibility 0s .5s;
+}
+
+.ms[data-open="true"] .ms-list { transform: none; opacity: 1; visibility: visible; transition-delay: 0s; }
+
+.ms-list:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+.ms-opt {
+  display: flex; align-items: center; gap: 10px; padding: 8px 10px; border-radius: 11px;
+  cursor: pointer; font-size: .92rem; font-weight: 600;
+}
+
+.ms-act { background: var(--accent-soft); }
+
+.ms-ot { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.ms-opt[aria-selected="true"] .ms-ot { font-weight: 800; }
+
+.ms-hint { font-size: .75rem; color: var(--muted); font-weight: 500; white-space: nowrap; }
+
+.ms-tick { flex: none; width: 14px; height: 14px; display: grid; place-items: center; }
+
+.ms-opt[aria-selected="true"] .ms-tick::after {
+  content: ""; width: 5px; height: 10px; border: solid var(--accent); border-width: 0 2px 2px 0; rotate: 45deg; translate: 0 -1px;
+}
+
+/* Chart draw-on: line traces left to right, area rises, dots follow, latest dot pops. */
+.chart-draw .line { stroke-dasharray: 1; animation: chart-draw 750ms cubic-bezier(.65, 0, .35, 1) backwards; }
+
+@keyframes chart-draw { from { stroke-dashoffset: 1; } }
+
+/* The area is revealed left to right just behind the pen, fading up as it goes. */
+.chart-draw .area { animation: chart-reveal 750ms cubic-bezier(.65, 0, .35, 1) 60ms backwards, chart-in 600ms ease 60ms backwards; }
+
+@keyframes chart-reveal { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
+
+.chart-draw .dot { transform-box: fill-box; transform-origin: center; animation: chart-dot 260ms ease-out var(--d, 0ms) backwards; }
+
+@keyframes chart-dot { from { opacity: 0; transform: scale(0); } }
+
+.chart-draw .dot.last { animation: chart-pop 520ms cubic-bezier(.34, 1.56, .64, 1) var(--d, 0ms) backwards; }
+
+@keyframes chart-pop { from { transform: scale(0); } }
+
+.chart-ghost { pointer-events: none; animation: chart-out 220ms ease forwards; }
+
+@keyframes chart-out { to { opacity: 0; } }
+
+.chart-fade { animation: chart-in 400ms ease backwards; }
+
+@keyframes chart-in { from { opacity: 0; } }
+
+/* Rest timer ring: drains as the rest runs out. */
+.rest-main { display: flex; align-items: center; gap: 12px; min-width: 0; }
+
+.rest-ring { position: relative; width: 40px; height: 40px; flex: none; display: grid; place-items: center; }
+
+.rest-ring svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+
+.rest-ring > svg:first-child { rotate: -90deg; }
+
+.ring-track { fill: none; stroke: var(--field); stroke-width: 4; }
+
+.ring-fill { fill: none; stroke: var(--accent); stroke-width: 4; stroke-linecap: round; transition: stroke-dashoffset .25s linear, stroke .3s ease; filter: drop-shadow(0 0 4px var(--accent-glow)); }
+
+.rest-bar.over .ring-track { stroke: rgba(255, 255, 255, .25); }
+
+.ring-done { inset: 9px !important; width: 22px !important; height: 22px !important; fill: none; stroke: currentColor; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+
+.ring-done .tick { stroke-dasharray: 1; animation: tick-draw 360ms ease-out backwards; }
+
+.rest-bar.over .rest-ring { animation: check-pop 520ms cubic-bezier(0.34, 1.56, 0.64, 1); }
+
+.rest-text { display: flex; flex-direction: column; line-height: 1.15; }
+
+.rest-text strong { font-size: 1.1rem; font-variant-numeric: tabular-nums; }
+
+.rest-text .small { font-weight: 500; opacity: .75; }
+
+@keyframes settle { from { translate: 0 -10px; opacity: 0; } }
+
+/* ---------- Sets table (logger + editors), laid out per exercise type ---------- */
+.sets { display: flex; flex-direction: column; gap: 2px; }
+
+.st-row {
+  position: relative; display: grid; gap: 8px; align-items: center;
+  padding: 5px 6px; border-radius: var(--radius-sm); transition: background-color .2s ease;
+}
+
+.st-head { font-size: .68rem; color: var(--muted); text-transform: uppercase; font-weight: 700; letter-spacing: .08em; padding-block: 2px; }
+
+.st-row.done { background: var(--good-soft); }
+
+.st-row.warm:not(.done) .num-input { background: transparent; border-style: dashed; }
+
+.st-prev { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+/* log: set | previous | fields | tick */
+.m-log.t-weight .st-row   { grid-template-columns: 34px minmax(0, 1fr) 72px 60px 38px; }
+
+.m-log.t-reps .st-row     { grid-template-columns: 34px minmax(0, 1fr) 96px 38px; }
+
+.m-log.t-time .st-row     { grid-template-columns: 34px minmax(0, 1fr) 96px 38px; }
+
+.m-log.t-distance .st-row { grid-template-columns: 34px minmax(0, 1fr) 64px 76px 38px; }
+
+/* edit: set | fields */
+.m-edit.t-weight .st-row, .m-edit.t-distance .st-row { grid-template-columns: 34px 1fr 1fr; }
+
+.m-edit.t-reps .st-row, .m-edit.t-time .st-row { grid-template-columns: 34px 1fr; }
+
+@media (max-width: 359px) {
+  .st-row { gap: 6px; padding: 4px 2px; }
+  .st-head { font-size: .6rem; letter-spacing: .04em; }
+  .m-log.t-weight .st-row   { grid-template-columns: 28px minmax(0, 1fr) 56px 46px 36px; }
+  .m-log.t-reps .st-row, .m-log.t-time .st-row { grid-template-columns: 28px minmax(0, 1fr) 84px 36px; }
+  .m-log.t-distance .st-row { grid-template-columns: 28px minmax(0, 1fr) 52px 64px 36px; }
+  .check { width: 36px; height: 36px; }
+}
+
+/* Set badge: number (or W for warm-up) that opens the set menu */
+.set-badge-wrap { position: relative; }
+
+.set-badge {
+  position: relative; width: 100%; height: 32px; border: none; border-radius: 9px;
+  background: var(--field); color: var(--muted); font-weight: 800; font-size: .85rem;
+  transition: background-color .2s ease, color .2s ease;
+}
+
+.set-badge:hover, .set-badge.open { color: var(--text); background: var(--accent-soft); }
+
+.set-badge.warm { color: var(--accent); background: var(--accent-soft); }
+
+/* three tiny dots so it reads as a button with options */
+.set-badge-dots {
+  position: absolute; left: 50%; bottom: 3px; translate: -50% 0; width: 2px; height: 2px; border-radius: 50%;
+  background: currentColor; opacity: .55; box-shadow: -4px 0 currentColor, 4px 0 currentColor;
+}
+
+.set-menu {
+  position: absolute; top: calc(100% + 6px); left: 0; z-index: 40; min-width: 190px;
+  display: flex; flex-direction: column; padding: 5px; border-radius: 14px;
+  background: var(--panel); border: 1px solid var(--edge);
+  box-shadow: inset 0 1px 0 var(--sheen), 0 16px 36px var(--shadow);
+  transform-origin: 20px 0; animation: menu-grow 350ms cubic-bezier(.3, 1.4, .4, 1);
+}
+
+@keyframes menu-grow { from { transform: scaleY(.4) translateY(-10px); opacity: 0; } }
+
+.set-menu button {
+  display: flex; align-items: center; gap: 10px; text-align: left; border: 0; background: transparent;
+  padding: 9px 10px; border-radius: 10px; font-weight: 600; font-size: .9rem; color: var(--text);
+}
+
+.set-menu button:hover, .set-menu button:focus-visible { background: var(--accent-soft); outline: none; }
+
+.set-menu button.danger { color: var(--danger); }
+
+.set-menu button.danger:hover, .set-menu button.danger:focus-visible { background: var(--danger-soft); }
+
+.sm-icon { display: grid; place-items: center; width: 24px; height: 24px; border-radius: 7px; background: var(--field); font-size: .7rem; font-weight: 800; flex: none; }
+
+/* lift the card holding an open menu above the cards after it */
+.card:has(.set-menu) { position: relative; z-index: 30; }
+
+/* Per-exercise rest chip */
+.rest-chip-wrap { display: flex; flex-direction: column; align-self: stretch; }
+
+.rest-chip {
+  align-self: flex-start; display: inline-flex; align-items: center; gap: 5px;
+  padding: 4px 10px 4px 7px; border-radius: 999px; font-size: .74rem; font-weight: 700;
+  border: 1px solid var(--edge); background: var(--field); color: var(--muted);
+  transition: color .2s ease, background-color .2s ease, border-color .2s ease;
+}
+
+.rest-chip svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
+
+.rest-chip.custom, .rest-chip.open { color: var(--accent); background: var(--accent-soft); border-color: transparent; }
+
+.rest-chip-note { font-weight: 500; opacity: .75; }
+
+.rest-chip-panel { padding-top: 8px; }
+
+/* Warm-up sets in pills: marked W and dimmed */
+.set-pill.warm { opacity: .62; border-style: dashed; }
+
+.pill-w { font-size: .62rem; font-weight: 800; color: var(--accent); background: var(--accent-soft); border-radius: 5px; padding: 1px 4px; margin-right: 5px; vertical-align: 1px; }
+
+/* Chart controls, PR markers and legend */
+.chart-controls { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px; }
+
+.chart-controls > .chips:first-child { flex: 1 1 auto; min-width: 0; }
+
+.chart-controls .chips.seg .chip { padding: 6px 12px; font-size: .8rem; }
+
+.chart .pr-ring { fill: none; stroke: var(--good); stroke-width: 2; transform-box: fill-box; transform-origin: center; }
+
+.chart-draw .pr-ring { animation: chart-pop 560ms cubic-bezier(.34, 1.56, .64, 1) var(--d, 0ms) backwards; }
+
+.chart-legend { display: flex; align-items: center; gap: 6px; margin: -2px 0 0; }
+
+.legend-pr { width: 12px; height: 12px; border-radius: 50%; border: 2px solid var(--good); }
+
+.tt-pr { font-size: .7rem; font-weight: 800; color: var(--good); }
+
+.chart-empty { padding: 28px 0; }
+
+.pr-chip { font-size: .62rem; font-weight: 800; letter-spacing: .04em; color: var(--good); background: var(--good-soft); border-radius: 999px; padding: 2px 7px; margin-left: 8px; vertical-align: 2px; }
+
+/* On/off switch: the knob slides on the app's spring */
+.switch {
+  --press: .96; position: relative; flex: none; width: 50px; height: 30px; border-radius: 999px; padding: 0;
+  border: 1px solid var(--edge); background: var(--field); transition: background-color .25s ease, border-color .25s ease;
+}
+
+.switch.on { background: var(--accent); border-color: var(--accent); box-shadow: 0 4px 14px var(--accent-glow); }
+
+.switch-knob {
+  position: absolute; top: 3px; left: 3px; width: 22px; height: 22px; border-radius: 50%;
+  background: #fff; box-shadow: 0 2px 6px rgba(0, 0, 0, .3);
+  transition: transform 480ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.switch.on .switch-knob { transform: translateX(20px); }
+
+.toggle-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding-top: 10px; border-top: 1px solid var(--line); }
+
+.toggle-row label { display: flex; flex-direction: column; gap: 2px; font-weight: 700; }
+
+.toggle-row label .small { font-weight: 500; }
+
+.trend.flat { color: var(--muted); background: var(--field); }
+
+.st-head > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.paste-box { display: flex; flex-direction: column; gap: 8px; padding-top: 4px; }

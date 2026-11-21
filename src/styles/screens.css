@@ -1,0 +1,285 @@
+/* Screens: styles specific to one page (Workout, editors, History, Progress, Exercises, Settings). */
+
+/* Workout */
+.workout-header { display: flex; align-items: center; gap: 8px; }
+
+.timer {
+  font-variant-numeric: tabular-nums; font-weight: 700; white-space: nowrap;
+  padding: 6px 12px; border-radius: 999px; background: var(--accent-soft); color: var(--accent);
+}
+
+.ex-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+
+.ex-title { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
+
+.banner {
+  display: flex; justify-content: space-between; align-items: flex-start; gap: 8px;
+  border-radius: var(--radius); padding: 14px 16px; margin-bottom: 12px;
+  border-color: var(--good);
+}
+
+.banner ul { margin: 8px 0 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 4px; }
+
+.pr-badge {
+  display: inline-block; font-size: .65rem; font-weight: 800; letter-spacing: .08em;
+  background: var(--good); color: var(--on-good); padding: 2px 6px; border-radius: 6px; margin-right: 4px;
+}
+
+/* Exercises */
+.list-card { padding: 4px 0; gap: 0; }
+
+.theme-group { display: flex; flex-direction: column; gap: 8px; }
+
+.theme-grid {
+  display: grid; grid-auto-flow: column; grid-auto-columns: minmax(104px, 1fr); gap: 10px;
+  overflow-x: auto; scrollbar-width: none; padding: 2px; margin: -2px;
+  scroll-snap-type: x proximity;
+}
+
+.theme-grid::-webkit-scrollbar { display: none; }
+
+.theme-option {
+  scroll-snap-align: start;
+  display: flex; flex-direction: column; gap: 6px; padding: 6px; text-align: left;
+  border-radius: 16px; border: 1px solid var(--edge); background: var(--field);
+  transition: border-color .15s ease, transform .12s ease;
+}
+
+.theme-option.selected { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-soft); }
+
+.theme-preview {
+  position: relative; display: block; height: 64px; border-radius: 11px; overflow: hidden;
+  border: 1px solid var(--line);
+}
+
+.tp-panel {
+  position: absolute; left: 8px; right: 22px; bottom: 8px; height: 26px; border-radius: 7px;
+  display: flex; flex-direction: column; justify-content: center; gap: 4px; padding: 0 7px;
+}
+
+.tp-line { display: block; height: 3px; border-radius: 2px; width: 70%; }
+
+.tp-line.short { width: 40%; opacity: .8; }
+
+.tp-dot { position: absolute; right: 8px; bottom: 8px; width: 10px; height: 10px; border-radius: 50%; }
+
+.theme-name { font-size: .78rem; font-weight: 700; padding: 0 2px 2px; }
+
+/* ---------- Workout home ---------- */
+.home { gap: 14px; }
+
+.home-head { display: flex; flex-direction: column; gap: 2px; padding: 4px 2px 0; }
+
+.home-head h1 { margin: 0; }
+
+.week-card { gap: 12px; }
+
+.week-days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+
+.week-day {
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  font-size: .72rem; font-weight: 700; color: var(--muted);
+}
+
+.week-day i {
+  display: block; width: 100%; max-width: 34px; height: 6px; border-radius: 999px;
+  background: var(--field); border: 1px solid var(--edge);
+}
+
+.week-day.trained i { background: var(--accent); border-color: var(--accent); box-shadow: 0 0 12px var(--accent-glow); }
+
+.week-day.today span { color: var(--text); }
+
+.week-day.today:not(.trained) i { border-color: var(--accent); }
+
+.week-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; padding-top: 12px; border-top: 1px solid var(--line); }
+
+.week-stats > div { min-width: 0; }
+
+.week-num { font-size: 1.02rem; font-weight: 800; letter-spacing: 0; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.start-empty {
+  display: flex; align-items: center; gap: 14px; width: 100%; text-align: left;
+  padding: 16px 18px; border-radius: var(--radius); border: 1px solid transparent;
+  background: var(--accent); color: var(--on-accent);
+  box-shadow: 0 12px 30px var(--accent-glow), inset 0 1px 0 rgba(255,255,255,.18);
+  transition: transform .12s ease, filter .12s ease;
+}
+
+.start-empty:hover { filter: brightness(1.06); }
+
+.start-icon {
+  display: grid; place-items: center; width: 42px; height: 42px; border-radius: 14px; flex-shrink: 0;
+  background: rgba(255,255,255,.18);
+}
+
+.start-text { flex: 1; display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+
+.start-text strong { font-size: 1.05rem; }
+
+.start-text .small { opacity: .8; }
+
+.my-workouts { display: flex; flex-direction: column; gap: 10px; }
+
+.empty-templates { gap: 8px; }
+
+.empty-templates p { margin: 0 0 6px; max-width: 34ch; line-height: 1.5; }
+
+.template-list { display: flex; flex-direction: column; gap: 10px; }
+
+.template-card { gap: 10px; }
+
+.tpl-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+
+.tpl-title { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+
+.tpl-title h3 { font-size: 1.12rem; }
+
+.tags { display: flex; flex-wrap: wrap; gap: 6px; }
+
+.tag {
+  font-size: .7rem; font-weight: 700; padding: 3px 9px; border-radius: 999px;
+  background: var(--accent-soft); color: var(--accent);
+}
+
+.tpl-exercises { margin: 0; line-height: 1.45; }
+
+.tpl-foot { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding-top: 10px; border-top: 1px solid var(--line); }
+
+.start-btn { display: inline-flex; align-items: center; gap: 6px; padding: 9px 16px; border-radius: 999px; }
+
+/* ---------- Saved workout editor ---------- */
+.editor-bar { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+
+.back-btn { display: inline-flex; align-items: center; gap: 2px; padding-left: 0; }
+
+.back-btn svg { width: 20px; height: 20px; }
+
+.name-input { font-size: 1.6rem; }
+
+.from-template { margin-top: -8px; padding-left: 2px; }
+
+/* ---------- History ---------- */
+.week-group { display: flex; flex-direction: column; gap: 10px; }
+
+.workout-card { gap: 0; }
+
+.workout-head {
+  display: flex; align-items: center; gap: 12px; width: 100%; text-align: left;
+  background: none; border: none; padding: 0;
+}
+
+.date-tile {
+  display: flex; flex-direction: column; align-items: center; justify-content: center; flex-shrink: 0;
+  width: 50px; height: 54px; border-radius: 14px; background: var(--accent-soft); color: var(--accent);
+}
+
+.date-tile span { font-size: .64rem; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; }
+
+.date-tile strong { font-size: 1.3rem; font-weight: 800; line-height: 1.1; font-variant-numeric: tabular-nums; }
+
+.workout-title { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 4px; }
+
+.workout-title h3 { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.meta { display: flex; flex-wrap: wrap; gap: 4px 10px; font-size: .8rem; color: var(--muted); font-variant-numeric: tabular-nums; }
+
+.meta span + span::before { content: "·"; margin-right: 10px; opacity: .6; }
+
+.chev { color: var(--muted); display: grid; place-items: center; transition: transform .2s ease; flex-shrink: 0; }
+
+.chev svg { width: 18px; height: 18px; }
+
+.workout-card.open .chev { transform: rotate(90deg); }
+
+.ex-summary { list-style: none; margin: 12px 0 0; padding: 12px 0 0; border-top: 1px solid var(--line); display: flex; flex-direction: column; gap: 8px; }
+
+.ex-summary li { display: flex; justify-content: space-between; gap: 12px; font-size: .88rem; }
+
+.ex-name { font-weight: 600; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.ex-best { white-space: nowrap; font-variant-numeric: tabular-nums; font-weight: 600; }
+
+.workout-detail { display: flex; flex-direction: column; gap: 14px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); }
+
+.detail-ex { display: flex; flex-direction: column; gap: 8px; }
+
+.detail-ex-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
+
+.detail-actions { display: flex; gap: 8px; align-items: center; }
+
+.detail-actions .btn-primary, .detail-actions .btn-secondary { flex: 1; }
+
+/* ---------- Progress sessions ---------- */
+.session-list { display: flex; flex-direction: column; gap: 10px; }
+
+.session { gap: 12px; }
+
+.session-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; }
+
+.session-head h3 { font-size: .98rem; }
+
+.session-metric { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; text-align: right; }
+
+.session-metric strong { font-size: 1.15rem; font-weight: 800; font-variant-numeric: tabular-nums; }
+
+.session-metric .unit { font-size: .78rem; color: var(--muted); font-weight: 600; }
+
+/* ---------- Exercises ---------- */
+.add-card { gap: 12px; }
+
+.ex-group { display: flex; flex-direction: column; gap: 8px; }
+
+.list-card { padding: 4px 0; gap: 0; }
+
+.ex-row { display: flex; align-items: center; gap: 8px; padding-right: 12px; border-top: 1px solid var(--line); }
+
+.ex-row:first-child { border-top: none; }
+
+.ex-row-main {
+  flex: 1; min-width: 0; display: flex; align-items: center; gap: 12px;
+  padding: 11px 4px 11px 14px; background: none; border: none; text-align: left;
+}
+
+.ex-row-text { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 2px; }
+
+.ex-row-name { font-weight: 700; transition: color .15s ease; }
+
+.ex-row-text .muted { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.top-set {
+  display: flex; justify-content: space-between; align-items: center; gap: 10px;
+  padding: 9px 12px; border-radius: var(--radius-sm); background: var(--accent-soft);
+}
+
+.top-set .eyebrow { color: var(--accent); }
+
+.top-set-value { font-variant-numeric: tabular-nums; white-space: nowrap; }
+
+.top-set-value strong { font-weight: 800; }
+
+.top-set-value .unit, .top-set-value .x { color: var(--muted); font-weight: 500; }
+
+.date-field { display: flex; flex-direction: column; gap: 6px; }
+
+.date-field .eyebrow { padding-left: 2px; }
+
+/* The rest panel sits under the exercise name but uses the card's full width
+   (it extends under the move/remove buttons: 3 × 34px + 2 × 6px gaps + 8px). */
+.ex-header .rest-chip-wrap .collapse { margin-right: -122px; }
+
+.notes-view { white-space: pre-wrap; background: var(--field); padding: 12px; border-radius: var(--radius-sm); margin: 0; }
+
+.big-icon { width: 44px; height: 44px; flex-shrink: 0; }
+
+.big-icon svg { width: 18px; height: 18px; }
+
+button.ex-row-main:hover .ex-row-name { color: var(--accent); }
+
+.collapse.open .workout-detail > * { animation: settle 520ms cubic-bezier(0.34, 1.56, 0.64, 1) backwards; }
+
+.collapse.open .workout-detail > :nth-child(2) { animation-delay: 40ms; }
+
+.collapse.open .workout-detail > :nth-child(3) { animation-delay: 80ms; }
+
+.collapse.open .workout-detail > :nth-child(n+4) { animation-delay: 120ms; }

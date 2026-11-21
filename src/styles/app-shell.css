@@ -1,0 +1,12 @@
+/* Installed app (home-screen) adjustments. */
+
+/* Installed on a phone (home-screen app): the status bar is transparent, so keep
+   content clear of it, and give it a dark scrim on light themes so its white
+   text stays readable. */
+@media (display-mode: standalone) {
+  main { padding-top: calc(20px + env(safe-area-inset-top, 0px)); }
+  html[data-mode="light"] body::before {
+    content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 50;
+    background: linear-gradient(rgba(0, 0, 0, .55), rgba(0, 0, 0, 0));
+  }
+}

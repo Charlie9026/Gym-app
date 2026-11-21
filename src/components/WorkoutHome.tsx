@@ -1,3 +1,4 @@
+import { useExerciseMap, useToday } from '../hooks';
 import { useMemo } from 'react';
 import type { AppData, WorkoutTemplate } from '../types';
 import { fmtWeight, workoutVolume } from '../utils';
@@ -13,17 +14,18 @@ interface Props {
 
 const DAY_LETTERS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
 
-function startOfWeek(d = new Date()): Date {
+function startOfWeek(d: Date): Date {
   const day = (d.getDay() + 6) % 7; // Monday = 0
   return new Date(d.getFullYear(), d.getMonth(), d.getDate() - day);
 }
 
 export function WorkoutHome({ data, onStartEmpty, onStartTemplate, onEdit }: Props) {
   const unit = data.settings.unit;
-  const exById = useMemo(() => new Map(data.exercises.map((e) => [e.id, e])), [data.exercises]);
+  const exById = useExerciseMap(data.exercises);
+  const now = useToday();
 
   const week = useMemo(() => {
-    const start = startOfWeek().getTime();
+    const start = startOfWeek(now).getTime();
     const trained = new Set<number>();
     let volume = 0;
     let count = 0;
@@ -36,8 +38,8 @@ export function WorkoutHome({ data, onStartEmpty, onStartTemplate, onEdit }: Pro
       volume += workoutVolume(w);
       count++;
     }
-    return { trained, volume, count, today: (new Date().getDay() + 6) % 7 };
-  }, [data.workouts]);
+    return { trained, volume, count, today: (now.getDay() + 6) % 7 };
+  }, [data.workouts, now]);
 
   const lastWorkout = data.workouts[data.workouts.length - 1];
 
@@ -54,7 +56,7 @@ export function WorkoutHome({ data, onStartEmpty, onStartTemplate, onEdit }: Pro
     return m;
   }, [data.workouts]);
 
-  const today = new Date().toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' });
+  const today = now.toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'long' });
 
   return (
     <div className="screen home">

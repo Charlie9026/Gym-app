@@ -1,5 +1,6 @@
 import type { ReactNode } from 'react';
-import { CountUp, useCountUp } from './CountUp';
+import { CountUp } from './CountUp';
+import { useCountUp } from '../useCountUp';
 
 /**
  * Neumorphic stat cards, adapted from the Forever AI "Stat Cards" component.

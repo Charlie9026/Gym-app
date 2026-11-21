@@ -1,3 +1,4 @@
+import { useExerciseMap } from '../hooks';
 import { useMemo, useState } from 'react';
 import { askText, notify } from '../dialog';
 import type { AppData, Workout } from '../types';
@@ -38,7 +39,7 @@ export function History({ data, update, onRepeat }: Props) {
   const [open, setOpen] = useState<string | null>(null);
   const [editing, setEditing] = useState<string | null>(null);
   const unit = data.settings.unit;
-  const exById = useMemo(() => new Map(data.exercises.map((e) => [e.id, e])), [data.exercises]);
+  const exById = useExerciseMap(data.exercises);
 
   const weeks = useMemo(() => {
     const groups: { start: number; workouts: Workout[]; volume: number }[] = [];

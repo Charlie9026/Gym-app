@@ -4,14 +4,11 @@
  * (for example inside the claude.ai page viewer).
  */
 import { useEffect } from 'react';
+import { isEmbedded } from './env';
 
 export function registerServiceWorker() {
   if (!import.meta.env.PROD || !('serviceWorker' in navigator)) return;
-  try {
-    if (window.self !== window.top) return; // embedded in another page
-  } catch {
-    return;
-  }
+  if (isEmbedded) return; // service workers aren't allowed inside another page
   window.addEventListener('load', () => {
     navigator.serviceWorker.register(`${import.meta.env.BASE_URL}sw.js`).catch(() => {
       /* not allowed here (e.g. a file:// address); the app works without it */

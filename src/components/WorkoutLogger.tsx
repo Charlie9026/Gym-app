@@ -1,5 +1,5 @@
 import { ask, askText, notify } from '../dialog';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useState } from 'react';
 import type { AppData, Exercise, ExerciseType, SetEntry, Workout, WorkoutExercise } from '../types';
 import type { Update } from '../store';
 import { completedSets, defaultWorkoutName, e1rm, fmtWeight } from '../utils';
@@ -18,7 +18,8 @@ import {
 import { SetsTable } from './SetsTable';
 import { RestChip } from './RestChip';
 import { ExercisePicker } from './ExercisePicker';
-import { newTemplate, newWorkoutFrom, structureChanged, templateExercisesFrom } from '../workout';
+import { lastSetsFor, newTemplate, newWorkoutFrom, structureChanged, templateExercisesFrom } from '../workout';
+import { useExerciseMap } from '../hooks';
 import { WorkoutHome } from './WorkoutHome';
 import { TemplateEditor } from './TemplateEditor';
 
@@ -37,15 +38,6 @@ const MISSING_VALUE: Record<ExerciseType, string> = {
   time: 'Enter a time for this set first.',
   distance: 'Enter a distance or time for this set first.',
 };
-
-/** Most recent finished sets for an exercise, used as the "previous" hint. */
-function lastSetsFor(workouts: Workout[], exerciseId: string): SetEntry[] {
-  for (let i = workouts.length - 1; i >= 0; i--) {
-    const ex = workouts[i].exercises.find((e) => e.exerciseId === exerciseId);
-    if (ex) return ex.sets;
-  }
-  return [];
-}
 
 function useElapsed(startIso: string) {
   const [now, setNow] = useState(() => Date.now());
@@ -105,7 +97,7 @@ function ActiveWorkout({
   const [picking, setPicking] = useState(false);
   const elapsed = useElapsed(active.date);
   const unit = data.settings.unit;
-  const exById = useMemo(() => new Map(data.exercises.map((e) => [e.id, e])), [data.exercises]);
+  const exById = useExerciseMap(data.exercises);
 
   const setActive = (fn: (w: Workout) => Workout) =>
     update((d) => (d.activeWorkout ? { ...d, activeWorkout: fn(d.activeWorkout) } : d));

@@ -1,5 +1,6 @@
 import { useEffect, useState, type CSSProperties } from 'react';
 import { fmtShortDate } from '../utils';
+import { prefersReducedMotion } from '../env';
 
 export interface Point {
   date: string;
@@ -15,14 +16,6 @@ interface Props {
   /** Which points are personal bests; they get a ring marker. */
   prs?: boolean[];
 }
-
-const reduceMotion = () => {
-  try {
-    return matchMedia('(prefers-reduced-motion: reduce)').matches;
-  } catch {
-    return false;
-  }
-};
 
 const W = 360;
 const H = 200;
@@ -76,7 +69,7 @@ export function LineChart({ points, format, label, animKey = '', prs = [] }: Pro
       : '';
 
   if (!shown || shown.key !== animKey || shown.path !== path) {
-    if (shown && shown.key !== animKey && !reduceMotion()) {
+    if (shown && shown.key !== animKey && !prefersReducedMotion()) {
       setGhost({ id: `${shown.key}>${animKey}`, path: shown.path, area: shown.area });
     }
     setShown({ key: animKey, path, area });

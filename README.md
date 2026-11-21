@@ -35,21 +35,31 @@ on the old copy and **Settings → Paste backup** on the new one.
 
 ```bash
 npm install
-npm run dev      # start dev server
-npm run build    # type-check + production build to dist/
-npm run lint
+npm run dev        # start the dev server
+npm run build      # type-check + production build to dist/ (also prepares the offline service worker)
+npm run lint       # lint; warnings count as failures
+npm test           # unit tests (Vitest) for the app's logic
+npm run test:e2e   # end-to-end tests (Playwright) against the production build
 ```
 
-Built with Vite, React and TypeScript, with no other runtime dependencies. Charts are hand-rolled SVG.
+Every push runs lint, the build and both test suites on GitHub Actions; the site is only published if they pass.
 
 ## Project layout
 
 ```
 src/
-  App.tsx              tab shell
-  types.ts             data model
-  store.ts             localStorage-backed state hook
-  exercises.ts         preset exercise list
-  utils.ts, workout.ts helpers (unit conversion, e1RM, formatting)
-  components/          one file per screen + shared inputs/chart
+  App.tsx                tab shell, rest timer, sliding tab highlight
+  types.ts               data model
+  store.ts               saved data (localStorage) and migrations for older data
+  sets.ts                rules per exercise type (weight, reps, time, distance) and warm-ups
+  workout.ts, utils.ts   workout helpers, units, formatting
+  themes.ts              colour themes
+  dialog.ts              in-app dialogs, toasts and Undo
+  pwa.ts, restAlert.ts   installed-app extras (offline, screen awake), rest chime/notification
+  components/            one file per screen and shared pieces (SetsTable, ChipGroup, MorphSelect…)
+  styles/                base, components, screens, app-shell
+  *.test.ts              unit tests
+e2e/                     end-to-end tests (Playwright)
+public/                  icons, manifest, service worker
+scripts/                 build helpers (service worker list, single-file build)
 ```

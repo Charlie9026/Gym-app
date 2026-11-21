@@ -1,4 +1,5 @@
 import { useLayoutEffect, useRef } from 'react';
+import { useSlidingHighlight } from '../slidingHighlight';
 
 /**
  * A row of pill buttons with an accent highlight that slides (with the same
@@ -23,56 +24,22 @@ interface Props<T extends string> {
   variant?: 'chips' | 'segmented';
 }
 
-function placePill(group: HTMLElement | null, pill: HTMLElement | null, animate: boolean) {
-  const chip = group?.querySelector<HTMLElement>('.chip.active');
-  if (!group || !pill || !chip) return;
-  pill.classList.toggle('no-anim', !animate);
-  pill.style.width = `${chip.offsetWidth}px`;
-  pill.style.height = `${chip.offsetHeight}px`;
-  pill.style.transform = `translate(${chip.offsetLeft}px, ${chip.offsetTop}px)`;
-  if (!animate) {
-    void pill.offsetWidth; // commit the jump before transitions come back
-    pill.classList.remove('no-anim');
-  }
-  pill.classList.add('ready');
-}
-
 export function ChipGroup<T extends string>({ options, value, onChange, label, wrap, kind = 'tabs', variant = 'chips' }: Props<T>) {
   const groupRef = useRef<HTMLDivElement>(null);
   const pillRef = useRef<HTMLSpanElement>(null);
 
-  // Slide to the active chip whenever the choice changes (jump the first time),
-  // and keep it in view in a sideways-scrolling row.
-  useLayoutEffect(() => {
-    placePill(groupRef.current, pillRef.current, !!pillRef.current?.classList.contains('ready'));
-    const chip = groupRef.current?.querySelector<HTMLElement>('.chip.active');
-    const g = groupRef.current;
-    if (chip && g && !wrap) {
-      const left = chip.offsetLeft - 16;
-      const right = chip.offsetLeft + chip.offsetWidth + 16 - g.clientWidth;
-      if (g.scrollLeft > left) g.scrollTo({ left, behavior: 'smooth' });
-      else if (g.scrollLeft < right) g.scrollTo({ left: right, behavior: 'smooth' });
-    }
-  }, [value, options.length, wrap]);
+  useSlidingHighlight(groupRef, pillRef, { active: '.chip.active', axis: 'xy' }, [value, options.length, wrap]);
 
-  // Re-align if the row changes size (rotation, chips wrapping, or a page scrollbar
-  // appearing when the content below changes). Animate rather than snap, so a resize
-  // in the middle of a slide just redirects it instead of cancelling it.
-  // ResizeObserver fires once on observe, so skip that first call.
+  // In a sideways-scrolling row, keep the chosen chip in view.
   useLayoutEffect(() => {
     const g = groupRef.current;
-    if (!g) return;
-    let first = true;
-    const ro = new ResizeObserver(() => {
-      if (first) {
-        first = false;
-        return;
-      }
-      placePill(g, pillRef.current, true);
-    });
-    ro.observe(g);
-    return () => ro.disconnect();
-  }, []);
+    const chip = g?.querySelector<HTMLElement>('.chip.active');
+    if (!g || !chip || wrap) return;
+    const left = chip.offsetLeft - 16;
+    const right = chip.offsetLeft + chip.offsetWidth + 16 - g.clientWidth;
+    if (g.scrollLeft > left) g.scrollTo({ left, behavior: 'smooth' });
+    else if (g.scrollLeft < right) g.scrollTo({ left: right, behavior: 'smooth' });
+  }, [value, wrap]);
 
   const radio = kind === 'radio';
   return (

@@ -1,4 +1,5 @@
-import type { TemplateExercise, Workout, WorkoutTemplate } from './types';
+import type { AppData, ExerciseType, SetEntry, TemplateExercise, Workout, WorkoutTemplate } from './types';
+import type { AnySet } from './sets';
 import { defaultWorkoutName, uid } from './utils';
 
 /** Start a new active workout, optionally pre-filled from a saved workout or a past session. */
@@ -52,4 +53,23 @@ export function relativeDay(iso: string): string {
   if (days < 14) return 'last week';
   if (days < 60) return `${Math.floor(days / 7)} weeks ago`;
   return new Date(iso).toLocaleDateString(undefined, { month: 'short', day: 'numeric' });
+}
+
+/** The most recent logged sets for an exercise (for "Previous" and faded hints). */
+export function lastSetsFor(workouts: Workout[], exerciseId: string): SetEntry[] {
+  for (let i = workouts.length - 1; i >= 0; i--) {
+    const ex = workouts[i].exercises.find((e) => e.exerciseId === exerciseId);
+    if (ex) return ex.sets;
+  }
+  return [];
+}
+
+/** Starting sets for an exercise added in an editor: last time's sets, or sensible defaults by type. */
+export function startingSets(data: AppData, exerciseId: string, type: ExerciseType): AnySet[] {
+  const last = lastSetsFor(data.workouts, exerciseId);
+  if (last.length) return last.map(({ weight, reps, seconds, meters, kind }) => ({ weight, reps, seconds, meters, kind }));
+  if (type === 'time') return [{ weight: 0, reps: 0, seconds: 30 }, { weight: 0, reps: 0, seconds: 30 }];
+  if (type === 'distance') return [{ weight: 0, reps: 0, meters: 0, seconds: 0 }];
+  const reps = type === 'reps' ? 10 : 8;
+  return [0, 1, 2].map(() => ({ weight: 0, reps }));
 }

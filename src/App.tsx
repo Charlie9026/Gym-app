@@ -1,11 +1,12 @@
 import { useLayoutEffect, useRef, useState, type ReactNode } from 'react';
+import { useSlidingHighlight } from './slidingHighlight';
 import { useAppData } from './store';
 import { WorkoutLogger } from './components/WorkoutLogger';
 import { History } from './components/History';
 import { Progress } from './components/Progress';
 import { ExerciseLibrary } from './components/ExerciseLibrary';
 import { Settings } from './components/Settings';
-import { DialogHost } from './dialog';
+import { DialogHost } from './components/DialogHost';
 import { RestTimer } from './components/RestTimer';
 import { primeAudio } from './restAlert';
 import { useWakeLock } from './pwa';
@@ -21,20 +22,6 @@ const TABS: { id: Tab; label: string; icon: ReactNode }[] = [
   { id: 'exercises', label: 'Exercises', icon: <ListIcon /> },
   { id: 'settings', label: 'Settings', icon: <GearIcon /> },
 ];
-
-/** Move the tab bar highlight under the active tab. */
-function placeBlob(nav: HTMLElement | null, blob: HTMLElement | null, animate: boolean) {
-  const btn = nav?.querySelector<HTMLElement>('button.active');
-  if (!nav || !blob || !btn) return;
-  blob.classList.toggle('no-anim', !animate);
-  blob.style.width = `${btn.offsetWidth}px`;
-  blob.style.transform = `translateX(${btn.offsetLeft}px)`;
-  if (!animate) {
-    void blob.offsetWidth; // commit the jump before transitions come back
-    blob.classList.remove('no-anim');
-  }
-  blob.classList.add('ready');
-}
 
 export default function App() {
   const [data, update] = useAppData();
@@ -55,28 +42,7 @@ export default function App() {
   const navRef = useRef<HTMLElement>(null);
   const blobRef = useRef<HTMLSpanElement>(null);
 
-  // Slide on every tab change (jump into place the very first time).
-  useLayoutEffect(() => {
-    placeBlob(navRef.current, blobRef.current, !!blobRef.current?.classList.contains('ready'));
-  }, [tab]);
-
-  // Re-align when the bar itself changes size (rotation, resize, a scrollbar appearing).
-  // Animate rather than snap, so a resize mid-slide redirects instead of cancelling it.
-  // Set up once; ResizeObserver fires immediately on observe, so skip that first call.
-  useLayoutEffect(() => {
-    const nav = navRef.current;
-    if (!nav) return;
-    let first = true;
-    const ro = new ResizeObserver(() => {
-      if (first) {
-        first = false;
-        return;
-      }
-      placeBlob(nav, blobRef.current, true);
-    });
-    ro.observe(nav);
-    return () => ro.disconnect();
-  }, []);
+  useSlidingHighlight(navRef, blobRef, { active: 'button.active', axis: 'x' }, [tab]);
 
   return (
     <div className="app">

@@ -1,5 +1,7 @@
-import { useMemo, useState } from 'react';
-import type { AppData, ExerciseType, SetEntry } from '../types';
+import { useState } from 'react';
+import type { AppData, SetEntry } from '../types';
+import { startingSets } from '../workout';
+import { useExerciseMap } from '../hooks';
 import type { Update } from '../store';
 import { notify } from '../dialog';
 import { DEFAULT_REST_SECONDS, isWarmup, typeOf, type AnySet } from '../sets';
@@ -27,22 +29,10 @@ interface Props<S extends AnySet> {
   emptyText: string;
 }
 
-/** Sensible starting sets for an exercise added to an editor, by type. */
-export function startingSets(data: AppData, exerciseId: string, type: ExerciseType): AnySet[] {
-  for (let i = data.workouts.length - 1; i >= 0; i--) {
-    const ex = data.workouts[i].exercises.find((e) => e.exerciseId === exerciseId);
-    if (ex) return ex.sets.map(({ weight, reps, seconds, meters, kind }) => ({ weight, reps, seconds, meters, kind }));
-  }
-  if (type === 'time') return [{ weight: 0, reps: 0, seconds: 30 }, { weight: 0, reps: 0, seconds: 30 }];
-  if (type === 'distance') return [{ weight: 0, reps: 0, meters: 0, seconds: 0 }];
-  const reps = type === 'reps' ? 10 : 8;
-  return [0, 1, 2].map(() => ({ weight: 0, reps }));
-}
-
 export function ExerciseListEditor<S extends AnySet>({ data, update, exercises, onChange, blankSet, emptyText }: Props<S>) {
   const [picking, setPicking] = useState(false);
   const unit = data.settings.unit;
-  const exById = useMemo(() => new Map(data.exercises.map((e) => [e.id, e])), [data.exercises]);
+  const exById = useExerciseMap(data.exercises);
 
   const apply = (fn: (xs: EditableExercise<S>[]) => EditableExercise<S>[]) => onChange(fn(exercises));
 

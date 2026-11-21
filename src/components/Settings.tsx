@@ -7,16 +7,8 @@ import { ChipGroup } from './ChipGroup';
 import { Switch } from './Switch';
 import { requestNotify } from '../restAlert';
 import { REST_OPTIONS, restLabel } from '../sets';
+import { isEmbedded } from '../env';
 import { addDemoWeek, hasDemoData, removeDemoWeek } from '../demo';
-
-/** True when shown inside another page (e.g. the artifact viewer), where downloads are blocked. */
-const EMBEDDED = (() => {
-  try {
-    return window.self !== window.top;
-  } catch {
-    return true;
-  }
-})();
 
 export function Settings({ data, update }: { data: AppData; update: Update }) {
   const fileRef = useRef<HTMLInputElement>(null);
@@ -38,7 +30,7 @@ export function Settings({ data, update }: { data: AppData; update: Update }) {
       await navigator.clipboard.writeText(JSON.stringify(data));
       notify('Backup copied. Paste it into a note or email to keep it safe.');
     } catch {
-      notify(EMBEDDED ? 'Copying isn’t allowed here. Open the app in its own tab to back up.' : 'Copying isn’t allowed here. Use Export JSON instead.');
+      notify(isEmbedded ? 'Copying isn’t allowed here. Open the app in its own tab to back up.' : 'Copying isn’t allowed here. Use Export JSON instead.');
     }
   };
 
@@ -142,7 +134,7 @@ export function Settings({ data, update }: { data: AppData; update: Update }) {
                 notify('You’ll get a notification when rest ends.');
               } else {
                 notify(
-                  EMBEDDED
+                  isEmbedded
                     ? 'Notifications aren’t allowed inside this page. Open the app in its own tab to use them.'
                     : r === 'denied'
                       ? 'Notifications are blocked. Allow them for this site in your browser settings.'
@@ -173,7 +165,7 @@ export function Settings({ data, update }: { data: AppData; update: Update }) {
           Your data lives only in this browser. Back it up now and then so you don’t lose it.
         </p>
         <div className="finish-row">
-          {!EMBEDDED && <button className="btn-secondary" onClick={exportData}>Export JSON</button>}
+          {!isEmbedded && <button className="btn-secondary" onClick={exportData}>Export JSON</button>}
           <button className="btn-secondary" onClick={copyData}>Copy backup</button>
           <button className="btn-secondary" onClick={() => fileRef.current?.click()}>Import JSON</button>
           <button className="btn-secondary" onClick={() => setPasting((p) => !p)} aria-expanded={pasting}>Paste backup</button>
