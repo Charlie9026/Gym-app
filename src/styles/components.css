@@ -588,3 +588,39 @@
 .or-row::before, .or-row::after { content: ""; flex: 1; height: 1px; background: var(--line); }
 .cloud-form { display: flex; flex-direction: column; gap: 8px; }
 .forgot { align-self: center; }
+
+/* Shared sign-in form (welcome screen + Settings) */
+.signin { display: flex; flex-direction: column; gap: 10px; }
+.signin .chips.seg { align-self: stretch; }
+.signin .chips.seg .chip { flex: 1; padding: 8px 10px; font-size: .88rem; }
+
+/* First-open welcome screen */
+.welcome {
+  position: fixed; inset: 0; z-index: 35; overflow-y: auto; background: var(--bg);
+  padding-block: calc(28px + env(safe-area-inset-top, 0px)) calc(28px + env(safe-area-inset-bottom, 0px));
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  animation: welcome-in 420ms ease both;
+}
+@keyframes welcome-in { from { opacity: 0; } }
+.welcome-glow {
+  position: fixed; width: 560px; height: 560px; border-radius: 50%; top: -280px; left: 50%; translate: -50% 0;
+  background: var(--orb); filter: blur(100px); pointer-events: none;
+}
+.welcome-inner {
+  position: relative; max-width: 420px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px;
+  animation: welcome-rise 560ms cubic-bezier(0.34, 1.56, 0.64, 1) both;
+}
+@keyframes welcome-rise { from { translate: 0 24px; opacity: 0; scale: .98; } }
+.welcome-brand { display: flex; flex-direction: column; align-items: center; gap: 6px; text-align: center; padding: 12px 0 6px; }
+.welcome-logo {
+  display: grid; place-items: center; width: 68px; height: 68px; border-radius: 20px; margin-bottom: 6px;
+  background: var(--accent); color: var(--on-accent); box-shadow: 0 14px 34px var(--accent-glow), inset 0 1px 0 rgba(255, 255, 255, .25);
+}
+.welcome-logo svg { width: 36px; height: 36px; fill: none; stroke: currentColor; stroke-width: 2.2; stroke-linecap: round; }
+.welcome-brand h1 { margin: 0; font-size: 2.3rem; }
+.welcome-tagline { margin: 0; color: var(--muted); font-weight: 600; }
+.welcome-card { gap: 12px; }
+.welcome-card > .muted { margin: 0; }
+.welcome-skip { align-self: center; font-weight: 700; }
+.welcome-note { margin: -10px 0 0; text-align: center; }

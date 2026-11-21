@@ -17,9 +17,10 @@ async function device(browser: Browser, opts: { sample?: boolean } = {}) {
 
 async function signUp(page: Page, email: string) {
   await tab(page, 'Settings');
+  await page.locator('.cloud-card').getByRole('button', { name: 'Create account' }).click(); // switch the form to Create account
   await page.locator('#cloud-email').fill(email);
   await page.locator('#cloud-password').fill(PASSWORD);
-  await page.getByRole('button', { name: 'Create account' }).click();
+  await page.locator('.cloud-card form button[type=submit]').click();
   await expect(page.locator('.cloud-status')).toHaveText('Backed up', { timeout: 20_000 });
 }
 
@@ -27,7 +28,7 @@ async function signIn(page: Page, email: string) {
   await tab(page, 'Settings');
   await page.locator('#cloud-email').fill(email);
   await page.locator('#cloud-password').fill(PASSWORD);
-  await page.getByRole('button', { name: 'Sign in', exact: true }).click();
+  await page.locator('.cloud-card form button[type=submit]').click();
   await expect(page.locator('.cloud-status')).toHaveText('Backed up', { timeout: 20_000 });
 }
 
@@ -113,7 +114,7 @@ test('a wrong password gets a clear message', async ({ browser }) => {
   await a.page.getByRole('button', { name: 'Sign out' }).click();
   await a.page.locator('#cloud-email').fill(email);
   await a.page.locator('#cloud-password').fill('wrong-password');
-  await a.page.getByRole('button', { name: 'Sign in', exact: true }).click();
+  await a.page.locator('.cloud-card form button[type=submit]').click();
   await expect(a.page.locator('.toast')).toContainText('don’t match an account');
 });
 
@@ -140,4 +141,22 @@ test('security rules: nobody can read or change someone else’s records', async
   // Unexpected fields are rejected even on your own records.
   const extra = { fields: { ...body.fields, admin: { booleanValue: true } } };
   expect((await request.patch(docUrl(alice.localId, 'x'), { data: extra, headers: { Authorization: `Bearer ${alice.idToken}` } })).status()).toBe(403);
+});
+
+test('first open: creating an account on the welcome screen backs up and closes it', async ({ browser }) => {
+  const ctx = await browser.newContext();
+  const page = await ctx.newPage();
+  await openApp(page, { welcome: true });
+  const welcome = page.getByRole('dialog', { name: 'Overload' });
+  await welcome.locator('#welcome-email').fill(newEmail());
+  await welcome.locator('#welcome-password').fill(PASSWORD);
+  await welcome.locator('form button[type=submit]').click();
+  await expect(welcome).toHaveCount(0, { timeout: 20_000 });
+  await tab(page, 'Settings');
+  await expect(page.locator('.cloud-status')).toHaveText('Backed up', { timeout: 20_000 });
+  // Signing out later doesn't bring the welcome screen back.
+  await page.getByRole('button', { name: 'Sign out' }).click();
+  await page.reload();
+  await expect(page.locator('.tabbar')).toBeVisible();
+  await expect(page.getByRole('dialog', { name: 'Overload' })).toHaveCount(0);
 });

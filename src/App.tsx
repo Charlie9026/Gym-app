@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef, useState, type ReactNode } from 'react';
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { useSlidingHighlight } from './slidingHighlight';
 import { useAppData } from './store';
 import { WorkoutLogger } from './components/WorkoutLogger';
@@ -11,6 +11,7 @@ import { RestTimer } from './components/RestTimer';
 import { primeAudio } from './restAlert';
 import { useStorageProtection, useWakeLock } from './pwa';
 import { useCloudSync } from './cloud/useCloudSync';
+import { Welcome } from './components/Welcome';
 import { applyTheme, getTheme } from './themes';
 import { CalendarIcon, ChartIcon, DumbbellIcon, GearIcon, ListIcon } from './components/Icons';
 
@@ -23,6 +24,8 @@ const TABS: { id: Tab; label: string; icon: ReactNode }[] = [
   { id: 'exercises', label: 'Exercises', icon: <ListIcon /> },
   { id: 'settings', label: 'Settings', icon: <GearIcon /> },
 ];
+
+const WELCOME_KEY = 'gym-app-welcome-v1';
 
 export default function App() {
   const [data, update] = useAppData();
@@ -40,6 +43,34 @@ export default function App() {
   useStorageProtection(data.workouts.length > 0);
   // Cloud backup and sync (switched off until Firebase is set up).
   const cloud = useCloudSync(data, update);
+
+  // First open: ask to sign in or create an account (once; skippable).
+  const [welcomeDone, setWelcomeDone] = useState(() => {
+    try {
+      return localStorage.getItem(WELCOME_KEY) === 'done';
+    } catch {
+      return true;
+    }
+  });
+  const finishWelcome = () => {
+    setWelcomeDone(true);
+    try {
+      localStorage.setItem(WELCOME_KEY, 'done');
+    } catch {
+      /* fine: it just may show again next time */
+    }
+  };
+  // Signing in (here or anywhere) also counts as done, so it won't reappear after a sign-out.
+  useEffect(() => {
+    if (cloud.user) {
+      try {
+        localStorage.setItem(WELCOME_KEY, 'done');
+      } catch {
+        /* ignore */
+      }
+    }
+  }, [cloud.user]);
+  const showWelcome = cloud.available && !welcomeDone && !cloud.user && cloud.status !== 'connecting';
 
   useLayoutEffect(() => applyTheme(getTheme(data.settings.theme)), [data.settings.theme]);
 
@@ -131,6 +162,7 @@ export default function App() {
           </button>
         ))}
       </nav>
+      {showWelcome && <Welcome cloud={cloud} onSkip={finishWelcome} />}
       <DialogHost />
     </div>
   );
