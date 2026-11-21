@@ -21,7 +21,8 @@ interface Props {
   onFinished: (prs: string[]) => void;
 }
 
-const REST_SECONDS = 90;
+/** Used when the setting hasn't been chosen yet. */
+const DEFAULT_REST_SECONDS = 90;
 
 /** Most recent finished sets for an exercise, used as the "previous" hint. */
 function lastSetsFor(workouts: Workout[], exerciseId: string): SetEntry[] {
@@ -300,7 +301,8 @@ function ActiveWorkout({
                       const reps = s.reps || hint?.reps || 0;
                       if (!reps) return notify('Enter the reps for this set first.');
                       setSet(exIdx, setIdx, { weight, reps, done: true });
-                      setRest({ end: Date.now() + REST_SECONDS * 1000, total: REST_SECONDS * 1000 });
+                      const restMs = (data.settings.restSeconds ?? DEFAULT_REST_SECONDS) * 1000;
+                      if (restMs > 0) setRest({ end: Date.now() + restMs, total: restMs });
                     }}
                   >
                     <svg viewBox="0 0 24 24" aria-hidden="true">

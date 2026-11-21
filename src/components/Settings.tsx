@@ -6,6 +6,17 @@ import { THEMES, getTheme, type Theme } from '../themes';
 import { ChipGroup } from './ChipGroup';
 import { addDemoWeek, hasDemoData, removeDemoWeek } from '../demo';
 
+const REST_OPTIONS = [0, 30, 60, 90, 120, 180, 300];
+
+function restLabel(sec: number, short = false): string {
+  if (sec === 0) return 'Off';
+  if (sec < 60) return `${sec}s`;
+  const m = Math.floor(sec / 60);
+  const s = sec % 60;
+  if (s) return short ? `${m}:${String(s).padStart(2, '0')}` : `${m} min ${s}s`;
+  return `${m} min`;
+}
+
 export function Settings({ data, update }: { data: AppData; update: Update }) {
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -64,6 +75,26 @@ export function Settings({ data, update }: { data: AppData; update: Update }) {
             </div>
           </div>
         ))}
+      </div>
+
+      <div className="card">
+        <div className="card-head">
+          <h3>Rest timer</h3>
+          <span className="muted small">{restLabel(data.settings.restSeconds ?? 90)}</span>
+        </div>
+        <ChipGroup
+          label="Rest time between sets"
+          kind="radio"
+          wrap
+          value={String(data.settings.restSeconds ?? 90)}
+          onChange={(v) => update((d) => ({ ...d, settings: { ...d.settings, restSeconds: Number(v) } }))}
+          options={REST_OPTIONS.map((sec) => ({ value: String(sec), label: restLabel(sec, true) }))}
+        />
+        <p className="muted small">
+          {(data.settings.restSeconds ?? 90) === 0
+            ? 'Ticking a set won’t start a timer.'
+            : 'Starts when you tick a set. You can still add 30 seconds or skip it during a workout.'}
+        </p>
       </div>
 
       <div className="card">

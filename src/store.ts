@@ -12,7 +12,7 @@ export function emptyData(): AppData {
     workouts: [],
     templates: [],
     activeWorkout: null,
-    settings: { unit: 'kg', theme: systemDefaultThemeId() },
+    settings: { unit: 'kg', theme: systemDefaultThemeId(), restSeconds: 90 },
   };
 }
 

@@ -87,6 +87,8 @@ export interface Settings {
   unit: Unit;
   /** Colour theme id from themes.ts */
   theme?: string;
+  /** Rest timer length after ticking a set, in seconds; 0 turns it off. */
+  restSeconds?: number;
 }
 
 export interface AppData {
