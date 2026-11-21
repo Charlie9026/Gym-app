@@ -213,12 +213,27 @@ main {
 }
 .modal-header { display: flex; justify-content: space-between; align-items: center; }
 .modal-header h2 { margin: 0; color: var(--text); text-transform: none; font-size: 1.25rem; letter-spacing: 0; font-weight: 800; }
-.chips { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 2px; flex-shrink: 0; scrollbar-width: none; }
+.chips {
+  position: relative; display: flex; gap: 6px; overflow-x: auto; padding: 2px; margin: -2px; flex-shrink: 0; scrollbar-width: none;
+  --spring: cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.chips::-webkit-scrollbar { display: none; }
 .chip {
   border: 1px solid var(--edge); background: var(--field); border-radius: 999px;
   padding: 7px 13px; white-space: nowrap; font-size: .82rem; font-weight: 600; color: var(--muted);
+  position: relative; z-index: 1; transition: color .28s ease, border-color .28s ease, background-color .28s ease;
 }
-.chip.active { background: var(--accent); border-color: var(--accent); color: var(--on-accent); }
+.chip:hover:not(.active) { color: var(--text); }
+.chip.active { background: transparent; border-color: transparent; color: var(--on-accent); font-weight: 700; }
+/* Sliding highlight behind the active chip (same spring as the tab bar). */
+.chip-pill {
+  position: absolute; top: 0; left: 0; z-index: 0; border-radius: 999px; pointer-events: none;
+  background: var(--accent); box-shadow: 0 4px 14px var(--accent-glow), inset 0 1px 0 rgba(255, 255, 255, .2);
+  opacity: 0;
+  transition: transform 520ms var(--spring), width 520ms var(--spring), height 520ms var(--spring), opacity .2s ease;
+}
+.chip-pill.ready { opacity: 1; }
+.chip-pill.no-anim { transition: none; }
 .pick-list { list-style: none; margin: 0; padding: 0; overflow-y: auto; flex: 1; border-radius: var(--radius-sm); }
 .pick-item {
   width: 100%; display: flex; justify-content: space-between; text-align: left; font-weight: 600;

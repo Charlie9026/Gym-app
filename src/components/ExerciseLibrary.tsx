@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { ChipGroup } from './ChipGroup';
 import { MUSCLE_GROUPS, type AppData, type MuscleGroup, type SetEntry } from '../types';
 import type { Update } from '../store';
 import { ask, notify } from '../dialog';
@@ -110,19 +111,14 @@ export function ExerciseLibrary({ data, update, onOpen }: Props) {
             onChange={(e) => setNewName(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && add()}
           />
-          <div className="chips wrap" role="radiogroup" aria-label="Muscle group">
-            {MUSCLE_GROUPS.map((m) => (
-              <button
-                key={m}
-                role="radio"
-                aria-checked={m === newMuscle}
-                className={'chip' + (m === newMuscle ? ' active' : '')}
-                onClick={() => setNewMuscle(m)}
-              >
-                {m}
-              </button>
-            ))}
-          </div>
+          <ChipGroup
+            label="Muscle group"
+            kind="radio"
+            wrap
+            value={newMuscle}
+            onChange={setNewMuscle}
+            options={MUSCLE_GROUPS.map((m) => ({ value: m, label: m }))}
+          />
           <div className="finish-row">
             <button className="btn-secondary" onClick={() => setAdding(false)}>Cancel</button>
             <button className="btn-primary" onClick={add}>Add exercise</button>
@@ -137,13 +133,12 @@ export function ExerciseLibrary({ data, update, onOpen }: Props) {
         value={query}
         onChange={(e) => setQuery(e.target.value)}
       />
-      <div className="chips">
-        {(['All', 'Logged', ...presentMuscles] as Filter[]).map((f) => (
-          <button key={f} className={'chip' + (f === filter ? ' active' : '')} onClick={() => setFilter(f)}>
-            {f}
-          </button>
-        ))}
-      </div>
+      <ChipGroup
+        label="Filter exercises"
+        value={filter}
+        onChange={setFilter}
+        options={(['All', 'Logged', ...presentMuscles] as Filter[]).map((f) => ({ value: f, label: f }))}
+      />
 
       {groups.map(({ group, items }) => (
         <section className="ex-group" key={group}>

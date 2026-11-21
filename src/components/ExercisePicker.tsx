@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { ChipGroup } from './ChipGroup';
 import { MUSCLE_GROUPS, type Exercise, type MuscleGroup } from '../types';
 import type { Update } from '../store';
 import { uid } from '../utils';
@@ -50,13 +51,12 @@ export function ExercisePicker({ exercises, update, onPick, onClose }: Props) {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
         />
-        <div className="chips">
-          {(['All', ...MUSCLE_GROUPS] as const).map((m) => (
-            <button key={m} className={'chip' + (m === muscle ? ' active' : '')} onClick={() => setMuscle(m)}>
-              {m}
-            </button>
-          ))}
-        </div>
+        <ChipGroup
+          label="Muscle group"
+          value={muscle}
+          onChange={setMuscle}
+          options={(['All', ...MUSCLE_GROUPS] as const).map((m) => ({ value: m, label: m }))}
+        />
         <ul className="pick-list">
           {query.trim() && !exactMatch && (
             <li>

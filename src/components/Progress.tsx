@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { ChipGroup } from './ChipGroup';
 import type { AppData, SetEntry } from '../types';
 import { e1rm, fmtDate, fmtWeight, toDisplay } from '../utils';
 import { LineChart, type Point } from './LineChart';
@@ -97,13 +98,12 @@ export function Progress({ data, initialExercise }: { data: AppData; initialExer
       />
 
       <div className="card">
-        <div className="chips">
-          {METRICS.map((m) => (
-            <button key={m.id} className={'chip' + (m.id === metric ? ' active' : '')} onClick={() => setMetric(m.id)}>
-              {m.label}
-            </button>
-          ))}
-        </div>
+        <ChipGroup
+          label="Chart measure"
+          value={metric}
+          onChange={setMetric}
+          options={METRICS.map((m) => ({ value: m.id, label: m.label }))}
+        />
         <div className="chart-title">
           <span>{name} · {METRICS.find((m) => m.id === metric)!.label} ({unit})</span>
           {points.length > 1 && (
