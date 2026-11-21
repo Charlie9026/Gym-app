@@ -158,7 +158,7 @@ export function ExerciseLibrary({ data, update, onOpen }: Props) {
               const u = usage.get(e.id);
               const content = (
                 <>
-                  <span className={'muscle-badge' + (u ? ' logged' : '')} aria-hidden="true">{MUSCLE_CODE[e.muscle]}</span>
+                  <span className="muscle-badge" aria-hidden="true">{MUSCLE_CODE[e.muscle]}</span>
                   <span className="ex-row-text">
                     <span className="ex-row-name">
                       {e.name}

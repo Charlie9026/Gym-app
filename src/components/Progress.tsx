@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import type { AppData, SetEntry } from '../types';
 import { e1rm, fmtDate, fmtWeight, toDisplay } from '../utils';
 import { LineChart, type Point } from './LineChart';
-import { SetPills } from './SetPills';
+import { SetPills, SetText, topSet } from './SetPills';
 
 type Metric = 'e1rm' | 'max' | 'volume';
 const METRICS: { id: Metric; label: string }[] = [
@@ -130,6 +130,12 @@ export function Progress({ data, initialExercise }: { data: AppData; initialExer
                   {toDisplay(metricOf(s), unit).toLocaleString()} <span className="unit">{unit}</span>
                 </strong>
               </div>
+            </div>
+            <div className="top-set">
+              <span className="eyebrow">Top set</span>
+              <span className="top-set-value">
+                <SetText set={topSet(s.sets)} unit={unit} />
+              </span>
             </div>
             <SetPills sets={s.sets} unit={unit} />
           </article>
