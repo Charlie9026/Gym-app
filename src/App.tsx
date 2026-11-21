@@ -8,6 +8,7 @@ import { Settings } from './components/Settings';
 import { DialogHost } from './dialog';
 import { RestTimer } from './components/RestTimer';
 import { primeAudio } from './restAlert';
+import { useWakeLock } from './pwa';
 import { applyTheme, getTheme } from './themes';
 import { CalendarIcon, ChartIcon, DumbbellIcon, GearIcon, ListIcon } from './components/Icons';
 
@@ -44,6 +45,9 @@ export default function App() {
   // tied to the workout's id so it never carries over to the next workout.
   const [rest, setRest] = useState<{ workoutId: string; end: number; total: number } | null>(null);
   const activeRest = rest && rest.workoutId === data.activeWorkout?.id ? rest : null;
+
+  // Keep the screen awake while a workout is in progress.
+  useWakeLock(!!data.activeWorkout);
 
   useLayoutEffect(() => applyTheme(getTheme(data.settings.theme)), [data.settings.theme]);
 

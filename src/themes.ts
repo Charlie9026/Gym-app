@@ -80,5 +80,6 @@ export function applyTheme(t: Theme) {
   const root = document.documentElement;
   for (const [k, v] of Object.entries(themeVars(t))) root.style.setProperty(k, v);
   root.style.colorScheme = t.mode;
+  root.dataset.mode = t.mode;
   document.querySelector('meta[name="theme-color"]')?.setAttribute('content', t.bg);
 }

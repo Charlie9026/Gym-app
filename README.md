@@ -14,6 +14,23 @@ A mobile-first gym progress tracker. Log your workouts, track weight and reps, a
 
 Data is stored in the browser's `localStorage`, so there's no account or server. Export backups now and then.
 
+## Install on your phone
+
+The app is published to GitHub Pages automatically (see `.github/workflows/deploy.yml`) at
+`https://<your-github-username>.github.io/Gym-app/`.
+
+1. **One-time setup:** in the repo on GitHub, go to **Settings → Pages → Build and deployment → Source** and choose **GitHub Actions**.
+2. Push to `main` (or run the **Deploy to GitHub Pages** workflow from the Actions tab). The first deploy takes a minute or two.
+3. Open the address on your phone, then:
+   - **iPhone (Safari):** Share → **Add to Home Screen**.
+   - **Android (Chrome):** menu → **Install app** (or **Add to Home screen**).
+
+Once installed it opens full screen, works offline, keeps the screen awake during a workout and can play a chime
+(and show a notification, if you allow it) when your rest ends.
+
+Your data lives in the browser it was logged in, so a new address starts empty. To move it, use **Settings → Copy backup**
+on the old copy and **Settings → Paste backup** on the new one.
+
 ## Development
 
 ```bash

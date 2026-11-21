@@ -1,5 +1,5 @@
 import { ask, notify } from '../dialog';
-import { useRef } from 'react';
+import { useRef, useState } from 'react';
 import type { AppData, Unit } from '../types';
 import { emptyData, isAppData, migrate, type Update } from '../store';
 import { THEMES, getTheme, type Theme } from '../themes';
@@ -20,6 +20,8 @@ const EMBEDDED = (() => {
 
 export function Settings({ data, update }: { data: AppData; update: Update }) {
   const fileRef = useRef<HTMLInputElement>(null);
+  const [pasting, setPasting] = useState(false);
+  const [pasted, setPasted] = useState('');
 
   const exportData = () => {
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
@@ -40,17 +42,32 @@ export function Settings({ data, update }: { data: AppData; update: Update }) {
     }
   };
 
-  const importData = async (file: File) => {
+  /** Restore from backup text (a file's contents or pasted text). */
+  const restore = async (text: string, source: 'file' | 'paste') => {
     try {
-      const parsed = JSON.parse(await file.text());
+      const parsed = JSON.parse(text);
       if (!isAppData(parsed)) throw new Error('not a backup');
-      if (!(await ask('Replace all current data with this backup?', { confirmLabel: 'Replace' }))) return;
+      const n = parsed.workouts.length;
+      const ok = await ask('Replace all current data with this backup?', {
+        confirmLabel: 'Replace',
+        detail: `The backup has ${n} workout${n === 1 ? '' : 's'}. What’s in the app now will be replaced.`,
+      });
+      if (!ok) return;
       update(() => migrate({ ...emptyData(), ...parsed }));
-      notify('Backup restored');
+      notify(`Backup restored: ${n} workout${n === 1 ? '' : 's'}`);
+      if (source === 'paste') {
+        setPasted('');
+        setPasting(false);
+      }
     } catch {
-      notify('That file isn’t a valid gym backup. Pick a file exported from this app.');
+      notify(
+        source === 'file'
+          ? 'That file isn’t a valid gym backup. Pick a file exported from this app.'
+          : 'That doesn’t look like a gym backup. Paste the whole text from “Copy backup”.',
+      );
     }
   };
+  const importData = async (file: File) => restore(await file.text(), 'file');
 
   return (
     <div className="screen">
@@ -159,6 +176,26 @@ export function Settings({ data, update }: { data: AppData; update: Update }) {
           {!EMBEDDED && <button className="btn-secondary" onClick={exportData}>Export JSON</button>}
           <button className="btn-secondary" onClick={copyData}>Copy backup</button>
           <button className="btn-secondary" onClick={() => fileRef.current?.click()}>Import JSON</button>
+          <button className="btn-secondary" onClick={() => setPasting((p) => !p)} aria-expanded={pasting}>Paste backup</button>
+        </div>
+        <div className={'collapse' + (pasting ? ' open' : '')} inert={!pasting} aria-hidden={!pasting}>
+          <div className="collapse-inner">
+            <div className="paste-box">
+              <label htmlFor="paste-backup" className="muted small">
+                Paste the text you copied with “Copy backup” on your other copy of the app.
+              </label>
+              <textarea
+                id="paste-backup"
+                className="notes"
+                placeholder="Paste backup here…"
+                value={pasted}
+                onChange={(e) => setPasted(e.target.value)}
+              />
+              <button className="btn-primary" disabled={!pasted.trim()} onClick={() => restore(pasted, 'paste')}>
+                Restore from pasted backup
+              </button>
+            </div>
+          </div>
         </div>
         <input
           ref={fileRef}
