@@ -83,8 +83,9 @@ test('the tab bar highlight fits its tab even if the bar resizes as the app open
       page.evaluate(() => {
         const a = document.querySelector('.tabbar button.active')!.getBoundingClientRect();
         const b = document.querySelector('.tabbar-blob')!.getBoundingClientRect();
-        return [Math.round(b.width - a.width), Math.round(b.left - a.left)];
+        // Within a pixel (sub-pixel layout differs between machines).
+        return Math.abs(b.width - a.width) < 1 && Math.abs(b.left - a.left) < 1;
       }),
     )
-    .toEqual([0, 0]);
+    .toBe(true);
 });
