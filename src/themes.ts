@@ -67,6 +67,12 @@ export function themeVars(t: Theme): Record<string, string> {
     '--sheen': dark ? 'rgba(255,255,255,.07)' : 'rgba(255,255,255,1)',
     '--shadow': dark ? 'rgba(0,0,0,.35)' : rgba(t.text, 0.08),
     '--scrim': dark ? 'rgba(0,0,0,.55)' : rgba(t.text, 0.25),
+    // Neumorphic light/shadow pair and fill, derived per theme.
+    '--neu-dark': dark ? 'rgba(0,0,0,.55)' : rgba(t.text, 0.14),
+    '--neu-light': dark ? 'rgba(255,255,255,.05)' : 'rgba(255,255,255,.95)',
+    '--neu-fill': dark
+      ? `linear-gradient(145deg, ${rgba(t.panel, 0.75)}, ${rgba(t.bg, 0.85)})`
+      : `linear-gradient(145deg, rgba(255,255,255,.75), ${rgba(t.bg, 0.9)})`,
   };
 }
 

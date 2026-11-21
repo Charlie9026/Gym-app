@@ -4,6 +4,8 @@ import { e1rm, fmtDate, fmtWeight, toDisplay } from '../utils';
 import { LineChart, type Point } from './LineChart';
 import { SetPills, SetText, topSet } from './SetPills';
 import { MorphSelect } from './MorphSelect';
+import { StatCards } from './StatCards';
+import { RepeatIcon, StackIcon, TrophyIcon, WeightIcon } from './Icons';
 import { MUSCLE_CODE } from '../exercises';
 
 type Metric = 'e1rm' | 'max' | 'volume';
@@ -85,12 +87,14 @@ export function Progress({ data, initialExercise }: { data: AppData; initialExer
         options={trained.map((e) => ({ value: e.id, label: e.name, badge: MUSCLE_CODE[e.muscle], hint: e.muscle }))}
       />
 
-      <div className="stats">
-        <Stat label="Heaviest" value={fmtWeight(heaviest.weight, unit)} sub={`${heaviest.reps} reps · ${fmtDate(heaviest.date)}`} />
-        <Stat label="Best est. 1RM" value={fmtWeight(e1rm(bestE1), unit)} sub={`${fmtWeight(bestE1.weight, unit)} × ${bestE1.reps} reps`} />
-        <Stat label="Most reps" value={`${mostReps.reps}`} sub={`at ${fmtWeight(mostReps.weight, unit)}`} />
-        <Stat label="Best volume" value={fmtWeight(bestVolValue, unit)} sub={fmtDate(bestVol.date)} />
-      </div>
+      <StatCards
+        items={[
+          { label: 'Heaviest', icon: <WeightIcon />, value: toDisplay(heaviest.weight, unit), unit, sub: `${heaviest.reps} reps · ${fmtDate(heaviest.date)}` },
+          { label: 'Best est. 1RM', icon: <TrophyIcon />, value: toDisplay(e1rm(bestE1), unit), unit, sub: `${fmtWeight(bestE1.weight, unit)} × ${bestE1.reps} reps` },
+          { label: 'Most reps', icon: <RepeatIcon />, value: mostReps.reps, sub: `at ${fmtWeight(mostReps.weight, unit)}` },
+          { label: 'Best volume', icon: <StackIcon />, value: toDisplay(bestVolValue, unit), unit, sub: fmtDate(bestVol.date) },
+        ]}
+      />
 
       <div className="card">
         <div className="chips">
@@ -145,16 +149,6 @@ export function Progress({ data, initialExercise }: { data: AppData; initialExer
           </article>
         ))}
       </div>
-    </div>
-  );
-}
-
-function Stat({ label, value, sub }: { label: string; value: string; sub: string }) {
-  return (
-    <div className="stat">
-      <div className="muted small">{label}</div>
-      <div className="stat-value">{value}</div>
-      <div className="muted small">{sub}</div>
     </div>
   );
 }

@@ -91,3 +91,34 @@ export const TrashIcon = () => (
     <path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3" />
   </Icon>
 );
+
+export const WeightIcon = () => (
+  <Icon>
+    <path d="M9 7a3 3 0 1 1 6 0" />
+    <path d="M6.5 7h11l2 13h-15z" />
+  </Icon>
+);
+
+export const TrophyIcon = () => (
+  <Icon>
+    <path d="M8 4h8v5a4 4 0 0 1-8 0z" />
+    <path d="M8 6H5a3 3 0 0 0 3 4M16 6h3a3 3 0 0 1-3 4" />
+    <path d="M12 13v4M8.5 20h7M10 17h4" />
+  </Icon>
+);
+
+export const RepeatIcon = () => (
+  <Icon>
+    <path d="M17 3l3 3-3 3" />
+    <path d="M4 11V9a3 3 0 0 1 3-3h13" />
+    <path d="M7 21l-3-3 3-3" />
+    <path d="M20 13v2a3 3 0 0 1-3 3H4" />
+  </Icon>
+);
+
+export const StackIcon = () => (
+  <Icon>
+    <path d="M12 3l9 5-9 5-9-5z" />
+    <path d="M3 13l9 5 9-5" />
+  </Icon>
+);
