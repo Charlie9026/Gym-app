@@ -38,7 +38,7 @@
 
 * { box-sizing: border-box; }
 html, body { margin: 0; background: var(--bg); color: var(--text); }
-body { min-height: 100dvh; font-size: 15px; transition: background-color .3s ease; }
+body { min-height: 100dvh; font-family: var(--font); font-size: 15px; transition: background-color .3s ease; }
 button, input, select, textarea { font: inherit; color: inherit; }
 button { cursor: pointer; }
 button:disabled { opacity: .45; cursor: not-allowed; }
