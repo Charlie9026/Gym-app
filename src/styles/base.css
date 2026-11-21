@@ -47,6 +47,8 @@
 * { box-sizing: border-box; }
 
 html, body { margin: 0; background: var(--bg); color: var(--text); }
+/* No zooming: double-tap zoom is off and pinch is blocked (see noZoom.ts). */
+html { touch-action: pan-x pan-y; }
 
 body { min-height: 100dvh; font-family: var(--font); font-size: 15px; transition: background-color .3s ease; }
 

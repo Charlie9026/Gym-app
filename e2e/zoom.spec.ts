@@ -40,3 +40,21 @@ test('no text field is small enough to make iPhones zoom in', async ({ page }) =
 
   expect([...seen]).toEqual(expect.arrayContaining(['welcome', 'Exercises', 'active workout', 'exercise picker']));
 });
+
+test('zooming is switched off', async ({ page }) => {
+  await openApp(page);
+  await expect(page.locator('meta[name=viewport]')).toHaveAttribute('content', /user-scalable=no/);
+  await expect(page.locator('meta[name=viewport]')).toHaveAttribute('content', /maximum-scale=1/);
+  expect(await page.evaluate(() => getComputedStyle(document.documentElement).touchAction)).toBe('pan-x pan-y');
+  // A two-finger move is cancelled; a one-finger move (scrolling) is not.
+  const cancelled = await page.evaluate(() => {
+    const move = (n: number) => {
+      const t = Array.from({ length: n }, (_, i) => new Touch({ identifier: i, target: document.body, clientX: 10 * i, clientY: 10 }));
+      const e = new TouchEvent('touchmove', { touches: t, cancelable: true, bubbles: true });
+      document.body.dispatchEvent(e);
+      return e.defaultPrevented;
+    };
+    return [move(1), move(2)];
+  });
+  expect(cancelled).toEqual([false, true]);
+});
