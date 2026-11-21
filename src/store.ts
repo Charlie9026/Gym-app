@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react';
 import { PRESET_EXERCISES } from './exercises';
-import type { AppData } from './types';
+import type { AppData, Exercise, MuscleGroup } from './types';
 import { systemDefaultThemeId } from './themes';
 
 const KEY = 'gym-app-data-v1';
@@ -27,16 +27,25 @@ export function isAppData(x: unknown): x is AppData {
   );
 }
 
+/** Best guess for a custom exercise saved under an old combined group. */
+function guessMuscle(old: 'Arms' | 'Legs', name: string): MuscleGroup {
+  if (old === 'Arms') return /tri|push ?down|skull|dip|extension|kickback|close.?grip/i.test(name) ? 'Triceps' : 'Biceps';
+  if (/calf|calves/i.test(name)) return 'Calves';
+  if (/glute|hip|thrust|bridge|abduct|kickback/i.test(name)) return 'Glutes';
+  if (/hamstring|curl|romanian|rdl|good morning|nordic|stiff/i.test(name)) return 'Hamstrings';
+  return 'Quads';
+}
+
 /** Bring older saved data up to date. */
 export function migrate(d: AppData): AppData {
-  // "Arms" was split into Biceps and Triceps; new presets get added too.
+  // "Arms" and "Legs" were split into specific muscles; new presets get added too.
   const presetById = new Map(PRESET_EXERCISES.map((e) => [e.id, e]));
-  const exercises = d.exercises.map((e) => {
-    if ((e.muscle as string) !== 'Arms') return e;
+  const exercises = d.exercises.map((e): Exercise => {
+    const old = e.muscle as string;
+    if (old !== 'Arms' && old !== 'Legs') return e;
     const preset = presetById.get(e.id);
     if (preset) return { ...e, muscle: preset.muscle };
-    const tri = /tri|push ?down|skull|dip|extension|kickback|close.?grip/i.test(e.name);
-    return { ...e, muscle: tri ? ('Triceps' as const) : ('Biceps' as const) };
+    return { ...e, muscle: guessMuscle(old, e.name) };
   });
   const known = new Set(exercises.map((e) => e.id));
   for (const p of PRESET_EXERCISES) if (!known.has(p.id)) exercises.push(p);

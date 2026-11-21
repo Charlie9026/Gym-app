@@ -1,10 +1,13 @@
 export type MuscleGroup =
   | 'Chest'
   | 'Back'
-  | 'Legs'
   | 'Shoulders'
   | 'Biceps'
   | 'Triceps'
+  | 'Quads'
+  | 'Hamstrings'
+  | 'Glutes'
+  | 'Calves'
   | 'Core'
   | 'Full Body'
   | 'Cardio'
@@ -13,10 +16,13 @@ export type MuscleGroup =
 export const MUSCLE_GROUPS: MuscleGroup[] = [
   'Chest',
   'Back',
-  'Legs',
   'Shoulders',
   'Biceps',
   'Triceps',
+  'Quads',
+  'Hamstrings',
+  'Glutes',
+  'Calves',
   'Core',
   'Full Body',
   'Cardio',

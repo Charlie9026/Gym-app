@@ -14,7 +14,7 @@ interface Props {
 }
 
 const MUSCLE_CODE: Record<MuscleGroup, string> = {
-  Chest: 'CH', Back: 'BK', Legs: 'LG', Shoulders: 'SH', Biceps: 'BI', Triceps: 'TR', Core: 'CO', 'Full Body': 'FB', Cardio: 'CA', Other: '··',
+  Chest: 'CH', Back: 'BK', Shoulders: 'SH', Biceps: 'BI', Triceps: 'TR', Quads: 'QD', Hamstrings: 'HS', Glutes: 'GL', Calves: 'CV', Core: 'CO', 'Full Body': 'FB', Cardio: 'CA', Other: '··',
 };
 
 type Filter = 'All' | 'Logged' | MuscleGroup;
