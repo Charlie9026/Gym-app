@@ -186,7 +186,8 @@ main {
   display: flex; justify-content: space-between; align-items: center;
   border-radius: 18px; padding: 8px 8px 8px 10px;
   font-weight: 700; font-variant-numeric: tabular-nums;
-  background: var(--glass-strong);
+  /* Nearly solid so the set rows behind don't show through. */
+  background: color-mix(in srgb, var(--panel) 96%, transparent);
 }
 .rest-bar.over { background: var(--good); border-color: var(--good); color: var(--on-good); }
 .rest-bar.over .btn-ghost { color: var(--on-good); }
