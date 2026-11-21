@@ -232,10 +232,10 @@ main {
 
 /* Progress */
 /* Neumorphic stat cards (adapted from Forever AI "Stat Cards") */
-.neu-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; padding: 4px 2px 6px; }
+.neu-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; padding: 6px 4px 10px; }
 .neu-card {
-  min-width: 0; aspect-ratio: 1.08; border-radius: 22px; padding: 12px 10px;
-  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 5px; text-align: center;
+  min-width: 0; aspect-ratio: 1.35; border-radius: 20px; padding: 10px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 3px; text-align: center;
   background: var(--neu-fill);
   box-shadow: 7px 7px 16px var(--neu-dark), -6px -6px 14px var(--neu-light), inset 0 1px 0 var(--sheen);
   transition: box-shadow 160ms ease;
@@ -244,15 +244,15 @@ main {
   box-shadow: 10px 10px 22px var(--neu-dark), -8px -8px 18px var(--neu-light), inset 0 1px 0 var(--sheen);
 }
 .neu-icon {
-  display: grid; place-items: center; width: 40px; height: 40px; border-radius: 50%; margin-bottom: 3px;
+  display: grid; place-items: center; width: 32px; height: 32px; border-radius: 50%; margin-bottom: 3px;
   color: var(--accent); background: var(--neu-fill);
   box-shadow: inset 3px 3px 7px var(--neu-dark), inset -3px -3px 7px var(--neu-light);
 }
-.neu-icon svg { width: 20px; height: 20px; }
-.neu-val { font-size: 1.5rem; font-weight: 800; line-height: 1.05; font-variant-numeric: tabular-nums; white-space: nowrap; }
+.neu-icon svg { width: 16px; height: 16px; }
+.neu-val { font-size: 1.25rem; font-weight: 800; line-height: 1.05; font-variant-numeric: tabular-nums; white-space: nowrap; }
 .neu-unit { font-size: .8rem; font-weight: 600; color: var(--muted); }
 .neu-lbl { font-size: .62rem; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--muted); }
-.neu-sub { font-size: .74rem; color: var(--muted); max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.neu-sub { font-size: .7rem; color: var(--muted); max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .chart-title { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 4px; font-weight: 700; }
 .trend { color: var(--good); background: var(--good-soft); padding: 2px 8px; border-radius: 999px; font-size: .75rem; font-weight: 700; }
 .trend.down { color: var(--danger); background: var(--danger-soft); }
