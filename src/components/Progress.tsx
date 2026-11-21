@@ -1,25 +1,109 @@
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import { ChipGroup } from './ChipGroup';
-import type { AppData, SetEntry } from '../types';
+import type { AppData, ExerciseType, SetEntry, Unit } from '../types';
 import { e1rm, fmtDate, fmtWeight, toDisplay } from '../utils';
+import {
+  MEASURES,
+  distUnit,
+  fmtTime,
+  paceOf,
+  setCountText,
+  toDistDisplay,
+  topSet,
+  typeOf,
+  workingSets,
+} from '../sets';
 import { LineChart, type Point } from './LineChart';
-import { SetPills, SetText, topSet } from './SetPills';
+import { SetPills, SetText } from './SetPills';
 import { MorphSelect } from './MorphSelect';
-import { StatCards } from './StatCards';
+import { StatCards, type StatItem } from './StatCards';
 import { CountUp, TrendBadge } from './CountUp';
-import { RepeatIcon, StackIcon, TrophyIcon, WeightIcon } from './Icons';
+import { CalendarIcon, ClockIcon, RepeatIcon, RouteIcon, StackIcon, TrophyIcon, WeightIcon } from './Icons';
 import { MUSCLE_CODE } from '../exercises';
-
-type Metric = 'e1rm' | 'max' | 'volume';
-const METRICS: { id: Metric; label: string }[] = [
-  { id: 'e1rm', label: 'Est. 1RM' },
-  { id: 'max', label: 'Heaviest set' },
-  { id: 'volume', label: 'Volume' },
-];
 
 interface Session {
   date: string;
   sets: SetEntry[];
+}
+
+type Range = '1m' | '3m' | 'all';
+const RANGES: { value: Range; label: string }[] = [
+  { value: '1m', label: '1M' },
+  { value: '3m', label: '3M' },
+  { value: 'all', label: 'All' },
+];
+const RANGE_TREND_LABEL: Record<Range, string> = { '1m': 'in the last month', '3m': 'in the last 3 months', all: 'since first session' };
+
+function rangeStart(range: Range): number {
+  if (range === 'all') return -Infinity;
+  const d = new Date();
+  return new Date(d.getFullYear(), d.getMonth() - (range === '1m' ? 1 : 3), d.getDate()).getTime();
+}
+
+const sumOf = (xs: number[]) => xs.reduce((a, b) => a + b, 0);
+
+/** The four stat cards for an exercise, by type (working sets only). */
+function statsFor(type: ExerciseType, sessions: Session[], unit: Unit): StatItem[] {
+  const all = sessions.flatMap((s) => s.sets.map((set) => ({ ...set, date: s.date })));
+  const bestBy = <T,>(xs: T[], f: (x: T) => number) => xs.reduce((a, b) => (f(b) > f(a) ? b : a), xs[0]);
+  const count = `${sessions.length} session${sessions.length === 1 ? '' : 's'}`;
+
+  if (type === 'reps') {
+    const most = bestBy(all, (x) => x.reps);
+    const bestSession = bestBy(sessions, (s) => sumOf(s.sets.map((x) => x.reps)));
+    return [
+      { label: 'Most reps', icon: <RepeatIcon />, value: most.reps, sub: fmtDate(most.date) },
+      { label: 'Best session', icon: <StackIcon />, value: sumOf(bestSession.sets.map((x) => x.reps)), unit: 'reps', sub: fmtDate(bestSession.date) },
+      { label: 'Total reps', icon: <TrophyIcon />, value: sumOf(all.map((x) => x.reps)), sub: count },
+      { label: 'Sessions', icon: <CalendarIcon />, value: sessions.length, sub: `since ${fmtDate(sessions[0].date)}` },
+    ];
+  }
+  if (type === 'time') {
+    const longest = bestBy(all, (x) => x.seconds ?? 0);
+    const bestSession = bestBy(sessions, (s) => sumOf(s.sets.map((x) => x.seconds ?? 0)));
+    return [
+      { label: 'Longest set', icon: <ClockIcon />, value: longest.seconds ?? 0, format: fmtTime, sub: fmtDate(longest.date) },
+      { label: 'Best session', icon: <StackIcon />, value: sumOf(bestSession.sets.map((x) => x.seconds ?? 0)), format: fmtTime, sub: fmtDate(bestSession.date) },
+      { label: 'Total time', icon: <TrophyIcon />, value: sumOf(all.map((x) => x.seconds ?? 0)), format: fmtTime, sub: count },
+      { label: 'Sessions', icon: <CalendarIcon />, value: sessions.length, sub: `since ${fmtDate(sessions[0].date)}` },
+    ];
+  }
+  if (type === 'distance') {
+    const dist = (s: Session) => toDistDisplay(sumOf(s.sets.map((x) => x.meters ?? 0)), unit);
+    const km = (n: number) => (Math.round(n * 100) / 100).toLocaleString(); // distances keep 2 decimals, as elsewhere
+    const longest = bestBy(sessions, dist);
+    const paced = all.filter((x) => paceOf(x, unit) > 0);
+    const fastest = paced.length ? paced.reduce((a, b) => (paceOf(b, unit) < paceOf(a, unit) ? b : a)) : null;
+    return [
+      { label: 'Longest', icon: <RouteIcon />, value: dist(longest), format: km, unit: distUnit(unit), sub: fmtDate(longest.date) },
+      {
+        label: 'Best pace', icon: <ClockIcon />, value: fastest ? paceOf(fastest, unit) : 0, format: (n) => (n ? fmtTime(n) : '—'),
+        unit: fastest ? `/${distUnit(unit)}` : undefined, sub: fastest ? fmtDate(fastest.date) : 'needs distance and time',
+      },
+      { label: 'Total distance', icon: <StackIcon />, value: toDistDisplay(sumOf(all.map((x) => x.meters ?? 0)), unit), format: km, unit: distUnit(unit), sub: count },
+      { label: 'Sessions', icon: <CalendarIcon />, value: sessions.length, sub: `since ${fmtDate(sessions[0].date)}` },
+    ];
+  }
+  const heaviest = bestBy(all, (x) => x.weight);
+  const bestE1 = bestBy(all, e1rm);
+  const mostReps = bestBy(all, (x) => x.reps);
+  const vol = (s: Session) => sumOf(s.sets.map((x) => x.weight * x.reps));
+  const bestVol = bestBy(sessions, vol);
+  return [
+    { label: 'Heaviest', icon: <WeightIcon />, value: toDisplay(heaviest.weight, unit), unit, sub: `${heaviest.reps} reps · ${fmtDate(heaviest.date)}` },
+    { label: 'Best est. 1RM', icon: <TrophyIcon />, value: toDisplay(e1rm(bestE1), unit), unit, sub: `${fmtWeight(bestE1.weight, unit)} × ${bestE1.reps} reps` },
+    { label: 'Most reps', icon: <RepeatIcon />, value: mostReps.reps, sub: `at ${fmtWeight(mostReps.weight, unit)}` },
+    { label: 'Best volume', icon: <StackIcon />, value: toDisplay(vol(bestVol), unit), unit, sub: fmtDate(bestVol.date) },
+  ];
+}
+
+/** Small summary under a session's date, by type. */
+function sessionSummary(type: ExerciseType, sets: SetEntry[], unit: Unit): string {
+  const w = workingSets(sets);
+  const counts = setCountText(sets);
+  if (type === 'time') return `${counts} · ${fmtTime(sumOf(w.map((x) => x.seconds ?? 0)))} total`;
+  if (type === 'distance') return `${counts} · ${toDistDisplay(sumOf(w.map((x) => x.meters ?? 0)), unit)} ${distUnit(unit)}`;
+  return `${counts} · ${sumOf(w.map((x) => x.reps))} reps`;
 }
 
 export function Progress({ data, initialExercise }: { data: AppData; initialExercise?: string }) {
@@ -35,20 +119,25 @@ export function Progress({ data, initialExercise }: { data: AppData; initialExer
   }, [data.workouts, data.exercises]);
 
   const [selected, setSelected] = useState<string>(initialExercise ?? '');
-  const [metric, setMetric] = useState<Metric>('e1rm');
+  const [metricId, setMetricId] = useState<string>('');
+  const [range, setRange] = useState<Range>('all');
   const exerciseId = trained.some((e) => e.id === selected) ? selected : trained[0]?.id;
+  const exercise = trained.find((e) => e.id === exerciseId);
+  const type = typeOf(exercise);
 
+  // Sessions for this exercise, counting working sets only (warm-ups are left out of progress).
   const sessions: Session[] = useMemo(
     () =>
       data.workouts.flatMap((w) =>
         w.exercises
           .filter((ex) => ex.exerciseId === exerciseId)
-          .map((ex) => ({ date: w.date, sets: ex.sets })),
+          .map((ex) => ({ date: w.date, sets: ex.sets }))
+          .filter((s) => workingSets(s.sets).length > 0),
       ),
     [data.workouts, exerciseId],
   );
 
-  if (trained.length === 0) {
+  if (trained.length === 0 || !exercise) {
     return (
       <div className="screen">
         <h1>Progress</h1>
@@ -57,26 +146,34 @@ export function Progress({ data, initialExercise }: { data: AppData; initialExer
     );
   }
 
-  const metricOf = (s: Session): number => {
-    if (metric === 'e1rm') return Math.max(...s.sets.map(e1rm));
-    if (metric === 'max') return Math.max(...s.sets.map((x) => x.weight));
-    return s.sets.reduce((sum, x) => sum + x.weight * x.reps, 0);
-  };
-  const points: Point[] = sessions.map((s) => ({ date: s.date, value: toDisplay(metricOf(s), unit) }));
+  const measures = MEASURES[type];
+  const measure = measures.find((m) => m.id === metricId) ?? measures[0];
+  const unitLabel = measure.unitLabel(unit);
+  const valueOf = (s: Session) => measure.value(s.sets, unit);
 
-  const allSets = sessions.flatMap((s) => s.sets.map((set) => ({ ...set, date: s.date })));
-  const heaviest = allSets.reduce((a, b) => (b.weight > a.weight ? b : a), allSets[0]);
-  const bestE1 = allSets.reduce((a, b) => (e1rm(b) > e1rm(a) ? b : a), allSets[0]);
-  const mostReps = allSets.reduce((a, b) => (b.reps > a.reps ? b : a), allSets[0]);
-  const bestVol = sessions.reduce((a, b) =>
-    b.sets.reduce((s, x) => s + x.weight * x.reps, 0) > a.sets.reduce((s, x) => s + x.weight * x.reps, 0) ? b : a,
-  );
-  const bestVolValue = bestVol.sets.reduce((s, x) => s + x.weight * x.reps, 0);
+  // Chart points for the chosen range (sessions without a value for this measure are skipped).
+  const from = rangeStart(range);
+  const charted = sessions.filter((s) => Date.parse(s.date) >= from && valueOf(s) > 0);
+  const points: Point[] = charted.map((s) => ({ date: s.date, value: valueOf(s) }));
+
+  // PR markers: sessions that beat every earlier session (across all history, not just the range).
+  const prDates = new Set<string>();
+  let best: number | null = null;
+  for (const s of sessions) {
+    const v = valueOf(s);
+    if (v <= 0) continue;
+    const better = best === null ? false : measure.lowerIsBetter ? v < best : v > best;
+    if (better) prDates.add(s.date);
+    if (best === null || (measure.lowerIsBetter ? v < best : v > best)) best = v;
+  }
+  const prs = charted.map((s) => prDates.has(s.date));
 
   const first = points[0]?.value ?? 0;
   const last = points[points.length - 1]?.value ?? 0;
-  const change = first ? ((last - first) / first) * 100 : 0;
-  const name = trained.find((e) => e.id === exerciseId)?.name ?? '';
+  const raw = first ? ((last - first) / first) * 100 : 0;
+  const change = measure.lowerIsBetter ? -raw : raw;
+
+  const stats = sessions.length ? statsFor(type, sessions.map((s) => ({ ...s, sets: workingSets(s.sets) })), unit) : [];
 
   return (
     <div className="screen">
@@ -89,66 +186,104 @@ export function Progress({ data, initialExercise }: { data: AppData; initialExer
         options={trained.map((e) => ({ value: e.id, label: e.name, badge: MUSCLE_CODE[e.muscle], hint: e.muscle }))}
       />
 
-      <StatCards
-        items={[
-          { label: 'Heaviest', icon: <WeightIcon />, value: toDisplay(heaviest.weight, unit), unit, sub: `${heaviest.reps} reps · ${fmtDate(heaviest.date)}` },
-          { label: 'Best est. 1RM', icon: <TrophyIcon />, value: toDisplay(e1rm(bestE1), unit), unit, sub: `${fmtWeight(bestE1.weight, unit)} × ${bestE1.reps} reps` },
-          { label: 'Most reps', icon: <RepeatIcon />, value: mostReps.reps, sub: `at ${fmtWeight(mostReps.weight, unit)}` },
-          { label: 'Best volume', icon: <StackIcon />, value: toDisplay(bestVolValue, unit), unit, sub: fmtDate(bestVol.date) },
-        ]}
-      />
+      {sessions.length === 0 ? (
+        <div className="card center muted">Only warm-up sets are logged for {exercise.name} so far.</div>
+      ) : (
+        <>
+          <StatCards items={stats} />
 
-      <div className="card">
-        <ChipGroup
-          label="Chart measure"
-          value={metric}
-          onChange={setMetric}
-          options={METRICS.map((m) => ({ value: m.id, label: m.label }))}
-        />
-        <div className="chart-title">
-          <span>{name} · {METRICS.find((m) => m.id === metric)!.label} ({unit})</span>
-          {points.length > 1 && (
-            <TrendBadge change={change} />
-          )}
-        </div>
-        <LineChart
-          points={points}
-          animKey={`${exerciseId}-${metric}`}
-          label={`${name} ${metric} over time`}
-          format={(v) => `${Math.round(v * 10) / 10}`}
-        />
-        {points.length === 1 && <p className="muted small center-text">Log this exercise again to see a trend.</p>}
-      </div>
-
-      <h2>Sessions</h2>
-      <div className="session-list">
-        {[...sessions].reverse().map((s, i) => (
-          <article className="card session" key={i}>
-            <div className="session-head">
-              <div>
-                <h3>{fmtDate(s.date)}</h3>
-                <span className="muted small">
-                  {s.sets.length} set{s.sets.length === 1 ? '' : 's'} ·{' '}
-                  {s.sets.reduce((n, x) => n + x.reps, 0)} reps
-                </span>
-              </div>
-              <div className="session-metric">
-                <span className="eyebrow">{METRICS.find((m) => m.id === metric)!.label}</span>
-                <strong>
-                  <CountUp value={toDisplay(metricOf(s), unit)} /> <span className="unit">{unit}</span>
-                </strong>
-              </div>
+          <div className="card">
+            <div className="chart-controls">
+              <ChipGroup
+                label="Chart measure"
+                value={measure.id}
+                onChange={setMetricId}
+                options={measures.map((m) => ({ value: m.id, label: m.label }))}
+              />
+              <ChipGroup label="Date range" variant="segmented" kind="radio" value={range} onChange={setRange} options={RANGES} />
             </div>
-            <div className="top-set">
-              <span className="eyebrow">Top set</span>
-              <span className="top-set-value">
-                <SetText set={topSet(s.sets)} unit={unit} />
+            <div className="chart-title">
+              <span>
+                {exercise.name} · {measure.label}
+                {unitLabel ? ` (${unitLabel})` : ''}
               </span>
+              {points.length > 1 && <TrendBadge change={change} label={RANGE_TREND_LABEL[range]} />}
             </div>
-            <SetPills sets={s.sets} unit={unit} />
-          </article>
-        ))}
-      </div>
+            {points.length === 0 ? (
+              <p className="muted small center-text chart-empty">
+                No sessions {range === '1m' ? 'in the last month' : 'in the last 3 months'}. Try a longer range.
+              </p>
+            ) : (
+              <LineChart
+                points={points}
+                prs={prs}
+                animKey={`${exerciseId}-${measure.id}-${range}`}
+                label={`${exercise.name} ${measure.label} over time`}
+                format={measure.format}
+              />
+            )}
+            {points.length === 1 && <p className="muted small center-text">Log this exercise again to see a trend.</p>}
+            {prs.some(Boolean) && (
+              <p className="chart-legend muted small">
+                <span className="legend-pr" aria-hidden="true" /> New best
+              </p>
+            )}
+          </div>
+
+          <h2>Sessions</h2>
+          <div className="session-list">
+            {[...sessions].reverse().map((s, i) => (
+              <SessionCard
+                key={i}
+                title={fmtDate(s.date)}
+                summary={sessionSummary(type, s.sets, unit)}
+                metricLabel={measure.label}
+                metric={<CountUp value={valueOf(s)} format={measure.format} />}
+                unitLabel={unitLabel}
+                top={<SetText set={topSet(s.sets, type)} type={type} unit={unit} />}
+                pills={<SetPills sets={s.sets} type={type} unit={unit} />}
+                pr={prDates.has(s.date)}
+              />
+            ))}
+          </div>
+        </>
+      )}
     </div>
+  );
+}
+
+function SessionCard(p: {
+  title: string;
+  summary: string;
+  metricLabel: string;
+  metric: ReactNode;
+  unitLabel: string;
+  top: ReactNode;
+  pills: ReactNode;
+  pr: boolean;
+}) {
+  return (
+    <article className="card session">
+      <div className="session-head">
+        <div>
+          <h3>
+            {p.title}
+            {p.pr && <span className="pr-chip">New best</span>}
+          </h3>
+          <span className="muted small">{p.summary}</span>
+        </div>
+        <div className="session-metric">
+          <span className="eyebrow">{p.metricLabel}</span>
+          <strong>
+            {p.metric} {p.unitLabel && <span className="unit">{p.unitLabel}</span>}
+          </strong>
+        </div>
+      </div>
+      <div className="top-set">
+        <span className="eyebrow">Top set</span>
+        <span className="top-set-value">{p.top}</span>
+      </div>
+      {p.pills}
+    </article>
   );
 }

@@ -148,19 +148,8 @@ main {
   font-variant-numeric: tabular-nums; font-weight: 700; white-space: nowrap;
   padding: 6px 12px; border-radius: 999px; background: var(--accent-soft); color: var(--accent);
 }
-.ex-header { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
-.set-grid {
-  display: grid;
-  grid-template-columns: 34px 1fr 72px 60px 38px;
-  gap: 8px;
-  align-items: center;
-  padding: 5px 6px;
-  border-radius: var(--radius-sm);
-  transition: background-color .2s ease;
-}
-.set-grid-head { font-size: .68rem; color: var(--muted); text-transform: uppercase; font-weight: 700; letter-spacing: .08em; }
-.set-grid.done { background: var(--good-soft); }
-.set-num { border: none; background: var(--field); border-radius: 9px; height: 32px; font-weight: 700; color: var(--muted); }
+.ex-header { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+.ex-title { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: flex-start; gap: 6px; }
 .num-input {
   width: 100%; height: 38px; text-align: center;
   border: 1px solid var(--edge); border-radius: 10px; background: var(--field);
@@ -378,6 +367,14 @@ main {
   top: calc(14px + env(safe-area-inset-top, 0px));
   width: max-content; max-width: calc(100% - 32px);
   background: var(--glass-strong); padding: 11px 18px; border-radius: 999px; font-weight: 700;
+  display: flex; align-items: center; gap: 14px;
+  animation: toast-in 420ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+@keyframes toast-in { from { translate: 0 -18px; opacity: 0; scale: .96; } }
+.toast.has-undo { padding: 6px 6px 6px 18px; }
+.toast-undo {
+  border: 0; border-radius: 999px; padding: 7px 14px; font-weight: 800;
+  background: var(--accent); color: var(--on-accent); box-shadow: 0 4px 14px var(--accent-glow);
 }
 
 button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-visible {
@@ -452,9 +449,6 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .back-btn { display: inline-flex; align-items: center; gap: 2px; padding-left: 0; }
 .back-btn svg { width: 20px; height: 20px; }
 .name-input { font-size: 1.6rem; }
-.tset-grid { display: grid; grid-template-columns: 34px 1fr 1fr 34px; gap: 8px; align-items: center; padding: 3px 6px; }
-.tset-head { font-size: .68rem; color: var(--muted); text-transform: uppercase; font-weight: 700; letter-spacing: .08em; }
-.set-num.static { display: grid; place-items: center; }
 .icon-text { display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
 .icon-text svg { width: 18px; height: 18px; }
 .from-template { margin-top: -8px; padding-left: 2px; }
@@ -659,11 +653,116 @@ button[data-boing] { animation: boing 480ms cubic-bezier(0.34, 1.56, 0.64, 1); }
 .collapse.open .workout-detail > :nth-child(n+4) { animation-delay: 120ms; }
 @keyframes settle { from { translate: 0 -10px; opacity: 0; } }
 
-/* Small phones (e.g. 320px): tighten the set rows so nothing overflows. */
-.set-grid > :nth-child(2) { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-@media (max-width: 359px) {
-  .set-grid { grid-template-columns: 26px minmax(0, 1fr) 56px 46px 36px; gap: 6px; padding: 4px 2px; }
-  .set-grid-head { font-size: .6rem; letter-spacing: .04em; }
-  .check { width: 36px; height: 36px; }
-  .tset-grid { grid-template-columns: 28px 1fr 1fr 32px; gap: 6px; }
+
+/* ---------- Sets table (logger + editors), laid out per exercise type ---------- */
+.sets { display: flex; flex-direction: column; gap: 2px; }
+.st-row {
+  position: relative; display: grid; gap: 8px; align-items: center;
+  padding: 5px 6px; border-radius: var(--radius-sm); transition: background-color .2s ease;
 }
+.st-head { font-size: .68rem; color: var(--muted); text-transform: uppercase; font-weight: 700; letter-spacing: .08em; padding-block: 2px; }
+.st-row.done { background: var(--good-soft); }
+.st-row.warm:not(.done) .num-input { background: transparent; border-style: dashed; }
+.st-prev { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* log: set | previous | fields | tick */
+.m-log.t-weight .st-row   { grid-template-columns: 34px minmax(0, 1fr) 72px 60px 38px; }
+.m-log.t-reps .st-row     { grid-template-columns: 34px minmax(0, 1fr) 96px 38px; }
+.m-log.t-time .st-row     { grid-template-columns: 34px minmax(0, 1fr) 96px 38px; }
+.m-log.t-distance .st-row { grid-template-columns: 34px minmax(0, 1fr) 64px 76px 38px; }
+/* edit: set | fields */
+.m-edit.t-weight .st-row, .m-edit.t-distance .st-row { grid-template-columns: 34px 1fr 1fr; }
+.m-edit.t-reps .st-row, .m-edit.t-time .st-row { grid-template-columns: 34px 1fr; }
+@media (max-width: 359px) {
+  .st-row { gap: 6px; padding: 4px 2px; }
+  .st-head { font-size: .6rem; letter-spacing: .04em; }
+  .m-log.t-weight .st-row   { grid-template-columns: 28px minmax(0, 1fr) 56px 46px 36px; }
+  .m-log.t-reps .st-row, .m-log.t-time .st-row { grid-template-columns: 28px minmax(0, 1fr) 84px 36px; }
+  .m-log.t-distance .st-row { grid-template-columns: 28px minmax(0, 1fr) 52px 64px 36px; }
+  .check { width: 36px; height: 36px; }
+}
+
+/* Set badge: number (or W for warm-up) that opens the set menu */
+.set-badge-wrap { position: relative; }
+.set-badge {
+  position: relative; width: 100%; height: 32px; border: none; border-radius: 9px;
+  background: var(--field); color: var(--muted); font-weight: 800; font-size: .85rem;
+  transition: background-color .2s ease, color .2s ease;
+}
+.set-badge:hover, .set-badge.open { color: var(--text); background: var(--accent-soft); }
+.set-badge.warm { color: var(--accent); background: var(--accent-soft); }
+/* three tiny dots so it reads as a button with options */
+.set-badge-dots {
+  position: absolute; left: 50%; bottom: 3px; translate: -50% 0; width: 2px; height: 2px; border-radius: 50%;
+  background: currentColor; opacity: .55; box-shadow: -4px 0 currentColor, 4px 0 currentColor;
+}
+.set-menu {
+  position: absolute; top: calc(100% + 6px); left: 0; z-index: 40; min-width: 190px;
+  display: flex; flex-direction: column; padding: 5px; border-radius: 14px;
+  background: var(--panel); border: 1px solid var(--edge);
+  box-shadow: inset 0 1px 0 var(--sheen), 0 16px 36px var(--shadow);
+  transform-origin: 20px 0; animation: menu-grow 350ms cubic-bezier(.3, 1.4, .4, 1);
+}
+@keyframes menu-grow { from { transform: scaleY(.4) translateY(-10px); opacity: 0; } }
+.set-menu button {
+  display: flex; align-items: center; gap: 10px; text-align: left; border: 0; background: transparent;
+  padding: 9px 10px; border-radius: 10px; font-weight: 600; font-size: .9rem; color: var(--text);
+}
+.set-menu button:hover, .set-menu button:focus-visible { background: var(--accent-soft); outline: none; }
+.set-menu button.danger { color: var(--danger); }
+.set-menu button.danger:hover, .set-menu button.danger:focus-visible { background: var(--danger-soft); }
+.sm-icon { display: grid; place-items: center; width: 24px; height: 24px; border-radius: 7px; background: var(--field); font-size: .7rem; font-weight: 800; flex: none; }
+/* lift the card holding an open menu above the cards after it */
+.card:has(.set-menu) { position: relative; z-index: 30; }
+
+/* Per-exercise rest chip */
+.rest-chip-wrap { display: flex; flex-direction: column; align-self: stretch; }
+.rest-chip {
+  align-self: flex-start; display: inline-flex; align-items: center; gap: 5px;
+  padding: 4px 10px 4px 7px; border-radius: 999px; font-size: .74rem; font-weight: 700;
+  border: 1px solid var(--edge); background: var(--field); color: var(--muted);
+  transition: color .2s ease, background-color .2s ease, border-color .2s ease;
+}
+.rest-chip svg { width: 14px; height: 14px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; }
+.rest-chip.custom, .rest-chip.open { color: var(--accent); background: var(--accent-soft); border-color: transparent; }
+.rest-chip-note { font-weight: 500; opacity: .75; }
+.rest-chip-panel { padding-top: 8px; }
+
+/* Warm-up sets in pills: marked W and dimmed */
+.set-pill.warm { opacity: .62; border-style: dashed; }
+.pill-w { font-size: .62rem; font-weight: 800; color: var(--accent); background: var(--accent-soft); border-radius: 5px; padding: 1px 4px; margin-right: 5px; vertical-align: 1px; }
+.date-field { display: flex; flex-direction: column; gap: 6px; }
+.date-field .eyebrow { padding-left: 2px; }
+
+/* Chart controls, PR markers and legend */
+.chart-controls { display: flex; flex-wrap: wrap; justify-content: space-between; align-items: center; gap: 8px; }
+.chart-controls > .chips:first-child { flex: 1 1 auto; min-width: 0; }
+.chart-controls .chips.seg .chip { padding: 6px 12px; font-size: .8rem; }
+.chart .pr-ring { fill: none; stroke: var(--good); stroke-width: 2; transform-box: fill-box; transform-origin: center; }
+.chart-draw .pr-ring { animation: chart-pop 560ms cubic-bezier(.34, 1.56, .64, 1) var(--d, 0ms) backwards; }
+.chart-legend { display: flex; align-items: center; gap: 6px; margin: -2px 0 0; }
+.legend-pr { width: 12px; height: 12px; border-radius: 50%; border: 2px solid var(--good); }
+.tt-pr { font-size: .7rem; font-weight: 800; color: var(--good); }
+.chart-empty { padding: 28px 0; }
+.pr-chip { font-size: .62rem; font-weight: 800; letter-spacing: .04em; color: var(--good); background: var(--good-soft); border-radius: 999px; padding: 2px 7px; margin-left: 8px; vertical-align: 2px; }
+.badge.type { background: var(--field); color: var(--muted); }
+
+/* On/off switch: the knob slides on the app's spring */
+.switch {
+  --press: .96; position: relative; flex: none; width: 50px; height: 30px; border-radius: 999px; padding: 0;
+  border: 1px solid var(--edge); background: var(--field); transition: background-color .25s ease, border-color .25s ease;
+}
+.switch.on { background: var(--accent); border-color: var(--accent); box-shadow: 0 4px 14px var(--accent-glow); }
+.switch-knob {
+  position: absolute; top: 3px; left: 3px; width: 22px; height: 22px; border-radius: 50%;
+  background: #fff; box-shadow: 0 2px 6px rgba(0, 0, 0, .3);
+  transition: transform 480ms cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+.switch.on .switch-knob { transform: translateX(20px); }
+.toggle-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding-top: 10px; border-top: 1px solid var(--line); }
+.toggle-row label { display: flex; flex-direction: column; gap: 2px; font-weight: 700; }
+.toggle-row label .small { font-weight: 500; }
+.trend.flat { color: var(--muted); background: var(--field); }
+.st-head > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+/* The rest panel sits under the exercise name but uses the card's full width
+   (it extends under the move/remove buttons: 3 × 34px + 2 × 6px gaps + 8px). */
+.ex-header .rest-chip-wrap .collapse { margin-right: -122px; }

@@ -1,0 +1,176 @@
+/**
+ * Rules for sets that depend on the exercise type (weight × reps, reps only,
+ * time, distance) and on warm-up vs working sets. Every screen uses these so
+ * they all agree on what a set means, how it's written and what "best" is.
+ */
+import type { Exercise, ExerciseType, SetEntry, TemplateSet, Unit } from './types';
+import { e1rm, toDisplay } from './utils';
+
+export type AnySet = TemplateSet | SetEntry;
+
+export const EXERCISE_TYPES: { value: ExerciseType; label: string }[] = [
+  { value: 'weight', label: 'Weight × reps' },
+  { value: 'reps', label: 'Reps only' },
+  { value: 'time', label: 'Time' },
+  { value: 'distance', label: 'Distance' },
+];
+
+export const typeOf = (ex?: Pick<Exercise, 'type'>): ExerciseType => ex?.type ?? 'weight';
+export const isWarmup = (s: AnySet) => s.kind === 'warmup';
+export const workingSets = <T extends AnySet>(sets: T[]): T[] => sets.filter((s) => !isWarmup(s));
+
+/** True when a set holds the numbers its type needs. */
+export function hasValue(s: AnySet, type: ExerciseType): boolean {
+  if (type === 'time') return (s.seconds ?? 0) > 0;
+  if (type === 'distance') return (s.meters ?? 0) > 0 || (s.seconds ?? 0) > 0;
+  return s.reps > 0;
+}
+
+/** Type-agnostic version (for places that don't know the exercise). */
+export const hasAnyValue = (s: AnySet) => s.reps > 0 || (s.seconds ?? 0) > 0 || (s.meters ?? 0) > 0;
+
+// ---------- distance & time ----------
+export const distUnit = (unit: Unit) => (unit === 'kg' ? 'km' : 'mi');
+const M_PER = { km: 1000, mi: 1609.344 };
+export const toDistDisplay = (m: number, unit: Unit) => Math.round((m / M_PER[distUnit(unit)]) * 100) / 100;
+export const fromDistDisplay = (v: number, unit: Unit) => v * M_PER[distUnit(unit)];
+
+export function fmtTime(totalSeconds: number): string {
+  const t = Math.max(0, Math.round(totalSeconds));
+  const h = Math.floor(t / 3600);
+  const m = Math.floor((t % 3600) / 60);
+  const s = t % 60;
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return h ? `${h}:${pad(m)}:${pad(s)}` : `${m}:${pad(s)}`;
+}
+
+/** Parse "90", "1:30" or "1:02:30" into seconds; null if it isn't a time. */
+export function parseTime(text: string): number | null {
+  const t = text.trim();
+  if (!t) return 0;
+  if (!/^\d+(:\d{0,2}){0,2}$/.test(t)) return null;
+  const parts = t.split(':').map((p) => (p === '' ? 0 : Number(p)));
+  return parts.reduce((acc, p) => acc * 60 + p, 0);
+}
+
+/** Seconds per km/mi; 0 when it can't be worked out. */
+export function paceOf(s: AnySet, unit: Unit): number {
+  const d = toDistDisplay(s.meters ?? 0, unit);
+  return d > 0 && (s.seconds ?? 0) > 0 ? (s.seconds as number) / d : 0;
+}
+
+// ---------- describing a set ----------
+export interface SetPart {
+  value: string;
+  unit?: string;
+}
+
+/** A set broken into value/unit parts, e.g. [{72.5,kg},{8,reps}]; rendered by SetText. */
+export function setParts(s: AnySet, type: ExerciseType, unit: Unit): SetPart[] {
+  const n = (v: number) => v.toLocaleString(undefined, { maximumFractionDigits: 2 });
+  if (type === 'time') return [{ value: fmtTime(s.seconds ?? 0) }];
+  if (type === 'distance') {
+    const parts: SetPart[] = [];
+    if (s.meters) parts.push({ value: n(toDistDisplay(s.meters, unit)), unit: distUnit(unit) });
+    if (s.seconds) parts.push({ value: fmtTime(s.seconds), unit: parts.length ? 'time' : undefined });
+    return parts.length ? parts : [{ value: '0', unit: distUnit(unit) }];
+  }
+  const reps = { value: String(s.reps), unit: s.reps === 1 ? 'rep' : 'reps' };
+  if (type === 'weight' && s.weight > 0) return [{ value: n(toDisplay(s.weight, unit)), unit }, reps];
+  return [reps];
+}
+
+/** Plain-text version, e.g. "72.5 kg × 8" or "5.2 km in 25:10". */
+export function setText(s: AnySet, type: ExerciseType, unit: Unit): string {
+  if (type === 'time') return fmtTime(s.seconds ?? 0);
+  if (type === 'distance') {
+    const d = s.meters ? `${toDistDisplay(s.meters, unit)} ${distUnit(unit)}` : '';
+    const t = s.seconds ? fmtTime(s.seconds) : '';
+    return d && t ? `${d} in ${t}` : d || t || '—';
+  }
+  if (type === 'weight' && s.weight > 0) return `${toDisplay(s.weight, unit).toLocaleString()} ${unit} × ${s.reps}`;
+  return `${s.reps} reps`;
+}
+
+/** How "good" a single set is, for picking the top set. */
+export function setScore(s: AnySet, type: ExerciseType): number {
+  if (type === 'time') return s.seconds ?? 0;
+  if (type === 'distance') return (s.meters ?? 0) * 1e6 + (s.seconds ? 1e6 / s.seconds : 0);
+  if (type === 'reps') return s.reps;
+  return e1rm(s) || s.reps / 1000; // bodyweight-style sets in a weight exercise still rank by reps
+}
+
+/** Best working set (ties go to the earliest); falls back to all sets if there are only warm-ups. */
+export function topSet<T extends AnySet>(sets: T[], type: ExerciseType): T {
+  const pool = workingSets(sets).length ? workingSets(sets) : sets;
+  return pool.reduce((a, b) => (setScore(b, type) > setScore(a, type) ? b : a));
+}
+
+/** "4 sets" or "4 sets + 2 warm-up". */
+export function setCountText(sets: AnySet[]): string {
+  const w = sets.filter(isWarmup).length;
+  const n = sets.length - w;
+  return `${n} set${n === 1 ? '' : 's'}${w ? ` + ${w} warm-up` : ''}`;
+}
+
+// ---------- progress measures per type ----------
+export interface Measure {
+  id: string;
+  label: string;
+  /** Unit shown next to values ('' for none). */
+  unitLabel: (unit: Unit) => string;
+  /** Value of one session (working sets only), in display units. */
+  value: (sets: AnySet[], unit: Unit) => number;
+  /** Formats a value for axes and labels. */
+  format: (v: number) => string;
+  /** For pace, a lower number is better. */
+  lowerIsBetter?: boolean;
+}
+
+const num = (v: number) => (Math.round(v * 10) / 10).toLocaleString();
+const sum = (xs: number[]) => xs.reduce((a, b) => a + b, 0);
+const max = (xs: number[]) => (xs.length ? Math.max(...xs) : 0);
+
+export const MEASURES: Record<ExerciseType, Measure[]> = {
+  weight: [
+    { id: 'e1rm', label: 'Est. 1RM', unitLabel: (u) => u, value: (s, u) => toDisplay(max(workingSets(s).map(e1rm)), u), format: num },
+    { id: 'max', label: 'Heaviest set', unitLabel: (u) => u, value: (s, u) => toDisplay(max(workingSets(s).map((x) => x.weight)), u), format: num },
+    { id: 'volume', label: 'Volume', unitLabel: (u) => u, value: (s, u) => toDisplay(sum(workingSets(s).map((x) => x.weight * x.reps)), u), format: num },
+  ],
+  reps: [
+    { id: 'maxReps', label: 'Most reps', unitLabel: () => 'reps', value: (s) => max(workingSets(s).map((x) => x.reps)), format: num },
+    { id: 'totalReps', label: 'Total reps', unitLabel: () => 'reps', value: (s) => sum(workingSets(s).map((x) => x.reps)), format: num },
+  ],
+  time: [
+    { id: 'longest', label: 'Longest set', unitLabel: () => '', value: (s) => max(workingSets(s).map((x) => x.seconds ?? 0)), format: fmtTime },
+    { id: 'totalTime', label: 'Total time', unitLabel: () => '', value: (s) => sum(workingSets(s).map((x) => x.seconds ?? 0)), format: fmtTime },
+  ],
+  distance: [
+    { id: 'distance', label: 'Distance', unitLabel: distUnit, value: (s, u) => toDistDisplay(sum(workingSets(s).map((x) => x.meters ?? 0)), u), format: (v) => (Math.round(v * 100) / 100).toLocaleString() },
+    {
+      id: 'pace', label: 'Pace', unitLabel: (u) => `/${distUnit(u)}`, lowerIsBetter: true,
+      value: (s, u) => {
+        const w = workingSets(s);
+        const d = toDistDisplay(sum(w.map((x) => x.meters ?? 0)), u);
+        const t = sum(w.map((x) => x.seconds ?? 0));
+        return d > 0 && t > 0 ? t / d : 0;
+      },
+      format: fmtTime,
+    },
+    { id: 'duration', label: 'Time', unitLabel: () => '', value: (s) => sum(workingSets(s).map((x) => x.seconds ?? 0)), format: fmtTime },
+  ],
+};
+
+// ---------- rest times ----------
+export const REST_OPTIONS = [0, 30, 60, 90, 120, 180, 300];
+export const DEFAULT_REST_SECONDS = 90;
+
+/** "Off", "30s", "1 min", "1 min 30s"; short form uses "1:30". */
+export function restLabel(sec: number, short = false): string {
+  if (sec === 0) return 'Off';
+  if (sec < 60) return `${sec}s`;
+  const m = Math.floor(sec / 60);
+  const s = sec % 60;
+  if (s) return short ? `${m}:${String(s).padStart(2, '0')}` : `${m} min ${s}s`;
+  return `${m} min`;
+}

@@ -14,7 +14,7 @@ export function newWorkoutFrom(source?: WorkoutTemplate | Workout): Workout {
       source?.exercises.map((ex) => ({
         exerciseId: ex.exerciseId,
         // Start empty: the logger shows the previous numbers as faded hints.
-        sets: ex.sets.map(() => ({ weight: 0, reps: 0, done: false })),
+        sets: ex.sets.map((s) => ({ weight: 0, reps: 0, done: false, ...(s.kind ? { kind: s.kind } : {}) })),
       })) ?? [],
   };
 }
@@ -22,7 +22,13 @@ export function newWorkoutFrom(source?: WorkoutTemplate | Workout): Workout {
 export function templateExercisesFrom(w: Workout): TemplateExercise[] {
   return w.exercises.map((ex) => ({
     exerciseId: ex.exerciseId,
-    sets: ex.sets.map((s) => ({ weight: s.weight, reps: s.reps })),
+    sets: ex.sets.map((s) => ({
+      weight: s.weight,
+      reps: s.reps,
+      ...(s.seconds ? { seconds: s.seconds } : {}),
+      ...(s.meters ? { meters: s.meters } : {}),
+      ...(s.kind ? { kind: s.kind } : {}),
+    })),
   }));
 }
 

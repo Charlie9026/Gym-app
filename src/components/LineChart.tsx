@@ -12,6 +12,8 @@ interface Props {
   label: string;
   /** Changing this replays the draw-on animation (e.g. exercise + measure). */
   animKey?: string;
+  /** Which points are personal bests; they get a ring marker. */
+  prs?: boolean[];
 }
 
 const reduceMotion = () => {
@@ -42,7 +44,7 @@ function niceTicks(min: number, max: number, count = 4): number[] {
 }
 
 /** Single-series line chart with a hover/tap tooltip. */
-export function LineChart({ points, format, label, animKey = '' }: Props) {
+export function LineChart({ points, format, label, animKey = '', prs = [] }: Props) {
   const [hover, setHover] = useState<number | null>(null);
   // The previous chart's shapes, faded out while the new line draws on.
   const [ghost, setGhost] = useState<{ id: string; path: string; area: string } | null>(null);
@@ -145,14 +147,12 @@ export function LineChart({ points, format, label, animKey = '' }: Props) {
             // Each dot appears as the line reaches it; the latest one pops in last.
             const style = { '--d': `${last ? 680 : Math.round(60 + frac * 600)}ms` } as CSSProperties;
             return (
-              <circle
-                key={i}
-                className={'dot' + (last ? ' last' : '')}
-                style={style}
-                cx={c.cx}
-                cy={c.cy}
-                r={hover === i || last ? 6 : 3.5}
-              />
+              <g key={i}>
+                {prs[i] && (
+                  <circle className="pr-ring" style={{ '--d': `${Math.round(120 + frac * 600)}ms` } as CSSProperties} cx={c.cx} cy={c.cy} r={9.5} />
+                )}
+                <circle className={'dot' + (last ? ' last' : '')} style={style} cx={c.cx} cy={c.cy} r={hover === i || last ? 6 : 3.5} />
+              </g>
             );
           })}
         </g>
@@ -168,6 +168,7 @@ export function LineChart({ points, format, label, animKey = '' }: Props) {
         >
           <div className="muted small">{fmtShortDate(points[hover].date)}</div>
           <strong>{format(points[hover].value)}</strong>
+          {prs[hover] && <div className="tt-pr">New best</div>}
         </div>
       )}
     </div>

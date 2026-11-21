@@ -1,8 +1,10 @@
 import { useMemo, useState } from 'react';
-import { ask, askText, notify } from '../dialog';
+import { askText, notify } from '../dialog';
 import type { AppData, Workout } from '../types';
 import type { Update } from '../store';
-import { e1rm, fmtDate, fmtDuration, fmtWeight, toDisplay, workoutVolume } from '../utils';
+import { fmtDuration, fmtWeight, toDisplay, workoutVolume } from '../utils';
+import { setCountText, setText, topSet, typeOf } from '../sets';
+import { WorkoutEditor } from './WorkoutEditor';
 import { newTemplate, newWorkoutFrom, templateExercisesFrom } from '../workout';
 import { ChevronIcon, TrashIcon } from './Icons';
 import { SetPills } from './SetPills';
@@ -34,6 +36,7 @@ function weekLabel(start: number): string {
 
 export function History({ data, update, onRepeat }: Props) {
   const [open, setOpen] = useState<string | null>(null);
+  const [editing, setEditing] = useState<string | null>(null);
   const unit = data.settings.unit;
   const exById = useMemo(() => new Map(data.exercises.map((e) => [e.id, e])), [data.exercises]);
 
@@ -48,6 +51,22 @@ export function History({ data, update, onRepeat }: Props) {
     }
     return groups;
   }, [data.workouts]);
+
+  const editingWorkout = editing ? data.workouts.find((w) => w.id === editing) : undefined;
+  if (editingWorkout) {
+    return (
+      <WorkoutEditor
+        key={editingWorkout.id}
+        data={data}
+        update={update}
+        workout={editingWorkout}
+        onClose={() => {
+          setEditing(null);
+          window.scrollTo({ top: 0 });
+        }}
+      />
+    );
+  }
 
   if (data.workouts.length === 0) {
     return (
@@ -71,9 +90,14 @@ export function History({ data, update, onRepeat }: Props) {
     notify(`${n} added to My workouts`);
   };
 
-  const remove = async (w: Workout) => {
-    const ok = await ask(`Delete “${w.name}” from ${fmtDate(w.date)}?`, { confirmLabel: 'Delete' });
-    if (ok) update((d) => ({ ...d, workouts: d.workouts.filter((x) => x.id !== w.id) }));
+  const remove = (w: Workout) => {
+    update((d) => ({ ...d, workouts: d.workouts.filter((x) => x.id !== w.id) }));
+    notify(`Deleted ${w.name}`, {
+      undo: () =>
+        update((d) =>
+          d.workouts.some((x) => x.id === w.id) ? d : { ...d, workouts: [...d.workouts, w].sort((a, b) => a.date.localeCompare(b.date)) },
+        ),
+    });
   };
 
   return (
@@ -103,7 +127,7 @@ export function History({ data, update, onRepeat }: Props) {
           {g.workouts.map((w) => {
             const isOpen = open === w.id;
             const d = new Date(w.date);
-            const sets = w.exercises.reduce((n, e) => n + e.sets.length, 0);
+            const sets = w.exercises.reduce((n, e) => n + e.sets.filter((s) => s.kind !== 'warmup').length, 0);
             return (
               <article className={'card workout-card' + (isOpen ? ' open' : '')} key={w.id}>
                 <button className="workout-head" onClick={() => setOpen(isOpen ? null : w.id)} aria-expanded={isOpen}>
@@ -129,15 +153,12 @@ export function History({ data, update, onRepeat }: Props) {
                   <div className="collapse-inner">
                   <ul className="ex-summary">
                     {w.exercises.map((ex, i) => {
-                      const best = ex.sets.reduce((a, b) => (e1rm(b) > e1rm(a) ? b : a), ex.sets[0]);
+                      const type = typeOf(exById.get(ex.exerciseId));
                       return (
                         <li key={i}>
                           <span className="ex-name">{name(ex.exerciseId)}</span>
                           <span className="ex-best">
-                            <span className="muted">
-                              {ex.sets.length} set{ex.sets.length === 1 ? '' : 's'} ·
-                            </span>{' '}
-                            {best.weight > 0 ? `${toDisplay(best.weight, unit).toLocaleString()} ${unit} × ${best.reps}` : `${best.reps} reps`}
+                            <span className="muted">{setCountText(ex.sets)} ·</span> {setText(topSet(ex.sets, type), type, unit)}
                           </span>
                         </li>
                       );
@@ -155,7 +176,7 @@ export function History({ data, update, onRepeat }: Props) {
                           <strong>{name(ex.exerciseId)}</strong>
                           <span className="muted small">{exById.get(ex.exerciseId)?.muscle}</span>
                         </div>
-                        <SetPills sets={ex.sets} unit={unit} />
+                        <SetPills sets={ex.sets} type={typeOf(exById.get(ex.exerciseId))} unit={unit} />
                       </div>
                     ))}
                     {w.notes && <p className="notes-view">{w.notes}</p>}
@@ -171,13 +192,16 @@ export function History({ data, update, onRepeat }: Props) {
                       >
                         Repeat
                       </button>
-                      <button className="btn-secondary" onClick={() => saveAsTemplate(w)}>
-                        Save to My workouts
+                      <button className="btn-secondary" onClick={() => setEditing(w.id)}>
+                        Edit
                       </button>
                       <button className="icon-btn danger big-icon" aria-label={`Delete ${w.name}`} onClick={() => remove(w)}>
                         <TrashIcon />
                       </button>
                     </div>
+                    <button className="btn-ghost full" onClick={() => saveAsTemplate(w)}>
+                      Save to My workouts
+                    </button>
                   </div>
                   </div>
                 </div>

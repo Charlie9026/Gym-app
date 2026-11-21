@@ -7,7 +7,11 @@ import { newTemplate } from './workout';
  * sample can be removed again.
  */
 
-type Plan = { name: string; exercises: [exerciseId: string, sets: number, reps: number, kg: number, stepKg: number][] };
+/** [exercise, working sets, reps, kg, kg added in round 2, warm-ups as [kg, reps]] */
+type WeightRow = [exerciseId: string, sets: number, reps: number, kg: number, stepKg: number, warmups?: [number, number][]];
+/** Timed (seconds) or reps-only rows, with the amount added in round 2. */
+type OtherRow = { exerciseId: string; sets: number; seconds?: number; reps?: number; step: number };
+type Plan = { name: string; exercises: (WeightRow | OtherRow)[] };
 
 const id = (name: string) => 'preset-' + name.toLowerCase().replace(/[^a-z0-9]+/g, '-');
 
@@ -15,7 +19,7 @@ const PLANS: Plan[] = [
   {
     name: 'Chest and arms day',
     exercises: [
-      [id('Bench Press'), 4, 8, 70, 2.5],
+      [id('Bench Press'), 4, 8, 70, 2.5, [[40, 10], [55, 5]]],
       [id('Incline Dumbbell Press'), 3, 10, 24, 2],
       [id('Chest Fly'), 3, 12, 14, 0],
       [id('Barbell Curl'), 3, 10, 30, 2.5],
@@ -25,21 +29,23 @@ const PLANS: Plan[] = [
   {
     name: 'Back and shoulders day',
     exercises: [
-      [id('Deadlift'), 3, 5, 120, 5],
+      [id('Deadlift'), 3, 5, 120, 5, [[80, 5]]],
       [id('Lat Pulldown'), 3, 10, 55, 2.5],
       [id('Barbell Row'), 3, 8, 65, 2.5],
       [id('Overhead Press'), 4, 8, 40, 2.5],
       [id('Lateral Raise'), 3, 15, 8, 1],
+      { exerciseId: id('Pull-Up'), sets: 3, reps: 8, step: 1 },
     ],
   },
   {
     name: 'Leg day',
     exercises: [
-      [id('Squat'), 4, 6, 95, 5],
+      [id('Squat'), 4, 6, 95, 5, [[60, 8], [80, 3]]],
       [id('Romanian Deadlift'), 3, 8, 80, 5],
       [id('Leg Press'), 3, 10, 160, 10],
       [id('Leg Curl'), 3, 12, 40, 2.5],
       [id('Calf Raise'), 4, 15, 60, 5],
+      { exerciseId: id('Plank'), sets: 3, seconds: 45, step: 15 },
     ],
   },
 ];
@@ -53,14 +59,32 @@ export function hasDemoData(d: AppData): boolean {
 }
 
 function sessionExercises(plan: Plan, round: 0 | 1): TemplateExercise[] {
-  return plan.exercises.map(([exerciseId, sets, reps, kg, step]) => ({
-    exerciseId,
-    // Second session is a touch heavier; the last set drops a rep, like a real session.
-    sets: Array.from({ length: sets }, (_, i) => ({
-      weight: kg + step * round,
-      reps: i === sets - 1 && reps > 6 ? reps - 1 : reps,
-    })),
-  }));
+  return plan.exercises.map((row) => {
+    if (!Array.isArray(row)) {
+      // Plank (time) or Pull-Up (reps): a little more in the second session.
+      const { exerciseId, sets, seconds, reps, step } = row;
+      return {
+        exerciseId,
+        sets: Array.from({ length: sets }, (_, i) =>
+          seconds
+            ? { weight: 0, reps: 0, seconds: seconds + step * round - (i === sets - 1 ? 10 : 0) }
+            : { weight: 0, reps: (reps ?? 0) + step * round - (i === sets - 1 ? 1 : 0) },
+        ),
+      };
+    }
+    const [exerciseId, sets, reps, kg, step, warmups = []] = row;
+    return {
+      exerciseId,
+      // Warm-ups first; second session is a touch heavier; the last set drops a rep, like a real session.
+      sets: [
+        ...warmups.map(([w, r]) => ({ weight: w, reps: r, kind: 'warmup' as const })),
+        ...Array.from({ length: sets }, (_, i) => ({
+          weight: kg + step * round,
+          reps: i === sets - 1 && reps > 6 ? reps - 1 : reps,
+        })),
+      ],
+    };
+  });
 }
 
 export function addDemoWeek(d: AppData): AppData {

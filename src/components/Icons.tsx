@@ -122,3 +122,18 @@ export const StackIcon = () => (
     <path d="M3 13l9 5 9-5" />
   </Icon>
 );
+
+export const ClockIcon = () => (
+  <Icon>
+    <circle cx="12" cy="13" r="8" />
+    <path d="M12 9v4l2.5 2M9.5 2.5h5" />
+  </Icon>
+);
+
+export const RouteIcon = () => (
+  <Icon>
+    <circle cx="6" cy="18" r="2.5" />
+    <circle cx="18" cy="6" r="2.5" />
+    <path d="M8.5 18H15a3 3 0 0 0 0-6H9a3 3 0 0 1 0-6h6.5" />
+  </Icon>
+);

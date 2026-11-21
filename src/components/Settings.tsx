@@ -4,18 +4,10 @@ import type { AppData, Unit } from '../types';
 import { emptyData, isAppData, migrate, type Update } from '../store';
 import { THEMES, getTheme, type Theme } from '../themes';
 import { ChipGroup } from './ChipGroup';
+import { Switch } from './Switch';
+import { requestNotify } from '../restAlert';
+import { REST_OPTIONS, restLabel } from '../sets';
 import { addDemoWeek, hasDemoData, removeDemoWeek } from '../demo';
-
-const REST_OPTIONS = [0, 30, 60, 90, 120, 180, 300];
-
-function restLabel(sec: number, short = false): string {
-  if (sec === 0) return 'Off';
-  if (sec < 60) return `${sec}s`;
-  const m = Math.floor(sec / 60);
-  const s = sec % 60;
-  if (s) return short ? `${m}:${String(s).padStart(2, '0')}` : `${m} min ${s}s`;
-  return `${m} min`;
-}
 
 /** True when shown inside another page (e.g. the artifact viewer), where downloads are blocked. */
 const EMBEDDED = (() => {
@@ -104,6 +96,45 @@ export function Settings({ data, update }: { data: AppData; update: Update }) {
             ? 'Ticking a set won’t start a timer.'
             : 'Starts when you tick a set. You can still add 30 seconds or skip it during a workout.'}
         </p>
+        <div className="toggle-row">
+          <label htmlFor="rest-sound">
+            Chime when rest ends
+            <span className="muted small">A soft two-note sound, even if the app is in the background.</span>
+          </label>
+          <Switch
+            id="rest-sound"
+            label="Chime when rest ends"
+            checked={data.settings.restSound !== false}
+            onChange={(v) => update((d) => ({ ...d, settings: { ...d.settings, restSound: v } }))}
+          />
+        </div>
+        <div className="toggle-row">
+          <label htmlFor="rest-notify">
+            Notify when rest ends
+            <span className="muted small">Shows a notification if you’ve switched away from the app.</span>
+          </label>
+          <Switch
+            id="rest-notify"
+            label="Notify when rest ends"
+            checked={!!data.settings.restNotify}
+            onChange={async (v) => {
+              if (!v) return update((d) => ({ ...d, settings: { ...d.settings, restNotify: false } }));
+              const r = await requestNotify();
+              if (r === 'granted') {
+                update((d) => ({ ...d, settings: { ...d.settings, restNotify: true } }));
+                notify('You’ll get a notification when rest ends.');
+              } else {
+                notify(
+                  EMBEDDED
+                    ? 'Notifications aren’t allowed inside this page. Open the app in its own tab to use them.'
+                    : r === 'denied'
+                      ? 'Notifications are blocked. Allow them for this site in your browser settings.'
+                      : 'This browser doesn’t support notifications.',
+                );
+              }
+            }}
+          />
+        </div>
       </div>
 
       <div className="card">

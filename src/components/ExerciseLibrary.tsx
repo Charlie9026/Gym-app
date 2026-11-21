@@ -1,9 +1,10 @@
 import { useMemo, useState } from 'react';
 import { ChipGroup } from './ChipGroup';
-import { MUSCLE_GROUPS, type AppData, type MuscleGroup, type SetEntry } from '../types';
+import { MUSCLE_GROUPS, type AppData, type ExerciseType, type MuscleGroup, type SetEntry } from '../types';
 import type { Update } from '../store';
-import { ask, notify } from '../dialog';
-import { e1rm, toDisplay, uid } from '../utils';
+import { notify } from '../dialog';
+import { uid } from '../utils';
+import { EXERCISE_TYPES, setScore, setText, topSet, typeOf } from '../sets';
 import { relativeDay } from '../workout';
 import { MUSCLE_CODE } from '../exercises';
 import { ChevronIcon, PlusIcon, TrashIcon } from './Icons';
@@ -18,6 +19,8 @@ interface Props {
 
 type Filter = 'All' | 'Logged' | MuscleGroup;
 
+const TYPE_BADGE: Record<ExerciseType, string> = { weight: 'weight', reps: 'reps only', time: 'time', distance: 'distance' };
+
 interface Usage {
   sessions: number;
   best: SetEntry;
@@ -30,24 +33,27 @@ export function ExerciseLibrary({ data, update, onOpen }: Props) {
   const [adding, setAdding] = useState(false);
   const [newName, setNewName] = useState('');
   const [newMuscle, setNewMuscle] = useState<MuscleGroup>('Chest');
+  const [newType, setNewType] = useState<ExerciseType>('weight');
   const unit = data.settings.unit;
 
   const usage = useMemo(() => {
+    const types = new Map(data.exercises.map((e) => [e.id, typeOf(e)]));
     const m = new Map<string, Usage>();
     for (const w of data.workouts) {
       for (const ex of w.exercises) {
-        const best = ex.sets.reduce((a, b) => (e1rm(b) > e1rm(a) ? b : a), ex.sets[0]);
+        const type = types.get(ex.exerciseId) ?? 'weight';
+        const best = topSet(ex.sets, type); // working sets only (warm-ups ignored)
         const u = m.get(ex.exerciseId);
         if (!u) m.set(ex.exerciseId, { sessions: 1, best, last: w.date });
         else {
           u.sessions++;
           u.last = w.date;
-          if (e1rm(best) > e1rm(u.best)) u.best = best;
+          if (setScore(best, type) > setScore(u.best, type)) u.best = best;
         }
       }
     }
     return m;
-  }, [data.workouts]);
+  }, [data.workouts, data.exercises]);
 
   const q = query.trim().toLowerCase();
   const visible = data.exercises.filter(
@@ -69,10 +75,11 @@ export function ExerciseLibrary({ data, update, onOpen }: Props) {
     }
     update((d) => ({
       ...d,
-      exercises: [...d.exercises, { id: 'custom-' + uid(), name, muscle: newMuscle, custom: true }],
+      exercises: [...d.exercises, { id: 'custom-' + uid(), name, muscle: newMuscle, custom: true, ...(newType !== 'weight' ? { type: newType } : {}) }],
     }));
     notify(`${name} added`);
     setNewName('');
+    setNewType('weight');
     setAdding(false);
   };
 
@@ -86,9 +93,11 @@ export function ExerciseLibrary({ data, update, onOpen }: Props) {
     if (data.activeWorkout?.exercises.some((e) => e.exerciseId === id)) {
       return notify(`${name} is in your current workout. Remove it there first.`);
     }
-    if (await ask(`Delete ${name}?`, { confirmLabel: 'Delete' })) {
-      update((d) => ({ ...d, exercises: d.exercises.filter((x) => x.id !== id) }));
-    }
+    const removed = data.exercises.find((x) => x.id === id);
+    update((d) => ({ ...d, exercises: d.exercises.filter((x) => x.id !== id) }));
+    notify(`Deleted ${name}`, {
+      undo: () => removed && update((d) => (d.exercises.some((x) => x.id === id) ? d : { ...d, exercises: [...d.exercises, removed] })),
+    });
   };
 
   return (
@@ -123,9 +132,14 @@ export function ExerciseLibrary({ data, update, onOpen }: Props) {
             kind="radio"
             wrap
             value={newMuscle}
-            onChange={setNewMuscle}
+            onChange={(m) => {
+              setNewMuscle(m);
+              if (m === 'Cardio') setNewType('distance');
+            }}
             options={MUSCLE_GROUPS.map((m) => ({ value: m, label: m }))}
           />
+          <span className="eyebrow">Logged as</span>
+          <ChipGroup label="How it's logged" kind="radio" wrap value={newType} onChange={setNewType} options={EXERCISE_TYPES} />
           <div className="finish-row">
             <button className="btn-secondary" onClick={() => setAdding(false)}>Cancel</button>
             <button className="btn-primary" onClick={add}>Add exercise</button>
@@ -162,13 +176,12 @@ export function ExerciseLibrary({ data, update, onOpen }: Props) {
                   <span className="ex-row-text">
                     <span className="ex-row-name">
                       {e.name}
+                      {typeOf(e) !== 'weight' && <span className="badge type">{TYPE_BADGE[typeOf(e)]}</span>}
                       {e.custom && <span className="badge">custom</span>}
                     </span>
                     <span className="muted small">
                       {u
-                        ? `${u.sessions} session${u.sessions === 1 ? '' : 's'} · best ${
-                            u.best.weight > 0 ? `${toDisplay(u.best.weight, unit).toLocaleString()} ${unit} × ${u.best.reps}` : `${u.best.reps} reps`
-                          } · ${relativeDay(u.last)}`
+                        ? `${u.sessions} session${u.sessions === 1 ? '' : 's'} · best ${setText(u.best, typeOf(e), unit)} · ${relativeDay(u.last)}`
                         : 'Not logged yet'}
                     </span>
                   </span>

@@ -24,7 +24,7 @@ interface AskOpts {
 }
 
 let showAsk: ((a: Ask) => void) | null = null;
-let showToast: ((msg: string) => void) | null = null;
+let showToast: ((msg: string, undo?: () => void) => void) | null = null;
 
 export function ask(message: string, opts: AskOpts = {}): Promise<boolean> {
   return new Promise((resolve) => {
@@ -61,21 +61,25 @@ export function askText(
   });
 }
 
-export function notify(message: string) {
-  showToast?.(message);
+/**
+ * Show a short message. Pass `undo` to add an Undo button (the toast then stays
+ * up a little longer); use this instead of "Are you sure?" for single deletes.
+ */
+export function notify(message: string, opts: { undo?: () => void } = {}) {
+  showToast?.(message, opts.undo);
 }
 
 export function DialogHost() {
   const [pending, setPending] = useState<Ask | null>(null);
   const [text, setText] = useState('');
-  const [toast, setToast] = useState<{ msg: string; key: number } | null>(null);
+  const [toast, setToast] = useState<{ msg: string; key: number; undo?: () => void } | null>(null);
 
   useEffect(() => {
     showAsk = (a) => {
       setText(a.input ?? '');
       setPending(a);
     };
-    showToast = (msg) => setToast({ msg, key: Date.now() });
+    showToast = (msg, undo) => setToast({ msg, undo, key: Date.now() });
     return () => {
       showAsk = null;
       showToast = null;
@@ -84,7 +88,7 @@ export function DialogHost() {
 
   useEffect(() => {
     if (!toast) return;
-    const t = setTimeout(() => setToast(null), 3000);
+    const t = setTimeout(() => setToast(null), toast.undo ? 5000 : 3000);
     return () => clearTimeout(t);
   }, [toast]);
 
@@ -134,8 +138,20 @@ export function DialogHost() {
         </div>
       )}
       {toast && (
-        <div className="toast" role="status" key={toast.key}>
-          {toast.msg}
+        <div className={'toast' + (toast.undo ? ' has-undo' : '')} role="status" key={toast.key}>
+          <span>{toast.msg}</span>
+          {toast.undo && (
+            <button
+              type="button"
+              className="toast-undo"
+              onClick={() => {
+                toast.undo?.();
+                setToast(null);
+              }}
+            >
+              Undo
+            </button>
+          )}
         </div>
       )}
     </>

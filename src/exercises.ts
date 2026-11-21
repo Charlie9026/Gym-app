@@ -1,18 +1,18 @@
-import type { Exercise, MuscleGroup } from './types';
+import type { Exercise, ExerciseType, MuscleGroup } from './types';
 
-const presets: [string, MuscleGroup][] = [
+const presets: [string, MuscleGroup, ExerciseType?][] = [
   ['Bench Press', 'Chest'],
   ['Incline Bench Press', 'Chest'],
   ['Dumbbell Bench Press', 'Chest'],
   ['Incline Dumbbell Press', 'Chest'],
   ['Chest Fly', 'Chest'],
-  ['Dips', 'Chest'],
-  ['Push-Up', 'Chest'],
+  ['Dips', 'Chest', 'reps'],
+  ['Push-Up', 'Chest', 'reps'],
   ['Deadlift', 'Back'],
   ['Barbell Row', 'Back'],
   ['Dumbbell Row', 'Back'],
-  ['Pull-Up', 'Back'],
-  ['Chin-Up', 'Back'],
+  ['Pull-Up', 'Back', 'reps'],
+  ['Chin-Up', 'Back', 'reps'],
   ['Lat Pulldown', 'Back'],
   ['Seated Cable Row', 'Back'],
   ['Squat', 'Quads'],
@@ -25,7 +25,7 @@ const presets: [string, MuscleGroup][] = [
   ['Romanian Deadlift', 'Hamstrings'],
   ['Leg Curl', 'Hamstrings'],
   ['Good Morning', 'Hamstrings'],
-  ['Nordic Curl', 'Hamstrings'],
+  ['Nordic Curl', 'Hamstrings', 'reps'],
   ['Hip Thrust', 'Glutes'],
   ['Glute Bridge', 'Glutes'],
   ['Glute Kickback', 'Glutes'],
@@ -46,18 +46,26 @@ const presets: [string, MuscleGroup][] = [
   ['Skull Crusher', 'Triceps'],
   ['Overhead Tricep Extension', 'Triceps'],
   ['Close-Grip Bench Press', 'Triceps'],
-  ['Plank', 'Core'],
-  ['Hanging Leg Raise', 'Core'],
+  ['Plank', 'Core', 'time'],
+  ['Hanging Leg Raise', 'Core', 'reps'],
   ['Cable Crunch', 'Core'],
-  ['Ab Wheel', 'Core'],
+  ['Ab Wheel', 'Core', 'reps'],
   ['Kettlebell Swing', 'Full Body'],
   ['Clean', 'Full Body'],
+  ['Burpee', 'Full Body', 'reps'],
+  ['Side Plank', 'Core', 'time'],
+  ['Dead Hang', 'Back', 'time'],
+  ['Running', 'Cardio', 'distance'],
+  ['Cycling', 'Cardio', 'distance'],
+  ['Rowing Machine', 'Cardio', 'distance'],
+  ['Jump Rope', 'Cardio', 'time'],
 ];
 
-export const PRESET_EXERCISES: Exercise[] = presets.map(([name, muscle]) => ({
+export const PRESET_EXERCISES: Exercise[] = presets.map(([name, muscle, type]) => ({
   id: 'preset-' + name.toLowerCase().replace(/[^a-z0-9]+/g, '-'),
   name,
   muscle,
+  ...(type ? { type } : {}),
 }));
 
 /** Two-letter codes shown in muscle badges. */

@@ -124,7 +124,7 @@ export function WorkoutHome({ data, onStartEmpty, onStartTemplate, onEdit }: Pro
         ) : (
           <div className="template-list">
             {data.templates.map((t) => {
-              const sets = t.exercises.reduce((n, e) => n + e.sets.length, 0);
+              const sets = t.exercises.reduce((n, e) => n + e.sets.filter((s) => s.kind !== 'warmup').length, 0);
               const names = t.exercises.map((e) => exById.get(e.exerciseId)?.name ?? 'Exercise');
               const muscles = [...new Set(t.exercises.map((e) => exById.get(e.exerciseId)?.muscle).filter(Boolean))];
               const u = usage.get(t.id);

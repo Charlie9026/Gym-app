@@ -1,37 +1,36 @@
-import type { TemplateSet, Unit } from '../types';
-import { e1rm, toDisplay } from '../utils';
+import type { ExerciseType, Unit } from '../types';
+import { isWarmup, setParts, type AnySet } from '../sets';
 
-/** Sets as readable pills, e.g. "72.5 kg × 10 reps". */
-export function SetPills({ sets, unit }: { sets: TemplateSet[]; unit: Unit }) {
+/** Sets as readable pills, e.g. "72.5 kg × 10 reps", "1:30", "5.2 km · 25:10". Warm-ups are marked W. */
+export function SetPills({ sets, type, unit }: { sets: AnySet[]; type: ExerciseType; unit: Unit }) {
   return (
     <ul className="set-pills">
       {sets.map((s, i) => (
-        <li key={i} className="set-pill">
-          <SetText set={s} unit={unit} />
+        <li key={i} className={'set-pill' + (isWarmup(s) ? ' warm' : '')}>
+          {isWarmup(s) && (
+            <span className="pill-w" title="Warm-up">
+              W
+            </span>
+          )}
+          <SetText set={s} type={type} unit={unit} />
         </li>
       ))}
     </ul>
   );
 }
 
-/** One set as "72.5 kg × 10 reps" (or "12 reps" when there's no weight). */
-export function SetText({ set, unit }: { set: TemplateSet; unit: Unit }) {
+/** One set with styled numbers and units. */
+export function SetText({ set, type, unit }: { set: AnySet; type: ExerciseType; unit: Unit }) {
+  const parts = setParts(set, type, unit);
   return (
     <>
-      {set.weight > 0 && (
-        <>
-          <strong>{toDisplay(set.weight, unit).toLocaleString()}</strong>
-          <span className="unit"> {unit}</span>
-          <span className="x"> × </span>
-        </>
-      )}
-      <strong>{set.reps}</strong>
-      <span className="unit"> rep{set.reps === 1 ? '' : 's'}</span>
+      {parts.map((p, i) => (
+        <span key={i}>
+          {i > 0 && <span className="x">{type === 'distance' ? ' · ' : ' × '}</span>}
+          <strong>{p.value}</strong>
+          {p.unit && p.unit !== 'time' && <span className="unit"> {p.unit}</span>}
+        </span>
+      ))}
     </>
   );
-}
-
-/** The session's strongest set by estimated 1RM; ties go to the earliest. */
-export function topSet<T extends TemplateSet>(sets: T[]): T {
-  return sets.reduce((a, b) => (e1rm(b) > e1rm(a) ? b : a));
 }

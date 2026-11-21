@@ -7,7 +7,8 @@ import { uid } from '../utils';
 interface Props {
   exercises: Exercise[];
   update: Update;
-  onPick: (id: string) => void;
+  /** `created` is passed when the exercise was just created here (not yet in the list). */
+  onPick: (id: string, created?: Exercise) => void;
   onClose: () => void;
 }
 
@@ -32,9 +33,10 @@ export function ExercisePicker({ exercises, update, onPick, onClose }: Props) {
       name,
       muscle: muscle === 'All' ? 'Other' : muscle,
       custom: true,
+      ...(muscle === 'Cardio' ? { type: 'distance' as const } : {}),
     };
     update((d) => ({ ...d, exercises: [...d.exercises, ex] }));
-    onPick(ex.id);
+    onPick(ex.id, ex);
   };
 
   return (

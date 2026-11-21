@@ -42,8 +42,10 @@ export function migrate(d: AppData): AppData {
   const presetById = new Map(PRESET_EXERCISES.map((e) => [e.id, e]));
   const exercises = d.exercises.map((e): Exercise => {
     const old = e.muscle as string;
-    if (old !== 'Arms' && old !== 'Legs') return e;
+    // Presets saved before exercise types existed pick up their type.
     const preset = presetById.get(e.id);
+    if (preset?.type && !e.type) e = { ...e, type: preset.type };
+    if (old !== 'Arms' && old !== 'Legs') return e;
     if (preset) return { ...e, muscle: preset.muscle };
     return { ...e, muscle: guessMuscle(old, e.name) };
   });

@@ -12,6 +12,8 @@ export interface StatItem {
   unit?: string;
   sub: string;
   icon: ReactNode;
+  /** Custom number display (e.g. times as m:ss). */
+  format?: (n: number) => string;
 }
 
 function StatCard({ item }: { item: StatItem }) {
@@ -20,7 +22,7 @@ function StatCard({ item }: { item: StatItem }) {
     <div className={'neu-card' + (pulse ? ' neu-pulse' : '')}>
       <span className="neu-icon" aria-hidden="true">{item.icon}</span>
       <span className="neu-val">
-        <CountUp value={item.value} />
+        <CountUp value={item.value} format={item.format} />
         {item.unit && <span className="neu-unit"> {item.unit}</span>}
       </span>
       <span className="neu-lbl">{item.label}</span>

@@ -26,14 +26,19 @@ export function e1rm(set: Pick<SetEntry, 'weight' | 'reps'>): number {
   return set.weight * (1 + set.reps / 30);
 }
 
+/** Sets ticked off that hold a value (reps, time or distance). */
 export function completedSets(sets: SetEntry[]): SetEntry[] {
-  return sets.filter((s) => s.done && s.reps > 0);
+  return sets.filter((s) => s.done && (s.reps > 0 || (s.seconds ?? 0) > 0 || (s.meters ?? 0) > 0));
 }
 
+/** Total weight lifted (weight × reps), counting working sets only. */
 export function workoutVolume(w: Workout): number {
   return w.exercises.reduce(
     (sum, ex) =>
-      sum + completedSets(ex.sets).reduce((s, set) => s + set.weight * set.reps, 0),
+      sum +
+      completedSets(ex.sets)
+        .filter((set) => set.kind !== 'warmup')
+        .reduce((s, set) => s + set.weight * set.reps, 0),
     0,
   );
 }

@@ -29,18 +29,37 @@ export const MUSCLE_GROUPS: MuscleGroup[] = [
   'Other',
 ];
 
+/**
+ * How an exercise is logged:
+ * - weight: weight × reps (e.g. Bench Press)
+ * - reps: reps only, bodyweight (e.g. Push-Up)
+ * - time: a duration (e.g. Plank)
+ * - distance: distance and time (e.g. Running)
+ */
+export type ExerciseType = 'weight' | 'reps' | 'time' | 'distance';
+
 export interface Exercise {
   id: string;
   name: string;
   muscle: MuscleGroup;
   custom?: boolean;
+  /** Defaults to 'weight' when missing (older data). */
+  type?: ExerciseType;
+  /** Rest after a set of this exercise, in seconds; falls back to the app setting. */
+  restSeconds?: number;
 }
 
-/** Weight is always stored in kilograms; converted for display. */
+/** Warm-up sets are excluded from volume, PRs and progress. Missing = working set. */
+export type SetKind = 'warmup';
+
+/** Weight is always stored in kilograms and distance in metres; converted for display. */
 export interface SetEntry {
   weight: number;
   reps: number;
   done: boolean;
+  seconds?: number;
+  meters?: number;
+  kind?: SetKind;
 }
 
 export interface WorkoutExercise {
@@ -65,6 +84,9 @@ export interface Workout {
 export interface TemplateSet {
   weight: number;
   reps: number;
+  seconds?: number;
+  meters?: number;
+  kind?: SetKind;
 }
 
 export interface TemplateExercise {
@@ -89,6 +111,10 @@ export interface Settings {
   theme?: string;
   /** Rest timer length after ticking a set, in seconds; 0 turns it off. */
   restSeconds?: number;
+  /** Play a chime when rest ends (default on). */
+  restSound?: boolean;
+  /** Show a system notification when rest ends, where the browser allows it. */
+  restNotify?: boolean;
 }
 
 export interface AppData {

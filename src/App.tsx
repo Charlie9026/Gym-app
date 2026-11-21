@@ -7,6 +7,7 @@ import { ExerciseLibrary } from './components/ExerciseLibrary';
 import { Settings } from './components/Settings';
 import { DialogHost } from './dialog';
 import { RestTimer } from './components/RestTimer';
+import { primeAudio } from './restAlert';
 import { applyTheme, getTheme } from './themes';
 import { CalendarIcon, ChartIcon, DumbbellIcon, GearIcon, ListIcon } from './components/Icons';
 
@@ -96,7 +97,11 @@ export default function App() {
           <WorkoutLogger
             data={data}
             update={update}
-            onRest={(ms) => data.activeWorkout && setRest({ workoutId: data.activeWorkout.id, end: Date.now() + ms, total: ms })}
+            onRest={(ms) => {
+              if (!data.activeWorkout) return;
+              if (data.settings.restSound !== false) primeAudio(); // runs inside the tap, so audio is allowed
+              setRest({ workoutId: data.activeWorkout.id, end: Date.now() + ms, total: ms });
+            }}
             onFinished={(p) => {
               setPrs(p);
               setTab('history');
@@ -126,6 +131,8 @@ export default function App() {
           total={activeRest.total}
           onAdd={() => setRest((r) => (r ? { ...r, end: r.end + 30_000, total: r.total + 30_000 } : r))}
           onDone={() => setRest(null)}
+          sound={data.settings.restSound !== false}
+          notify={!!data.settings.restNotify}
         />
       )}
 

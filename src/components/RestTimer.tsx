@@ -1,10 +1,29 @@
 import { useEffect, useState } from 'react';
+import { scheduleChime, scheduleNotification } from '../restAlert';
 
 /** Rest countdown bar with a ring that drains as the rest runs out. */
 const RING_R = 17;
 const RING_C = 2 * Math.PI * RING_R;
 
-export function RestTimer({ end, total, onAdd, onDone }: { end: number; total: number; onAdd: () => void; onDone: () => void }) {
+export function RestTimer({
+  end,
+  total,
+  onAdd,
+  onDone,
+  sound = true,
+  notify = false,
+}: {
+  end: number;
+  total: number;
+  onAdd: () => void;
+  onDone: () => void;
+  sound?: boolean;
+  notify?: boolean;
+}) {
+  // Book the alerts for the end time; +30s re-books them, Skip/Done cancels them.
+  useEffect(() => (sound ? scheduleChime(end) : undefined), [end, sound]);
+  useEffect(() => (notify ? scheduleNotification(end) : undefined), [end, notify]);
+
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
     const t = setInterval(() => setNow(Date.now()), 200);

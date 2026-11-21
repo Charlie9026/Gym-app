@@ -1,17 +1,23 @@
 import { ask, askText, notify } from '../dialog';
 import { useEffect, useMemo, useState } from 'react';
-import type { AppData, SetEntry, Workout, WorkoutExercise } from '../types';
+import type { AppData, Exercise, ExerciseType, SetEntry, Workout, WorkoutExercise } from '../types';
 import type { Update } from '../store';
+import { completedSets, defaultWorkoutName, e1rm, fmtWeight } from '../utils';
 import {
-  completedSets,
-  defaultWorkoutName,
-  e1rm,
-  fmtWeight,
-  fromDisplay,
-  toDisplay,
-} from '../utils';
+  DEFAULT_REST_SECONDS,
+  distUnit,
+  fmtTime,
+  hasValue,
+  isWarmup,
+  paceOf,
+  toDistDisplay,
+  typeOf,
+  workingSets,
+  type AnySet,
+} from '../sets';
+import { SetsTable } from './SetsTable';
+import { RestChip } from './RestChip';
 import { ExercisePicker } from './ExercisePicker';
-import { NumberInput } from './NumberInput';
 import { newTemplate, newWorkoutFrom, structureChanged, templateExercisesFrom } from '../workout';
 import { WorkoutHome } from './WorkoutHome';
 import { TemplateEditor } from './TemplateEditor';
@@ -24,8 +30,13 @@ interface Props {
   onRest: (ms: number) => void;
 }
 
-/** Used when the setting hasn't been chosen yet. */
-const DEFAULT_REST_SECONDS = 90;
+/** What's missing when a set can't be ticked yet, by exercise type. */
+const MISSING_VALUE: Record<ExerciseType, string> = {
+  weight: 'Enter the reps for this set first.',
+  reps: 'Enter the reps for this set first.',
+  time: 'Enter a time for this set first.',
+  distance: 'Enter a distance or time for this set first.',
+};
 
 /** Most recent finished sets for an exercise, used as the "previous" hint. */
 function lastSetsFor(workouts: Workout[], exerciseId: string): SetEntry[] {
@@ -158,7 +169,7 @@ function ActiveWorkout({
     }
     const name = active.name.trim() || defaultWorkoutName(new Date(active.date));
     const finished: Workout = { ...active, name, exercises, finishedAt: new Date().toISOString() };
-    const prs = findPRs(data.workouts, finished, (id) => exById.get(id)?.name ?? 'Exercise', unit);
+    const prs = findPRs(data.workouts, finished, exById, unit);
     const done = templateExercisesFrom(finished);
 
     // Work out what happens to My workouts.
@@ -201,9 +212,9 @@ function ActiveWorkout({
   };
 
   const discard = () => {
-    ask('Discard this workout? Everything logged in it will be lost.', { confirmLabel: 'Discard' }).then(
-      (ok) => ok && update((d) => ({ ...d, activeWorkout: null })),
-    );
+    const kept = active;
+    update((d) => ({ ...d, activeWorkout: null }));
+    notify('Workout discarded', { undo: () => update((d) => ({ ...d, activeWorkout: kept })) });
   };
 
   return (
@@ -225,108 +236,77 @@ function ActiveWorkout({
 
       {active.exercises.map((ex, exIdx) => {
         const info = exById.get(ex.exerciseId);
+        const type = typeOf(info);
+        const exName = info?.name ?? 'this exercise';
         const prev = lastSetsFor(data.workouts, ex.exerciseId);
         const targets = template?.exercises.find((t) => t.exerciseId === ex.exerciseId)?.sets ?? [];
         /** Faded suggestion for a set: last session, then the saved workout, then the set above. */
-        const hintFor = (i: number): { weight: number; reps: number } | undefined => {
+        const hintFor = (i: number): AnySet | undefined => {
           if (prev[i]) return prev[i];
           if (targets[i]) return targets[i];
           const above = ex.sets[i - 1];
-          if (above && (above.weight || above.reps)) return above;
+          if (above && hasValue(above, type)) return above;
           return (i > 0 ? hintFor(i - 1) : undefined) ?? prev[prev.length - 1] ?? targets[targets.length - 1];
+        };
+        const toggleDone = (i: number) => {
+          const s = ex.sets[i];
+          if (s.done) return setSet(exIdx, i, { done: false });
+          // Ticking with empty fields accepts the faded suggestion.
+          const h = hintFor(i);
+          const filled = {
+            weight: s.weight || h?.weight || 0,
+            reps: s.reps || h?.reps || 0,
+            seconds: s.seconds || h?.seconds || 0,
+            meters: s.meters || h?.meters || 0,
+          };
+          if (!hasValue(filled, type)) return notify(MISSING_VALUE[type]);
+          setSet(exIdx, i, { ...filled, done: true });
+          const restMs = (info?.restSeconds ?? data.settings.restSeconds ?? DEFAULT_REST_SECONDS) * 1000;
+          if (restMs > 0) onRest(restMs);
+        };
+        const removeSet = (i: number) => {
+          if (ex.sets.length <= 1) return notify('An exercise needs at least one set. Remove the exercise instead.');
+          const removed = ex.sets[i];
+          setExercise(exIdx, (e) => ({ ...e, sets: e.sets.filter((_, k) => k !== i) }));
+          notify(`Set removed from ${exName}`, {
+            undo: () => setExercise(exIdx, (e) => ({ ...e, sets: [...e.sets.slice(0, i), removed, ...e.sets.slice(i)] })),
+          });
+        };
+        const removeExercise = () => {
+          setActive((w) => ({ ...w, exercises: w.exercises.filter((_, k) => k !== exIdx) }));
+          notify(`${info?.name ?? 'Exercise'} removed`, {
+            undo: () => setActive((w) => ({ ...w, exercises: [...w.exercises.slice(0, exIdx), ex, ...w.exercises.slice(exIdx)] })),
+          });
         };
         return (
           <div className="card" key={exIdx}>
             <div className="ex-header">
-              <h3>{info?.name ?? 'Unknown exercise'}</h3>
+              <div className="ex-title">
+                <h3>{info?.name ?? 'Unknown exercise'}</h3>
+                {info && <RestChip exercise={info} defaultSeconds={data.settings.restSeconds ?? DEFAULT_REST_SECONDS} update={update} />}
+              </div>
               <div className="row-actions">
-                <button className="icon-btn" aria-label="Move up" onClick={() => moveExercise(exIdx, -1)}>↑</button>
-                <button className="icon-btn" aria-label="Move down" onClick={() => moveExercise(exIdx, 1)}>↓</button>
-                <button
-                  className="icon-btn danger"
-                  aria-label="Remove exercise"
-                  onClick={() =>
-                    ask(`Remove ${info?.name ?? 'this exercise'} from this workout?`, { confirmLabel: 'Remove' }).then(
-                      (ok) =>
-                        ok && setActive((w) => ({ ...w, exercises: w.exercises.filter((_, i) => i !== exIdx) })),
-                    )
-                  }
-                >
+                <button className="icon-btn" aria-label={`Move ${exName} up`} onClick={() => moveExercise(exIdx, -1)}>↑</button>
+                <button className="icon-btn" aria-label={`Move ${exName} down`} onClick={() => moveExercise(exIdx, 1)}>↓</button>
+                <button className="icon-btn danger" aria-label={`Remove ${exName}`} onClick={removeExercise}>
                   ✕
                 </button>
               </div>
             </div>
-            <div className="set-grid set-grid-head">
-              <span>Set</span>
-              <span>Previous</span>
-              <span>{unit}</span>
-              <span>Reps</span>
-              <span>✓</span>
-            </div>
-            {ex.sets.map((s, setIdx) => {
-              const p = prev[setIdx];
-              const hint = hintFor(setIdx);
-              return (
-                <div className={'set-grid' + (s.done ? ' done' : '')} key={setIdx}>
-                  <button
-                    className="set-num"
-                    title="Remove set"
-                    aria-label={`Set ${setIdx + 1}, remove`}
-                    onClick={async () => {
-                      if (ex.sets.length <= 1) return notify('An exercise needs at least one set. Remove the exercise instead.');
-                      // Ask first: a stray tap shouldn't silently delete a logged set.
-                      const ok = await ask(`Remove set ${setIdx + 1} from ${info?.name ?? 'this exercise'}?`, { confirmLabel: 'Remove' });
-                      if (ok) setExercise(exIdx, (e) => ({ ...e, sets: e.sets.filter((_, i) => i !== setIdx) }));
-                    }}
-                  >
-                    {setIdx + 1}
-                  </button>
-                  <span className="muted small">
-                    {p ? `${toDisplay(p.weight, unit)} × ${p.reps}` : '—'}
-                  </span>
-                  <NumberInput
-                    ariaLabel={`Set ${setIdx + 1} weight`}
-                    value={toDisplay(s.weight, unit)}
-                    onChange={(n) => setSet(exIdx, setIdx, { weight: fromDisplay(n, unit) })}
-                    placeholder={hint?.weight ? String(toDisplay(hint.weight, unit)) : '0'}
-                  />
-                  <NumberInput
-                    ariaLabel={`Set ${setIdx + 1} reps`}
-                    value={s.reps}
-                    decimals={false}
-                    onChange={(n) => setSet(exIdx, setIdx, { reps: n })}
-                    placeholder={hint?.reps ? String(hint.reps) : '0'}
-                  />
-                  <button
-                    className={'check' + (s.done ? ' on' : '')}
-                    aria-label={s.done ? 'Mark set not done' : 'Mark set done'}
-                    aria-pressed={s.done}
-                    onClick={() => {
-                      if (s.done) return setSet(exIdx, setIdx, { done: false });
-                      // Ticking with empty fields accepts the faded suggestion.
-                      const weight = s.weight || hint?.weight || 0;
-                      const reps = s.reps || hint?.reps || 0;
-                      if (!reps) return notify('Enter the reps for this set first.');
-                      setSet(exIdx, setIdx, { weight, reps, done: true });
-                      const restMs = (data.settings.restSeconds ?? DEFAULT_REST_SECONDS) * 1000;
-                      if (restMs > 0) onRest(restMs);
-                    }}
-                  >
-                    <svg viewBox="0 0 24 24" aria-hidden="true">
-                      <path className="tick" d="M5 12.5l4.5 4.5L19 7.5" pathLength={1} />
-                    </svg>
-                  </button>
-                </div>
-              );
-            })}
-            <button
-              className="btn-ghost full"
-              onClick={() =>
-                setExercise(exIdx, (e) => ({ ...e, sets: [...e.sets, { weight: 0, reps: 0, done: false }] }))
-              }
-            >
-              + Add set
-            </button>
+            <SetsTable
+              type={type}
+              unit={unit}
+              exerciseName={info?.name ?? 'Exercise'}
+              sets={ex.sets}
+              mode="log"
+              prev={prev}
+              hintFor={hintFor}
+              onChange={(i, patch) => setSet(exIdx, i, patch)}
+              onToggleDone={toggleDone}
+              onToggleWarmup={(i) => setSet(exIdx, i, { kind: isWarmup(ex.sets[i]) ? undefined : 'warmup' })}
+              onRemove={removeSet}
+              onAdd={() => setExercise(exIdx, (e) => ({ ...e, sets: [...e.sets, { weight: 0, reps: 0, done: false }] }))}
+            />
           </div>
         );
       })}
@@ -367,22 +347,34 @@ function ActiveWorkout({
 function findPRs(
   history: Workout[],
   w: Workout,
-  nameOf: (id: string) => string,
+  exById: Map<string, Exercise>,
   unit: AppData['settings']['unit'],
 ): string[] {
   const prs: string[] = [];
   for (const ex of w.exercises) {
-    const prior = history.flatMap(
-      (h) => h.exercises.filter((e) => e.exerciseId === ex.exerciseId).flatMap((e) => e.sets),
+    const info = exById.get(ex.exerciseId);
+    const type = typeOf(info);
+    const name = info?.name ?? 'Exercise';
+    const prior = workingSets(
+      history.flatMap((h) => h.exercises.filter((e) => e.exerciseId === ex.exerciseId).flatMap((e) => e.sets)),
     );
-    if (prior.length === 0) continue; // first time isn't a PR, it's a baseline
-    const priorMax = Math.max(...prior.map((s) => s.weight));
-    const priorE1 = Math.max(...prior.map(e1rm));
-    const max = Math.max(...ex.sets.map((s) => s.weight));
-    const best = Math.max(...ex.sets.map(e1rm));
-    if (max > priorMax) prs.push(`${nameOf(ex.exerciseId)}: heaviest weight ${fmtWeight(max, unit)}`);
-    else if (best > priorE1 + 0.01)
-      prs.push(`${nameOf(ex.exerciseId)}: best est. 1RM ${fmtWeight(best, unit)}`);
+    const now = workingSets(ex.sets);
+    if (prior.length === 0 || now.length === 0) continue; // first time is a baseline, not a PR
+    const best = (sets: SetEntry[], f: (s: SetEntry) => number) => Math.max(...sets.map(f));
+    if (type === 'weight') {
+      if (best(now, (s) => s.weight) > best(prior, (s) => s.weight)) prs.push(`${name}: heaviest weight ${fmtWeight(best(now, (s) => s.weight), unit)}`);
+      else if (best(now, e1rm) > best(prior, e1rm) + 0.01) prs.push(`${name}: best est. 1RM ${fmtWeight(best(now, e1rm), unit)}`);
+      else if (best(now, (s) => (s.weight ? 0 : s.reps)) > best(prior, (s) => (s.weight ? 0 : s.reps))) prs.push(`${name}: most reps ${best(now, (s) => s.reps)}`);
+    } else if (type === 'reps') {
+      if (best(now, (s) => s.reps) > best(prior, (s) => s.reps)) prs.push(`${name}: most reps ${best(now, (s) => s.reps)}`);
+    } else if (type === 'time') {
+      if (best(now, (s) => s.seconds ?? 0) > best(prior, (s) => s.seconds ?? 0)) prs.push(`${name}: longest ${fmtTime(best(now, (s) => s.seconds ?? 0))}`);
+    } else {
+      const far = (s: SetEntry) => s.meters ?? 0;
+      const pace = (s: SetEntry) => paceOf(s, unit) || Infinity;
+      if (best(now, far) > best(prior, far)) prs.push(`${name}: longest ${toDistDisplay(best(now, far), unit)} ${distUnit(unit)}`);
+      else if (Math.min(...now.map(pace)) < Math.min(...prior.map(pace))) prs.push(`${name}: fastest pace ${fmtTime(Math.min(...now.map(pace)))} /${distUnit(unit)}`);
+    }
   }
   return prs;
 }
