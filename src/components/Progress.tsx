@@ -113,6 +113,7 @@ export function Progress({ data, initialExercise }: { data: AppData; initialExer
         </div>
         <LineChart
           points={points}
+          animKey={`${exerciseId}-${metric}`}
           label={`${name} ${metric} over time`}
           format={(v) => `${Math.round(v * 10) / 10}`}
         />

@@ -603,3 +603,18 @@ button.ex-row-main:hover .ex-row-name { color: var(--accent); }
 .ms-opt[aria-selected="true"] .ms-tick::after {
   content: ""; width: 5px; height: 10px; border: solid var(--accent); border-width: 0 2px 2px 0; rotate: 45deg; translate: 0 -1px;
 }
+
+/* Chart draw-on: line traces left to right, area rises, dots follow, latest dot pops. */
+.chart-draw .line { stroke-dasharray: 1; animation: chart-draw 750ms cubic-bezier(.65, 0, .35, 1) backwards; }
+@keyframes chart-draw { from { stroke-dashoffset: 1; } }
+/* The area is revealed left to right just behind the pen, fading up as it goes. */
+.chart-draw .area { animation: chart-reveal 750ms cubic-bezier(.65, 0, .35, 1) 60ms backwards, chart-in 600ms ease 60ms backwards; }
+@keyframes chart-reveal { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } }
+.chart-draw .dot { transform-box: fill-box; transform-origin: center; animation: chart-dot 260ms ease-out var(--d, 0ms) backwards; }
+@keyframes chart-dot { from { opacity: 0; transform: scale(0); } }
+.chart-draw .dot.last { animation: chart-pop 520ms cubic-bezier(.34, 1.56, .64, 1) var(--d, 0ms) backwards; }
+@keyframes chart-pop { from { transform: scale(0); } }
+.chart-ghost { pointer-events: none; animation: chart-out 220ms ease forwards; }
+@keyframes chart-out { to { opacity: 0; } }
+.chart-fade { animation: chart-in 400ms ease backwards; }
+@keyframes chart-in { from { opacity: 0; } }
