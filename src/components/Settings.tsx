@@ -3,6 +3,7 @@ import { useRef } from 'react';
 import type { AppData, Unit } from '../types';
 import { emptyData, isAppData, migrate, type Update } from '../store';
 import { THEMES, getTheme, type Theme } from '../themes';
+import { ChipGroup } from './ChipGroup';
 import { addDemoWeek, hasDemoData, removeDemoWeek } from '../demo';
 
 export function Settings({ data, update }: { data: AppData; update: Update }) {
@@ -67,17 +68,14 @@ export function Settings({ data, update }: { data: AppData; update: Update }) {
 
       <div className="card">
         <h3>Weight unit</h3>
-        <div className="segmented">
-          {(['kg', 'lb'] as Unit[]).map((u) => (
-            <button
-              key={u}
-              className={data.settings.unit === u ? 'active' : ''}
-              onClick={() => update((d) => ({ ...d, settings: { ...d.settings, unit: u } }))}
-            >
-              {u}
-            </button>
-          ))}
-        </div>
+        <ChipGroup
+          label="Weight unit"
+          kind="radio"
+          variant="segmented"
+          value={data.settings.unit}
+          onChange={(u) => update((d) => ({ ...d, settings: { ...d.settings, unit: u } }))}
+          options={(['kg', 'lb'] as Unit[]).map((u) => ({ value: u, label: u }))}
+        />
         <p className="muted small">Switching converts all displayed weights; nothing you logged is lost.</p>
       </div>
 

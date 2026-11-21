@@ -101,7 +101,6 @@ main {
   font-weight: 700;
   transition: transform .12s ease, filter .12s ease, background-color .2s ease;
 }
-.btn-primary:active, .btn-secondary:active, .btn-danger:active { transform: scale(.98); }
 .btn-primary { background: var(--accent); color: var(--on-accent); box-shadow: 0 8px 22px var(--accent-glow); }
 .btn-primary:hover:not(:disabled) { filter: brightness(1.08); }
 .btn-secondary { background: var(--field); border-color: var(--edge); color: var(--text); }
@@ -172,15 +171,20 @@ main {
   border: 1px solid var(--edge); background: var(--field); color: var(--muted); font-weight: 800;
   transition: background-color .15s ease, transform .12s ease;
 }
-.check:active { transform: scale(.92); }
-.check.on { background: var(--good); border-color: var(--good); color: var(--on-good); }
+.check { display: grid; place-items: center; }
+.check svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+.check.on { background: var(--good); border-color: var(--good); color: var(--on-good); animation: check-pop 480ms cubic-bezier(0.34, 1.56, 0.64, 1); }
+/* Completing a set: the box springs in and the tick draws itself. */
+@keyframes check-pop { from { scale: .7; } }
+.check.on .tick { stroke-dasharray: 1; animation: tick-draw 320ms ease-out 80ms backwards; }
+@keyframes tick-draw { from { stroke-dashoffset: 1; } }
 
 .rest-bar {
   position: fixed; left: 50%; transform: translateX(-50%); z-index: 15;
   bottom: calc(92px + env(safe-area-inset-bottom, 0px));
   width: min(608px, calc(100% - 32px));
   display: flex; justify-content: space-between; align-items: center;
-  border-radius: 16px; padding: 8px 8px 8px 16px;
+  border-radius: 18px; padding: 8px 8px 8px 10px;
   font-weight: 700; font-variant-numeric: tabular-nums;
   background: var(--glass-strong);
 }
@@ -292,9 +296,10 @@ main {
 .badge { font-size: .66rem; font-weight: 700; background: var(--accent-soft); color: var(--accent); padding: 2px 7px; border-radius: 999px; margin-left: 6px; }
 
 /* Settings */
-.segmented { display: inline-flex; background: var(--field); border: 1px solid var(--edge); border-radius: 12px; padding: 3px; align-self: flex-start; }
-.segmented button { border: none; background: transparent; padding: 8px 24px; border-radius: 9px; font-weight: 700; color: var(--muted); }
-.segmented button.active { background: var(--accent); color: var(--on-accent); }
+/* Segmented switch (kg/lb): a ChipGroup with variant="segmented". */
+.chips.seg { display: inline-flex; align-self: flex-start; gap: 0; margin: 0; padding: 3px; border-radius: 12px; background: var(--field); border: 1px solid var(--edge); overflow: visible; }
+.chips.seg .chip { border: 0; background: transparent; padding: 8px 26px; border-radius: 9px; font-size: .95rem; font-weight: 700; }
+.chips.seg .chip-pill { border-radius: 9px; }
 .theme-group { display: flex; flex-direction: column; gap: 8px; }
 .theme-grid {
   display: grid; grid-auto-flow: column; grid-auto-columns: minmax(104px, 1fr); gap: 10px;
@@ -308,7 +313,6 @@ main {
   border-radius: 16px; border: 1px solid var(--edge); background: var(--field);
   transition: border-color .15s ease, transform .12s ease;
 }
-.theme-option:active { transform: scale(.97); }
 .theme-option.selected { border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent-soft); }
 .theme-preview {
   position: relative; display: block; height: 64px; border-radius: 11px; overflow: hidden;
@@ -412,7 +416,6 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
   transition: transform .12s ease, filter .12s ease;
 }
 .start-empty:hover { filter: brightness(1.06); }
-.start-empty:active { transform: scale(.985); }
 .start-icon {
   display: grid; place-items: center; width: 42px; height: 42px; border-radius: 14px; flex-shrink: 0;
   background: rgba(255,255,255,.18);
@@ -482,7 +485,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 
 /* ---------- History ---------- */
 .week-group { display: flex; flex-direction: column; gap: 10px; }
-.workout-card { gap: 12px; }
+.workout-card { gap: 0; }
 .workout-head {
   display: flex; align-items: center; gap: 12px; width: 100%; text-align: left;
   background: none; border: none; padding: 0;
@@ -500,11 +503,11 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .chev { color: var(--muted); display: grid; place-items: center; transition: transform .2s ease; flex-shrink: 0; }
 .chev svg { width: 18px; height: 18px; }
 .workout-card.open .chev { transform: rotate(90deg); }
-.ex-summary { list-style: none; margin: 0; padding: 12px 0 0; border-top: 1px solid var(--line); display: flex; flex-direction: column; gap: 8px; }
+.ex-summary { list-style: none; margin: 12px 0 0; padding: 12px 0 0; border-top: 1px solid var(--line); display: flex; flex-direction: column; gap: 8px; }
 .ex-summary li { display: flex; justify-content: space-between; gap: 12px; font-size: .88rem; }
 .ex-name { font-weight: 600; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .ex-best { white-space: nowrap; font-variant-numeric: tabular-nums; font-weight: 600; }
-.workout-detail { display: flex; flex-direction: column; gap: 14px; padding-top: 12px; border-top: 1px solid var(--line); }
+.workout-detail { display: flex; flex-direction: column; gap: 14px; margin-top: 12px; padding-top: 12px; border-top: 1px solid var(--line); }
 .detail-ex { display: flex; flex-direction: column; gap: 8px; }
 .detail-ex-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
 .detail-actions { display: flex; gap: 8px; align-items: center; }
@@ -618,3 +621,39 @@ button.ex-row-main:hover .ex-row-name { color: var(--accent); }
 @keyframes chart-out { to { opacity: 0; } }
 .chart-fade { animation: chart-in 400ms ease backwards; }
 @keyframes chart-in { from { opacity: 0; } }
+
+/* ---------- Springy press for every button ----------
+   Pressing scales the button in; on release (see src/spring.ts) it springs
+   back with the same overshoot curve as the tab bar and chips. Uses the
+   independent `scale` property so it never fights a component's transform. */
+button { --press: .94; }
+.workout-head, .start-empty, .ex-row-main, .pick-item, .ms-btn, .theme-option, .history-head { --press: .98; }
+button:not(:disabled):active { scale: var(--press); }
+button[data-boing] { animation: boing 480ms cubic-bezier(0.34, 1.56, 0.64, 1); }
+@keyframes boing { from { scale: var(--press); } to { scale: 1; } }
+@media (prefers-reduced-motion: reduce) { button:not(:disabled):active { scale: none; } }
+
+/* Rest timer ring: drains as the rest runs out. */
+.rest-main { display: flex; align-items: center; gap: 12px; min-width: 0; }
+.rest-ring { position: relative; width: 40px; height: 40px; flex: none; display: grid; place-items: center; }
+.rest-ring svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.rest-ring > svg:first-child { rotate: -90deg; }
+.ring-track { fill: none; stroke: var(--field); stroke-width: 4; }
+.ring-fill { fill: none; stroke: var(--accent); stroke-width: 4; stroke-linecap: round; transition: stroke-dashoffset .25s linear, stroke .3s ease; filter: drop-shadow(0 0 4px var(--accent-glow)); }
+.rest-bar.over .ring-track { stroke: rgba(255, 255, 255, .25); }
+.ring-done { inset: 9px !important; width: 22px !important; height: 22px !important; fill: none; stroke: currentColor; stroke-width: 3; stroke-linecap: round; stroke-linejoin: round; }
+.ring-done .tick { stroke-dasharray: 1; animation: tick-draw 360ms ease-out backwards; }
+.rest-bar.over .rest-ring { animation: check-pop 520ms cubic-bezier(0.34, 1.56, 0.64, 1); }
+.rest-text { display: flex; flex-direction: column; line-height: 1.15; }
+.rest-text strong { font-size: 1.1rem; font-variant-numeric: tabular-nums; }
+.rest-text .small { font-weight: 500; opacity: .75; }
+
+/* History cards: the summary slides closed as the detail slides open. */
+.collapse { display: grid; grid-template-rows: 0fr; opacity: 0; transition: grid-template-rows 420ms cubic-bezier(.2, .8, .2, 1), opacity 260ms ease; }
+.collapse.open { grid-template-rows: 1fr; opacity: 1; }
+.collapse-inner { min-height: 0; overflow: hidden; }
+.collapse.open .workout-detail > * { animation: settle 520ms cubic-bezier(0.34, 1.56, 0.64, 1) backwards; }
+.collapse.open .workout-detail > :nth-child(2) { animation-delay: 40ms; }
+.collapse.open .workout-detail > :nth-child(3) { animation-delay: 80ms; }
+.collapse.open .workout-detail > :nth-child(n+4) { animation-delay: 120ms; }
+@keyframes settle { from { translate: 0 -10px; opacity: 0; } }

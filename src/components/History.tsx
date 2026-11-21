@@ -6,6 +6,7 @@ import { e1rm, fmtDate, fmtDuration, fmtWeight, toDisplay, workoutVolume } from 
 import { newTemplate, newWorkoutFrom, templateExercisesFrom } from '../workout';
 import { ChevronIcon, TrashIcon } from './Icons';
 import { SetPills } from './SetPills';
+import { CountUp } from './CountUp';
 
 interface Props {
   data: AppData;
@@ -77,10 +78,10 @@ export function History({ data, update, onRepeat }: Props) {
         <h1>History</h1>
         <div className="summary-chips">
           <span className="chip-stat">
-            <strong>{data.workouts.length}</strong> workout{data.workouts.length === 1 ? '' : 's'}
+            <strong><CountUp value={data.workouts.length} from={0} /></strong> workout{data.workouts.length === 1 ? '' : 's'}
           </span>
           <span className="chip-stat">
-            <strong>{fmtWeight(totalVolume, unit)}</strong> lifted
+            <strong><CountUp value={toDisplay(totalVolume, unit)} from={0} /> {unit}</strong> lifted
           </span>
         </div>
       </header>
@@ -90,7 +91,8 @@ export function History({ data, update, onRepeat }: Props) {
           <div className="section-head">
             <h2>{weekLabel(g.start)}</h2>
             <span className="muted small">
-              {g.workouts.length} workout{g.workouts.length === 1 ? '' : 's'} · {fmtWeight(g.volume, unit)}
+              <CountUp value={g.workouts.length} from={0} /> workout{g.workouts.length === 1 ? '' : 's'} ·{' '}
+              <CountUp value={toDisplay(g.volume, unit)} from={0} /> {unit}
             </span>
           </div>
 
@@ -118,7 +120,9 @@ export function History({ data, update, onRepeat }: Props) {
                   <span className="chev"><ChevronIcon /></span>
                 </button>
 
-                {!isOpen && (
+                {/* Both views stay mounted so opening and closing can animate their height. */}
+                <div className={'collapse' + (isOpen ? '' : ' open')} inert={isOpen} aria-hidden={isOpen}>
+                  <div className="collapse-inner">
                   <ul className="ex-summary">
                     {w.exercises.map((ex, i) => {
                       const best = ex.sets.reduce((a, b) => (e1rm(b) > e1rm(a) ? b : a), ex.sets[0]);
@@ -135,9 +139,11 @@ export function History({ data, update, onRepeat }: Props) {
                       );
                     })}
                   </ul>
-                )}
+                  </div>
+                </div>
 
-                {isOpen && (
+                <div className={'collapse' + (isOpen ? ' open' : '')} inert={!isOpen} aria-hidden={!isOpen}>
+                  <div className="collapse-inner">
                   <div className="workout-detail">
                     {w.exercises.map((ex, i) => (
                       <div key={i} className="detail-ex">
@@ -169,7 +175,8 @@ export function History({ data, update, onRepeat }: Props) {
                       </button>
                     </div>
                   </div>
-                )}
+                  </div>
+                </div>
               </article>
             );
           })}

@@ -19,6 +19,8 @@ interface Props<T extends string> {
   wrap?: boolean;
   /** "tabs" for filters/views, "radio" for picking a value in a form. */
   kind?: 'tabs' | 'radio';
+  /** "segmented" draws the options as one compact switch (e.g. kg/lb). */
+  variant?: 'chips' | 'segmented';
 }
 
 function placePill(group: HTMLElement | null, pill: HTMLElement | null, animate: boolean) {
@@ -35,7 +37,7 @@ function placePill(group: HTMLElement | null, pill: HTMLElement | null, animate:
   pill.classList.add('ready');
 }
 
-export function ChipGroup<T extends string>({ options, value, onChange, label, wrap, kind = 'tabs' }: Props<T>) {
+export function ChipGroup<T extends string>({ options, value, onChange, label, wrap, kind = 'tabs', variant = 'chips' }: Props<T>) {
   const groupRef = useRef<HTMLDivElement>(null);
   const pillRef = useRef<HTMLSpanElement>(null);
 
@@ -53,7 +55,9 @@ export function ChipGroup<T extends string>({ options, value, onChange, label, w
     }
   }, [value, options.length, wrap]);
 
-  // Re-align without animating if the row changes size (rotation, new chips wrapping).
+  // Re-align if the row changes size (rotation, chips wrapping, or a page scrollbar
+  // appearing when the content below changes). Animate rather than snap, so a resize
+  // in the middle of a slide just redirects it instead of cancelling it.
   // ResizeObserver fires once on observe, so skip that first call.
   useLayoutEffect(() => {
     const g = groupRef.current;
@@ -64,7 +68,7 @@ export function ChipGroup<T extends string>({ options, value, onChange, label, w
         first = false;
         return;
       }
-      placePill(g, pillRef.current, false);
+      placePill(g, pillRef.current, true);
     });
     ro.observe(g);
     return () => ro.disconnect();
@@ -74,7 +78,7 @@ export function ChipGroup<T extends string>({ options, value, onChange, label, w
   return (
     <div
       ref={groupRef}
-      className={'chips' + (wrap ? ' wrap' : '')}
+      className={'chips' + (wrap ? ' wrap' : '') + (variant === 'segmented' ? ' seg' : '')}
       role={radio ? 'radiogroup' : 'group'}
       aria-label={label}
     >

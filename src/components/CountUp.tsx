@@ -13,10 +13,11 @@ const reduceMotion = () => {
  * Returns the in-between value to display and a short-lived `pulse` flag.
  * Instant with reduced motion; rAF pauses on its own while the page is hidden.
  */
-export function useCountUp(value: number, duration = 650) {
-  const [shown, setShown] = useState(value);
+export function useCountUp(value: number, duration = 650, startFrom?: number) {
+  // With startFrom, the first render counts up from that value (e.g. 0).
+  const [shown, setShown] = useState(startFrom ?? value);
   const [pulse, setPulse] = useState(false);
-  const from = useRef(value);
+  const from = useRef(startFrom ?? value);
 
   useEffect(() => {
     const start = from.current;
@@ -55,8 +56,8 @@ export const fmtNumber = (n: number, decimals = 1) =>
   n.toLocaleString(undefined, { maximumFractionDigits: decimals, minimumFractionDigits: 0 });
 
 /** A number that counts to its new value. Screen readers get the final value. */
-export function CountUp({ value, decimals = 1 }: { value: number; decimals?: number }) {
-  const { shown } = useCountUp(value);
+export function CountUp({ value, decimals = 1, from }: { value: number; decimals?: number; from?: number }) {
+  const { shown } = useCountUp(value, from === undefined ? 650 : 900, from);
   // Show as many decimals as the final value has, so the count doesn't flicker extra digits.
   const d = Number.isInteger(value) ? 0 : decimals;
   return (

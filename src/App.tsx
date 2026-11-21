@@ -50,7 +50,8 @@ export default function App() {
     placeBlob(navRef.current, blobRef.current, !!blobRef.current?.classList.contains('ready'));
   }, [tab]);
 
-  // Re-align without animating when the bar itself changes size (rotation, resize).
+  // Re-align when the bar itself changes size (rotation, resize, a scrollbar appearing).
+  // Animate rather than snap, so a resize mid-slide redirects instead of cancelling it.
   // Set up once; ResizeObserver fires immediately on observe, so skip that first call.
   useLayoutEffect(() => {
     const nav = navRef.current;
@@ -61,7 +62,7 @@ export default function App() {
         first = false;
         return;
       }
-      placeBlob(nav, blobRef.current, false);
+      placeBlob(nav, blobRef.current, true);
     });
     ro.observe(nav);
     return () => ro.disconnect();

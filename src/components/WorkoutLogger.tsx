@@ -87,7 +87,7 @@ function ActiveWorkout({
   onFinished,
 }: Props & { active: Workout }) {
   const [picking, setPicking] = useState(false);
-  const [restEnd, setRestEnd] = useState<number | null>(null);
+  const [rest, setRest] = useState<{ end: number; total: number } | null>(null);
   const elapsed = useElapsed(active.date);
   const unit = data.settings.unit;
   const exById = useMemo(() => new Map(data.exercises.map((e) => [e.id, e])), [data.exercises]);
@@ -300,10 +300,12 @@ function ActiveWorkout({
                       const reps = s.reps || hint?.reps || 0;
                       if (!reps) return notify('Enter the reps for this set first.');
                       setSet(exIdx, setIdx, { weight, reps, done: true });
-                      setRestEnd(Date.now() + REST_SECONDS * 1000);
+                      setRest({ end: Date.now() + REST_SECONDS * 1000, total: REST_SECONDS * 1000 });
                     }}
                   >
-                    ✓
+                    <svg viewBox="0 0 24 24" aria-hidden="true">
+                      <path className="tick" d="M5 12.5l4.5 4.5L19 7.5" pathLength={1} />
+                    </svg>
                   </button>
                 </div>
               );
@@ -340,8 +342,15 @@ function ActiveWorkout({
         <button className="btn-primary" onClick={finish}>Finish workout</button>
       </div>
 
-      {restEnd && <div className="rest-spacer" aria-hidden="true" />}
-      {restEnd && <RestTimer end={restEnd} onChange={setRestEnd} />}
+      {rest && <div className="rest-spacer" aria-hidden="true" />}
+      {rest && (
+        <RestTimer
+          end={rest.end}
+          total={rest.total}
+          onAdd={() => setRest((r) => (r ? { end: r.end + 30_000, total: r.total + 30_000 } : r))}
+          onDone={() => setRest(null)}
+        />
+      )}
 
       {picking && (
         <ExercisePicker
@@ -355,26 +364,57 @@ function ActiveWorkout({
   );
 }
 
-function RestTimer({ end, onChange }: { end: number; onChange: (end: number | null) => void }) {
+const RING_R = 17;
+const RING_C = 2 * Math.PI * RING_R;
+
+function RestTimer({ end, total, onAdd, onDone }: { end: number; total: number; onAdd: () => void; onDone: () => void }) {
   const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
-    const t = setInterval(() => setNow(Date.now()), 250);
+    const t = setInterval(() => setNow(Date.now()), 200);
     return () => clearInterval(t);
   }, []);
-  const left = Math.max(0, Math.ceil((end - now) / 1000));
+  const msLeft = Math.max(0, end - now);
+  const left = Math.ceil(msLeft / 1000);
+  const over = left === 0;
+  // Fraction of the rest still to go; the ring drains as this falls.
+  const frac = Math.min(1, msLeft / total);
   useEffect(() => {
-    if (left === 0) {
+    if (over) {
       navigator.vibrate?.([200, 100, 200]);
-      const t = setTimeout(() => onChange(null), 3000);
+      const t = setTimeout(onDone, 3000);
       return () => clearTimeout(t);
     }
-  }, [left, onChange]);
+  }, [over, onDone]);
+  const time = `${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}`;
   return (
-    <div className={'rest-bar' + (left === 0 ? ' over' : '')} role="status">
-      <span>{left === 0 ? 'Rest over, next set!' : `Rest ${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}`}</span>
+    <div className={'rest-bar' + (over ? ' over' : '')} role="status" aria-label={over ? 'Rest over' : `Rest, ${time} left`}>
+      <div className="rest-main">
+        <span className="rest-ring" aria-hidden="true">
+          <svg viewBox="0 0 40 40">
+            <circle className="ring-track" cx="20" cy="20" r={RING_R} />
+            <circle
+              className="ring-fill"
+              cx="20"
+              cy="20"
+              r={RING_R}
+              strokeDasharray={RING_C}
+              strokeDashoffset={RING_C * (1 - frac)}
+            />
+          </svg>
+          {over ? (
+            <svg className="ring-done" viewBox="0 0 24 24">
+              <path className="tick" d="M5 12.5l4.5 4.5L19 7.5" pathLength={1} />
+            </svg>
+          ) : null}
+        </span>
+        <span className="rest-text">
+          <strong>{over ? 'Rest over' : time}</strong>
+          <span className="small">{over ? 'Time for your next set' : 'Resting'}</span>
+        </span>
+      </div>
       <div className="row-actions">
-        <button className="btn-ghost" onClick={() => onChange(end + 30_000)}>+30s</button>
-        <button className="btn-ghost" onClick={() => onChange(null)}>Skip</button>
+        {!over && <button className="btn-ghost" onClick={onAdd}>+30s</button>}
+        <button className="btn-ghost" onClick={onDone}>{over ? 'Done' : 'Skip'}</button>
       </div>
     </div>
   );
