@@ -20,10 +20,14 @@ function weekStart(d: Date): number {
 }
 
 function weekLabel(start: number): string {
-  const thisWeek = weekStart(new Date());
+  const now = new Date();
+  const thisWeek = weekStart(now);
   if (start === thisWeek) return 'This week';
-  if (start === thisWeek - 7 * 86400000) return 'Last week';
-  const end = new Date(start + 6 * 86400000);
+  // Calendar arithmetic (not 7×24h) so weeks spanning a clock change still match.
+  const tw = new Date(thisWeek);
+  if (start === new Date(tw.getFullYear(), tw.getMonth(), tw.getDate() - 7).getTime()) return 'Last week';
+  const s = new Date(start);
+  const end = new Date(s.getFullYear(), s.getMonth(), s.getDate() + 6);
   const fmt = (d: Date) => d.toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
   return `${fmt(new Date(start))} – ${fmt(end)}`;
 }

@@ -79,6 +79,13 @@ export function ExerciseLibrary({ data, update, onOpen }: Props) {
   const remove = async (id: string, name: string) => {
     const n = usage.get(id)?.sessions ?? 0;
     if (n > 0) return notify(`${name} is used in ${n} logged session${n === 1 ? '' : 's'}, so it can’t be deleted.`);
+    const inTemplates = data.templates.filter((t) => t.exercises.some((e) => e.exerciseId === id));
+    if (inTemplates.length) {
+      return notify(`${name} is in ${inTemplates.map((t) => t.name).join(', ')}. Remove it from there first.`);
+    }
+    if (data.activeWorkout?.exercises.some((e) => e.exerciseId === id)) {
+      return notify(`${name} is in your current workout. Remove it there first.`);
+    }
     if (await ask(`Delete ${name}?`, { confirmLabel: 'Delete' })) {
       update((d) => ({ ...d, exercises: d.exercises.filter((x) => x.id !== id) }));
     }

@@ -4,6 +4,7 @@ import type { AppData, SetEntry, Workout, WorkoutExercise } from '../types';
 import type { Update } from '../store';
 import {
   completedSets,
+  defaultWorkoutName,
   e1rm,
   fmtWeight,
   fromDisplay,
@@ -19,6 +20,8 @@ interface Props {
   data: AppData;
   update: Update;
   onFinished: (prs: string[]) => void;
+  /** Start the rest timer (lives in App so it keeps running across tabs). */
+  onRest: (ms: number) => void;
 }
 
 /** Used when the setting hasn't been chosen yet. */
@@ -47,7 +50,7 @@ function useElapsed(startIso: string) {
   return h ? `${h}:${pad(m)}:${pad(s)}` : `${m}:${pad(s)}`;
 }
 
-export function WorkoutLogger({ data, update, onFinished }: Props) {
+export function WorkoutLogger({ data, update, onFinished, onRest }: Props) {
   const active = data.activeWorkout;
   // undefined = not editing; null = creating a new saved workout; string = editing that one
   const [editing, setEditing] = useState<string | null | undefined>(undefined);
@@ -78,7 +81,7 @@ export function WorkoutLogger({ data, update, onFinished }: Props) {
     );
   }
 
-  return <ActiveWorkout data={data} active={active} update={update} onFinished={onFinished} />;
+  return <ActiveWorkout data={data} active={active} update={update} onFinished={onFinished} onRest={onRest} />;
 }
 
 function ActiveWorkout({
@@ -86,9 +89,9 @@ function ActiveWorkout({
   active,
   update,
   onFinished,
+  onRest,
 }: Props & { active: Workout }) {
   const [picking, setPicking] = useState(false);
-  const [rest, setRest] = useState<{ end: number; total: number } | null>(null);
   const elapsed = useElapsed(active.date);
   const unit = data.settings.unit;
   const exById = useMemo(() => new Map(data.exercises.map((e) => [e.id, e])), [data.exercises]);
@@ -153,7 +156,8 @@ function ActiveWorkout({
       if (ok) update((d) => ({ ...d, activeWorkout: null }));
       return;
     }
-    const finished: Workout = { ...active, exercises, finishedAt: new Date().toISOString() };
+    const name = active.name.trim() || defaultWorkoutName(new Date(active.date));
+    const finished: Workout = { ...active, name, exercises, finishedAt: new Date().toISOString() };
     const prs = findPRs(data.workouts, finished, (id) => exById.get(id)?.name ?? 'Exercise', unit);
     const done = templateExercisesFrom(finished);
 
@@ -267,10 +271,13 @@ function ActiveWorkout({
                   <button
                     className="set-num"
                     title="Remove set"
-                    onClick={() =>
-                      ex.sets.length > 1 &&
-                      setExercise(exIdx, (e) => ({ ...e, sets: e.sets.filter((_, i) => i !== setIdx) }))
-                    }
+                    aria-label={`Set ${setIdx + 1}, remove`}
+                    onClick={async () => {
+                      if (ex.sets.length <= 1) return notify('An exercise needs at least one set. Remove the exercise instead.');
+                      // Ask first: a stray tap shouldn't silently delete a logged set.
+                      const ok = await ask(`Remove set ${setIdx + 1} from ${info?.name ?? 'this exercise'}?`, { confirmLabel: 'Remove' });
+                      if (ok) setExercise(exIdx, (e) => ({ ...e, sets: e.sets.filter((_, i) => i !== setIdx) }));
+                    }}
                   >
                     {setIdx + 1}
                   </button>
@@ -302,7 +309,7 @@ function ActiveWorkout({
                       if (!reps) return notify('Enter the reps for this set first.');
                       setSet(exIdx, setIdx, { weight, reps, done: true });
                       const restMs = (data.settings.restSeconds ?? DEFAULT_REST_SECONDS) * 1000;
-                      if (restMs > 0) setRest({ end: Date.now() + restMs, total: restMs });
+                      if (restMs > 0) onRest(restMs);
                     }}
                   >
                     <svg viewBox="0 0 24 24" aria-hidden="true">
@@ -344,15 +351,6 @@ function ActiveWorkout({
         <button className="btn-primary" onClick={finish}>Finish workout</button>
       </div>
 
-      {rest && <div className="rest-spacer" aria-hidden="true" />}
-      {rest && (
-        <RestTimer
-          end={rest.end}
-          total={rest.total}
-          onAdd={() => setRest((r) => (r ? { end: r.end + 30_000, total: r.total + 30_000 } : r))}
-          onDone={() => setRest(null)}
-        />
-      )}
 
       {picking && (
         <ExercisePicker
@@ -362,62 +360,6 @@ function ActiveWorkout({
           onClose={() => setPicking(false)}
         />
       )}
-    </div>
-  );
-}
-
-const RING_R = 17;
-const RING_C = 2 * Math.PI * RING_R;
-
-function RestTimer({ end, total, onAdd, onDone }: { end: number; total: number; onAdd: () => void; onDone: () => void }) {
-  const [now, setNow] = useState(() => Date.now());
-  useEffect(() => {
-    const t = setInterval(() => setNow(Date.now()), 200);
-    return () => clearInterval(t);
-  }, []);
-  const msLeft = Math.max(0, end - now);
-  const left = Math.ceil(msLeft / 1000);
-  const over = left === 0;
-  // Fraction of the rest still to go; the ring drains as this falls.
-  const frac = Math.min(1, msLeft / total);
-  useEffect(() => {
-    if (over) {
-      navigator.vibrate?.([200, 100, 200]);
-      const t = setTimeout(onDone, 3000);
-      return () => clearTimeout(t);
-    }
-  }, [over, onDone]);
-  const time = `${Math.floor(left / 60)}:${String(left % 60).padStart(2, '0')}`;
-  return (
-    <div className={'rest-bar' + (over ? ' over' : '')} role="status" aria-label={over ? 'Rest over' : `Rest, ${time} left`}>
-      <div className="rest-main">
-        <span className="rest-ring" aria-hidden="true">
-          <svg viewBox="0 0 40 40">
-            <circle className="ring-track" cx="20" cy="20" r={RING_R} />
-            <circle
-              className="ring-fill"
-              cx="20"
-              cy="20"
-              r={RING_R}
-              strokeDasharray={RING_C}
-              strokeDashoffset={RING_C * (1 - frac)}
-            />
-          </svg>
-          {over ? (
-            <svg className="ring-done" viewBox="0 0 24 24">
-              <path className="tick" d="M5 12.5l4.5 4.5L19 7.5" pathLength={1} />
-            </svg>
-          ) : null}
-        </span>
-        <span className="rest-text">
-          <strong>{over ? 'Rest over' : time}</strong>
-          <span className="small">{over ? 'Time for your next set' : 'Resting'}</span>
-        </span>
-      </div>
-      <div className="row-actions">
-        {!over && <button className="btn-ghost" onClick={onAdd}>+30s</button>}
-        <button className="btn-ghost" onClick={onDone}>{over ? 'Done' : 'Skip'}</button>
-      </div>
     </div>
   );
 }

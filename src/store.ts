@@ -49,7 +49,8 @@ export function migrate(d: AppData): AppData {
   });
   const known = new Set(exercises.map((e) => e.id));
   for (const p of PRESET_EXERCISES) if (!known.has(p.id)) exercises.push(p);
-  return { ...d, exercises };
+  const workouts = [...d.workouts].sort((a, b) => a.date.localeCompare(b.date));
+  return { ...d, exercises, workouts };
 }
 
 function load(): AppData {

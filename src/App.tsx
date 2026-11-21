@@ -6,6 +6,7 @@ import { Progress } from './components/Progress';
 import { ExerciseLibrary } from './components/ExerciseLibrary';
 import { Settings } from './components/Settings';
 import { DialogHost } from './dialog';
+import { RestTimer } from './components/RestTimer';
 import { applyTheme, getTheme } from './themes';
 import { CalendarIcon, ChartIcon, DumbbellIcon, GearIcon, ListIcon } from './components/Icons';
 
@@ -38,6 +39,10 @@ export default function App() {
   const [tab, setTab] = useState<Tab>('workout');
   const [prs, setPrs] = useState<string[] | null>(null);
   const [progressEx, setProgressEx] = useState<string | undefined>(undefined);
+  // Rest timer for the active workout. Kept here so it survives switching tabs;
+  // tied to the workout's id so it never carries over to the next workout.
+  const [rest, setRest] = useState<{ workoutId: string; end: number; total: number } | null>(null);
+  const activeRest = rest && rest.workoutId === data.activeWorkout?.id ? rest : null;
 
   useLayoutEffect(() => applyTheme(getTheme(data.settings.theme)), [data.settings.theme]);
 
@@ -91,6 +96,7 @@ export default function App() {
           <WorkoutLogger
             data={data}
             update={update}
+            onRest={(ms) => data.activeWorkout && setRest({ workoutId: data.activeWorkout.id, end: Date.now() + ms, total: ms })}
             onFinished={(p) => {
               setPrs(p);
               setTab('history');
@@ -111,7 +117,17 @@ export default function App() {
           />
         )}
         {tab === 'settings' && <Settings data={data} update={update} />}
+        {activeRest && <div className="rest-spacer" aria-hidden="true" />}
       </main>
+
+      {activeRest && (
+        <RestTimer
+          end={activeRest.end}
+          total={activeRest.total}
+          onAdd={() => setRest((r) => (r ? { ...r, end: r.end + 30_000, total: r.total + 30_000 } : r))}
+          onDone={() => setRest(null)}
+        />
+      )}
 
       <nav className="tabbar" ref={navRef}>
         <span className="tabbar-track" aria-hidden="true">

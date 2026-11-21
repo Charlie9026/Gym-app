@@ -17,6 +17,15 @@ function restLabel(sec: number, short = false): string {
   return `${m} min`;
 }
 
+/** True when shown inside another page (e.g. the artifact viewer), where downloads are blocked. */
+const EMBEDDED = (() => {
+  try {
+    return window.self !== window.top;
+  } catch {
+    return true;
+  }
+})();
+
 export function Settings({ data, update }: { data: AppData; update: Update }) {
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -35,7 +44,7 @@ export function Settings({ data, update }: { data: AppData; update: Update }) {
       await navigator.clipboard.writeText(JSON.stringify(data));
       notify('Backup copied. Paste it into a note or email to keep it safe.');
     } catch {
-      notify('Copying isn’t allowed here. Use Export JSON instead.');
+      notify(EMBEDDED ? 'Copying isn’t allowed here. Open the app in its own tab to back up.' : 'Copying isn’t allowed here. Use Export JSON instead.');
     }
   };
 
@@ -113,10 +122,10 @@ export function Settings({ data, update }: { data: AppData; update: Update }) {
       <div className="card">
         <h3>Backup</h3>
         <p className="muted small">
-          Your data lives only in this browser. Export a backup now and then so you don’t lose it.
+          Your data lives only in this browser. Back it up now and then so you don’t lose it.
         </p>
         <div className="finish-row">
-          <button className="btn-secondary" onClick={exportData}>Export JSON</button>
+          {!EMBEDDED && <button className="btn-secondary" onClick={exportData}>Export JSON</button>}
           <button className="btn-secondary" onClick={copyData}>Copy backup</button>
           <button className="btn-secondary" onClick={() => fileRef.current?.click()}>Import JSON</button>
         </div>

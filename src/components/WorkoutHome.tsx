@@ -30,7 +30,9 @@ export function WorkoutHome({ data, onStartEmpty, onStartTemplate, onEdit }: Pro
     for (const w of data.workouts) {
       const t = Date.parse(w.date);
       if (t < start) continue;
-      trained.add(Math.floor((t - start) / 86400000));
+      // Whole calendar days since Monday; rounding absorbs clock-change days (23h/25h).
+      const d = new Date(t);
+      trained.add(Math.round((new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime() - start) / 86400000));
       volume += workoutVolume(w);
       count++;
     }
