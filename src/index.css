@@ -42,12 +42,12 @@ body { min-height: 100dvh; font-size: 15px; transition: background-color .3s eas
 button, input, select, textarea { font: inherit; color: inherit; }
 button { cursor: pointer; }
 button:disabled { opacity: .45; cursor: not-allowed; }
-h1 { font-size: 1.9rem; font-weight: 800; letter-spacing: -0.03em; margin: 4px 0 4px; }
+h1 { font-size: 1.9rem; font-weight: 800; letter-spacing: 0; margin: 4px 0 4px; }
 h2 {
   font-size: .72rem; margin: 18px 4px 0; color: var(--muted);
   text-transform: uppercase; letter-spacing: .12em; font-weight: 700;
 }
-h3 { font-size: 1rem; font-weight: 700; margin: 0; letter-spacing: -0.01em; }
+h3 { font-size: 1rem; font-weight: 700; margin: 0; letter-spacing: 0; }
 ::selection { background: var(--accent-soft); }
 
 /* The single accent glow that fades into the base. */
@@ -135,7 +135,7 @@ main {
 .select { appearance: auto; }
 .notes { min-height: 84px; resize: vertical; }
 .title-input {
-  font-size: 1.5rem; font-weight: 800; letter-spacing: -0.02em;
+  font-size: 1.5rem; font-weight: 800; letter-spacing: 0;
   border-color: transparent; background: transparent; padding: 4px 2px;
   backdrop-filter: none; -webkit-backdrop-filter: none;
 }
@@ -213,7 +213,7 @@ main {
   padding-right: max(16px, env(safe-area-inset-right, 0px));
 }
 .modal-header { display: flex; justify-content: space-between; align-items: center; }
-.modal-header h2 { margin: 0; color: var(--text); text-transform: none; font-size: 1.25rem; letter-spacing: -0.01em; font-weight: 800; }
+.modal-header h2 { margin: 0; color: var(--text); text-transform: none; font-size: 1.25rem; letter-spacing: 0; font-weight: 800; }
 .chips { display: flex; gap: 6px; overflow-x: auto; padding-bottom: 2px; flex-shrink: 0; scrollbar-width: none; }
 .chip {
   border: 1px solid var(--edge); background: var(--field); border-radius: 999px;
@@ -234,7 +234,7 @@ main {
 /* Progress */
 .stats { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .stat { border-radius: var(--radius); padding: 14px; }
-.stat-value { font-size: 1.45rem; font-weight: 800; margin: 2px 0; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.stat-value { font-size: 1.45rem; font-weight: 800; margin: 2px 0; letter-spacing: 0; font-variant-numeric: tabular-nums; }
 .chart-title { display: flex; justify-content: space-between; flex-wrap: wrap; gap: 4px; font-weight: 700; }
 .trend { color: var(--good); background: var(--good-soft); padding: 2px 8px; border-radius: 999px; font-size: .75rem; font-weight: 700; }
 .trend.down { color: var(--danger); background: var(--danger-soft); }
@@ -352,7 +352,7 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 .week-day.today:not(.trained) i { border-color: var(--accent); }
 .week-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; padding-top: 12px; border-top: 1px solid var(--line); }
 .week-stats > div { min-width: 0; }
-.week-num { font-size: 1.02rem; font-weight: 800; letter-spacing: -0.01em; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.week-num { font-size: 1.02rem; font-weight: 800; letter-spacing: 0; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
 .start-empty {
   display: flex; align-items: center; gap: 14px; width: 100%; text-align: left;
