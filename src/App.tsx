@@ -19,6 +19,20 @@ const TABS: { id: Tab; label: string; icon: ReactNode }[] = [
   { id: 'settings', label: 'Settings', icon: <GearIcon /> },
 ];
 
+/** Move the tab bar highlight under the active tab. */
+function placeBlob(nav: HTMLElement | null, blob: HTMLElement | null, animate: boolean) {
+  const btn = nav?.querySelector<HTMLElement>('button.active');
+  if (!nav || !blob || !btn) return;
+  blob.classList.toggle('no-anim', !animate);
+  blob.style.width = `${btn.offsetWidth}px`;
+  blob.style.transform = `translateX(${btn.offsetLeft}px)`;
+  if (!animate) {
+    void blob.offsetWidth; // commit the jump before transitions come back
+    blob.classList.remove('no-anim');
+  }
+  blob.classList.add('ready');
+}
+
 export default function App() {
   const [data, update] = useAppData();
   const [tab, setTab] = useState<Tab>('workout');
@@ -30,25 +44,28 @@ export default function App() {
   // Sliding highlight behind the active tab.
   const navRef = useRef<HTMLElement>(null);
   const blobRef = useRef<HTMLSpanElement>(null);
+
+  // Slide on every tab change (jump into place the very first time).
+  useLayoutEffect(() => {
+    placeBlob(navRef.current, blobRef.current, !!blobRef.current?.classList.contains('ready'));
+  }, [tab]);
+
+  // Re-align without animating when the bar itself changes size (rotation, resize).
+  // Set up once; ResizeObserver fires immediately on observe, so skip that first call.
   useLayoutEffect(() => {
     const nav = navRef.current;
-    const blob = blobRef.current;
-    if (!nav || !blob) return;
-    const place = (animate: boolean) => {
-      const btn = nav.querySelector<HTMLElement>('button.active');
-      if (!btn) return;
-      blob.classList.toggle('no-anim', !animate);
-      blob.style.width = `${btn.offsetWidth}px`;
-      blob.style.transform = `translateX(${btn.offsetLeft}px)`;
-      blob.classList.add('ready');
-      if (!animate) requestAnimationFrame(() => blob.classList.remove('no-anim'));
-    };
-    place(blob.classList.contains('ready'));
-    // Re-measure without animating when the bar changes size (rotation, resize).
-    const ro = new ResizeObserver(() => place(false));
+    if (!nav) return;
+    let first = true;
+    const ro = new ResizeObserver(() => {
+      if (first) {
+        first = false;
+        return;
+      }
+      placeBlob(nav, blobRef.current, false);
+    });
     ro.observe(nav);
     return () => ro.disconnect();
-  }, [tab]);
+  }, []);
 
   return (
     <div className="app">
