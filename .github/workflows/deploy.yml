@@ -43,22 +43,12 @@ jobs:
         env:
           CI: true
 
-  deploy:
+  # Build the site once the tests pass, and hand it to the deploy job.
+  build:
     needs: test
     # Only publish from pushes and manual runs, never from pull requests.
     if: github.event_name != 'pull_request'
     runs-on: ubuntu-latest
-    permissions:
-      contents: read
-      actions: read # lets the deploy step find the uploaded site
-      pages: write
-      id-token: write
-    concurrency:
-      group: pages
-      cancel-in-progress: true
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v5
       - uses: actions/setup-node@v5
@@ -71,5 +61,23 @@ jobs:
       - uses: actions/upload-pages-artifact@v4
         with:
           path: dist
+
+  # Publishing runs as its own job (GitHub's recommended layout): by the time it
+  # starts, the uploaded site is registered, which avoids the intermittent
+  # "No artifacts named github-pages were found" failure.
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    permissions:
+      actions: read
+      pages: write
+      id-token: write
+    concurrency:
+      group: pages
+      cancel-in-progress: false
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
       - id: deployment
         uses: actions/deploy-pages@v4
