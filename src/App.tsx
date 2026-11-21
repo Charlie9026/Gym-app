@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useLayoutEffect, useState, type ReactNode } from 'react';
 import { useAppData } from './store';
 import { WorkoutLogger } from './components/WorkoutLogger';
 import { History } from './components/History';
@@ -6,15 +6,17 @@ import { Progress } from './components/Progress';
 import { ExerciseLibrary } from './components/ExerciseLibrary';
 import { Settings } from './components/Settings';
 import { DialogHost } from './dialog';
+import { applyTheme, getTheme } from './themes';
+import { CalendarIcon, ChartIcon, DumbbellIcon, GearIcon, ListIcon } from './components/Icons';
 
 type Tab = 'workout' | 'history' | 'progress' | 'exercises' | 'settings';
 
-const TABS: { id: Tab; label: string; icon: string }[] = [
-  { id: 'workout', label: 'Workout', icon: '🏋️' },
-  { id: 'history', label: 'History', icon: '📅' },
-  { id: 'progress', label: 'Progress', icon: '📈' },
-  { id: 'exercises', label: 'Exercises', icon: '📋' },
-  { id: 'settings', label: 'Settings', icon: '⚙️' },
+const TABS: { id: Tab; label: string; icon: ReactNode }[] = [
+  { id: 'workout', label: 'Workout', icon: <DumbbellIcon /> },
+  { id: 'history', label: 'History', icon: <CalendarIcon /> },
+  { id: 'progress', label: 'Progress', icon: <ChartIcon /> },
+  { id: 'exercises', label: 'Exercises', icon: <ListIcon /> },
+  { id: 'settings', label: 'Settings', icon: <GearIcon /> },
 ];
 
 export default function App() {
@@ -22,16 +24,19 @@ export default function App() {
   const [tab, setTab] = useState<Tab>('workout');
   const [prs, setPrs] = useState<string[] | null>(null);
 
+  useLayoutEffect(() => applyTheme(getTheme(data.settings.theme)), [data.settings.theme]);
+
   return (
     <div className="app">
+      <div className="glow" aria-hidden="true" />
       <main>
         {prs && (
           <div className="banner" role="status">
             <div>
-              <strong>Workout saved! 💪</strong>
+              <strong>Workout saved</strong>
               {prs.length > 0 ? (
                 <ul>
-                  {prs.map((p) => <li key={p}>🏆 New PR, {p}</li>)}
+                  {prs.map((p) => <li key={p}><span className="pr-badge">PR</span> {p}</li>)}
                 </ul>
               ) : (
                 <div className="small">Nice work. Keep showing up.</div>

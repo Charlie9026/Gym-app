@@ -2,6 +2,7 @@ import { ask, notify } from '../dialog';
 import { useRef } from 'react';
 import type { AppData, Unit } from '../types';
 import { emptyData, isAppData, type Update } from '../store';
+import { THEMES, getTheme, type Theme } from '../themes';
 
 export function Settings({ data, update }: { data: AppData; update: Update }) {
   const fileRef = useRef<HTMLInputElement>(null);
@@ -40,6 +41,28 @@ export function Settings({ data, update }: { data: AppData; update: Update }) {
   return (
     <div className="screen">
       <h1>Settings</h1>
+
+      <div className="card">
+        <div className="card-head">
+          <h3>Colour theme</h3>
+          <span className="muted small">{getTheme(data.settings.theme).name}</span>
+        </div>
+        {(['dark', 'light'] as const).map((mode) => (
+          <div key={mode} className="theme-group">
+            <div className="eyebrow">{mode === 'dark' ? 'Dark' : 'Light'}</div>
+            <div className="theme-grid" role="radiogroup" aria-label={`${mode} themes`}>
+              {THEMES.filter((t) => t.mode === mode).map((t) => (
+                <ThemeOption
+                  key={t.id}
+                  theme={t}
+                  selected={getTheme(data.settings.theme).id === t.id}
+                  onSelect={() => update((d) => ({ ...d, settings: { ...d.settings, theme: t.id } }))}
+                />
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
 
       <div className="card">
         <h3>Weight unit</h3>
@@ -86,7 +109,7 @@ export function Settings({ data, update }: { data: AppData; update: Update }) {
           className="btn-danger"
           onClick={() =>
             ask('Delete ALL workouts and custom exercises? This cannot be undone.', { confirmLabel: 'Delete everything' }).then(
-              (ok) => ok && update(() => emptyData()),
+              (ok) => ok && update((d) => ({ ...emptyData(), settings: d.settings })),
             )
           }
         >
@@ -94,5 +117,30 @@ export function Settings({ data, update }: { data: AppData; update: Update }) {
         </button>
       </div>
     </div>
+  );
+}
+
+function ThemeOption({ theme, selected, onSelect }: { theme: Theme; selected: boolean; onSelect: () => void }) {
+  return (
+    <button
+      className={'theme-option' + (selected ? ' selected' : '')}
+      role="radio"
+      aria-checked={selected}
+      onClick={onSelect}
+    >
+      <span
+        className="theme-preview"
+        style={{
+          background: `radial-gradient(120% 120% at 100% 0%, ${theme.accent}66, transparent 60%), ${theme.bg}`,
+        }}
+      >
+        <span className="tp-panel" style={{ background: theme.panel + (theme.mode === 'dark' ? 'cc' : 'e6') }}>
+          <span className="tp-line" style={{ background: theme.text }} />
+          <span className="tp-line short" style={{ background: theme.muted }} />
+        </span>
+        <span className="tp-dot" style={{ background: theme.accent }} />
+      </span>
+      <span className="theme-name">{theme.name}</span>
+    </button>
   );
 }

@@ -49,6 +49,11 @@ export function LineChart({ points, format, label }: Props) {
   const y = (v: number) => PAD.top + innerH - ((v - yMin) / (yMax - yMin)) * innerH;
   const coords = points.map((p, i) => ({ cx: x(times[i]), cy: y(p.value) }));
   const path = coords.map((c, i) => `${i ? 'L' : 'M'}${c.cx},${c.cy}`).join(' ');
+  const baseY = PAD.top + innerH;
+  const area =
+    coords.length > 1
+      ? `${path} L${coords[coords.length - 1].cx},${baseY} L${coords[0].cx},${baseY} Z`
+      : '';
 
   const pickNearest = (clientX: number, rect: DOMRect) => {
     const px = ((clientX - rect.left) / rect.width) * W;
@@ -92,10 +97,17 @@ export function LineChart({ points, format, label }: Props) {
             {fmtShortDate(points[i].date)}
           </text>
         ))}
+        <defs>
+          <linearGradient id="chart-area" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0" className="area-top" />
+            <stop offset="1" className="area-bottom" />
+          </linearGradient>
+        </defs>
+        {area && <path d={area} fill="url(#chart-area)" />}
         {h && <line className="crosshair" x1={h.cx} x2={h.cx} y1={PAD.top} y2={PAD.top + innerH} />}
         <path className="line" d={path} />
         {coords.map((c, i) => (
-          <circle key={i} className="dot" cx={c.cx} cy={c.cy} r={hover === i ? 6 : 4} />
+          <circle key={i} className="dot" cx={c.cx} cy={c.cy} r={hover === i || i === coords.length - 1 ? 6 : 3.5} />
         ))}
       </svg>
       {h && hover !== null && (

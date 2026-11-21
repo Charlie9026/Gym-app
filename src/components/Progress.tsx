@@ -98,7 +98,7 @@ export function Progress({ data }: { data: AppData }) {
         <div className="chart-title">
           <span>{name} · {METRICS.find((m) => m.id === metric)!.label} ({unit})</span>
           {points.length > 1 && (
-            <span className="muted small">
+            <span className={'trend' + (change < 0 ? ' down' : '')}>
               {change >= 0 ? '▲' : '▼'} {Math.abs(change).toFixed(1)}% since first session
             </span>
           )}
@@ -112,7 +112,7 @@ export function Progress({ data }: { data: AppData }) {
       </div>
 
       <h2>Sessions</h2>
-      <div className="card">
+      <div className="card table-wrap">
         <table className="table">
           <thead>
             <tr>

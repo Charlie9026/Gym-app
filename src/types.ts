@@ -55,6 +55,8 @@ export type Unit = 'kg' | 'lb';
 
 export interface Settings {
   unit: Unit;
+  /** Colour theme id from themes.ts */
+  theme?: string;
 }
 
 export interface AppData {

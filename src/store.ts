@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { PRESET_EXERCISES } from './exercises';
 import type { AppData } from './types';
+import { systemDefaultThemeId } from './themes';
 
 const KEY = 'gym-app-data-v1';
 
@@ -10,7 +11,7 @@ export function emptyData(): AppData {
     exercises: PRESET_EXERCISES,
     workouts: [],
     activeWorkout: null,
-    settings: { unit: 'kg' },
+    settings: { unit: 'kg', theme: systemDefaultThemeId() },
   };
 }
 
@@ -31,7 +32,8 @@ function load(): AppData {
     if (!raw) return emptyData();
     const parsed = JSON.parse(raw);
     if (!isAppData(parsed)) return emptyData();
-    return { ...emptyData(), ...parsed };
+    const base = emptyData();
+    return { ...base, ...parsed, settings: { ...base.settings, ...parsed.settings } };
   } catch {
     return emptyData();
   }
