@@ -51,6 +51,8 @@ html, body { margin: 0; background: var(--bg); color: var(--text); }
 body { min-height: 100dvh; font-family: var(--font); font-size: 15px; transition: background-color .3s ease; }
 
 button, input, select, textarea { font: inherit; color: inherit; }
+/* iPhones zoom the page in when a field under 16px is focused; keep every field at 16px or more. */
+input, select, textarea { font-size: max(16px, 1em); }
 
 button { cursor: pointer; }
 
