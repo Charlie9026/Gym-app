@@ -4,6 +4,7 @@ import type { Update } from '../store';
 import { ask, notify } from '../dialog';
 import { e1rm, toDisplay, uid } from '../utils';
 import { relativeDay } from '../workout';
+import { MUSCLE_CODE } from '../exercises';
 import { ChevronIcon, PlusIcon, TrashIcon } from './Icons';
 
 interface Props {
@@ -13,9 +14,6 @@ interface Props {
   onOpen: (exerciseId: string) => void;
 }
 
-const MUSCLE_CODE: Record<MuscleGroup, string> = {
-  Chest: 'CH', Back: 'BK', Shoulders: 'SH', Biceps: 'BI', Triceps: 'TR', Quads: 'QD', Hamstrings: 'HS', Glutes: 'GL', Calves: 'CV', Core: 'CO', 'Full Body': 'FB', Cardio: 'CA', Other: '··',
-};
 
 type Filter = 'All' | 'Logged' | MuscleGroup;
 

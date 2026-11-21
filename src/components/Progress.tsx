@@ -3,6 +3,8 @@ import type { AppData, SetEntry } from '../types';
 import { e1rm, fmtDate, fmtWeight, toDisplay } from '../utils';
 import { LineChart, type Point } from './LineChart';
 import { SetPills, SetText, topSet } from './SetPills';
+import { MorphSelect } from './MorphSelect';
+import { MUSCLE_CODE } from '../exercises';
 
 type Metric = 'e1rm' | 'max' | 'volume';
 const METRICS: { id: Metric; label: string }[] = [
@@ -75,11 +77,13 @@ export function Progress({ data, initialExercise }: { data: AppData; initialExer
   return (
     <div className="screen">
       <h1>Progress</h1>
-      <select className="select" value={exerciseId} onChange={(e) => setSelected(e.target.value)} aria-label="Exercise">
-        {trained.map((e) => (
-          <option key={e.id} value={e.id}>{e.name}</option>
-        ))}
-      </select>
+      <MorphSelect
+        label="Exercise"
+        hideLabel
+        value={exerciseId}
+        onChange={setSelected}
+        options={trained.map((e) => ({ value: e.id, label: e.name, badge: MUSCLE_CODE[e.muscle], hint: e.muscle }))}
+      />
 
       <div className="stats">
         <Stat label="Heaviest" value={fmtWeight(heaviest.weight, unit)} sub={`${heaviest.reps} reps · ${fmtDate(heaviest.date)}`} />
