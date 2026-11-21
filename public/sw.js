@@ -1,8 +1,9 @@
-/* Gym Log service worker: makes the app open instantly and work offline.
+/* Overload service worker: makes the app open instantly and work offline.
    The version and the precache list below are filled in at build time by
    scripts/inject-sw.mjs, so every new build refreshes the cache. */
 const VERSION = '__VERSION__';
 const PRECACHE = /*__PRECACHE__*/[];
+// Cache names keep the original prefix so updates can tidy up older caches.
 const CACHE = 'gym-log-' + VERSION;
 const FONTS = 'gym-log-fonts';
 const scope = self.registration.scope;

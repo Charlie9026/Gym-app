@@ -12,7 +12,7 @@ const js = readFileSync('dist/' + entryJs, 'utf8');
 const css = readFileSync('dist/' + entryCss, 'utf8');
 if (/<\/script/i.test(js)) throw new Error('bundle contains </script>, cannot inline safely');
 
-const html = `<title>Gym Log</title>
+const html = `<title>Overload</title>
 <meta name="claude:viewport-fit-sides" content="cover">
 <meta name="theme-color" content="#0B0B10">
 <link rel="preconnect" href="https://fonts.googleapis.com">

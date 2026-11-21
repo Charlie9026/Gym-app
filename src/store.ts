@@ -3,6 +3,7 @@ import { PRESET_EXERCISES } from './exercises';
 import type { AppData, Exercise, MuscleGroup } from './types';
 import { systemDefaultThemeId } from './themes';
 
+// Keep this name: it's where existing data is saved (the app was called Gym Log at first).
 const KEY = 'gym-app-data-v1';
 
 export function emptyData(): AppData {

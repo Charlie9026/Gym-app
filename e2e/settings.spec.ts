@@ -41,7 +41,7 @@ test('paste a backup to restore data', async ({ page }) => {
   await expect(restore).toBeDisabled();
   await page.locator('#paste-backup').fill('not a backup');
   await restore.click();
-  await expect(page.locator('.toast')).toContainText('doesn’t look like a gym backup');
+  await expect(page.locator('.toast')).toContainText('doesn’t look like an Overload backup');
   await page.locator('#paste-backup').fill(backup!);
   await restore.click();
   await expect(page.getByRole('alertdialog')).toContainText('The backup has 6 workouts');

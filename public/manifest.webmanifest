@@ -1,8 +1,8 @@
 {
   "id": "./",
-  "name": "Gym Log",
-  "short_name": "Gym Log",
-  "description": "Log workouts, track weights and watch your lifts go up.",
+  "name": "Overload",
+  "short_name": "Overload",
+  "description": "Overload: log your workouts, track every set and watch your lifts go up.",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",

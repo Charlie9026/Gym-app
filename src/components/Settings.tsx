@@ -27,7 +27,7 @@ export function Settings({ data, update, cloud }: { data: AppData; update: Updat
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = `gym-backup-${new Date().toISOString().slice(0, 10)}.json`;
+    a.download = `overload-backup-${new Date().toISOString().slice(0, 10)}.json`;
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -61,8 +61,8 @@ export function Settings({ data, update, cloud }: { data: AppData; update: Updat
     } catch {
       notify(
         source === 'file'
-          ? 'That file isn’t a valid gym backup. Pick a file exported from this app.'
-          : 'That doesn’t look like a gym backup. Paste the whole text from “Copy backup”.',
+          ? 'That file isn’t an Overload backup. Pick a file exported from this app.'
+          : 'That doesn’t look like an Overload backup. Paste the whole text from “Copy backup”.',
       );
     }
   };

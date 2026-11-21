@@ -1,4 +1,4 @@
-# Gym Log
+# Overload
 
 A mobile-first gym progress tracker. Log your workouts, track weight and reps, and watch your lifts go up.
 
