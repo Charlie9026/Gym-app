@@ -47,3 +47,29 @@ test('keeps the screen awake during a workout', async ({ page }) => {
   await page.getByRole('button', { name: 'Discard' }).click();
   await expect.poll(async () => (await wake()).releases).toBe(1);
 });
+
+test('asks the browser to protect storage once there is data, and shows the status', async ({ page }) => {
+  await page.addInitScript(() => {
+    const w = window as unknown as { __persist: { asked: number; granted: boolean } };
+    w.__persist = { asked: 0, granted: false };
+    Object.defineProperty(navigator, 'storage', {
+      configurable: true,
+      value: {
+        persisted: async () => w.__persist.granted,
+        persist: async () => {
+          w.__persist.asked++;
+          w.__persist.granted = true;
+          return true;
+        },
+      },
+    });
+  });
+  await openApp(page);
+  const asked = () => page.evaluate(() => (window as unknown as { __persist: { asked: number } }).__persist.asked);
+  expect(await asked()).toBe(0); // nothing logged yet: no request
+  await loadSampleWeek(page);
+  await expect.poll(asked).toBe(1);
+  await tab(page, 'Workout');
+  await tab(page, 'Settings');
+  await expect(page.locator('.protect-row')).toContainText('Storage protected');
+});

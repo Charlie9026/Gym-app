@@ -15,8 +15,8 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm
@@ -33,6 +33,15 @@ jobs:
         run: npx playwright test
         env:
           CI: true
+      - name: Java for the Firebase emulator
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 21
+      - name: Cloud sync tests (Firebase emulator)
+        run: npm run test:sync
+        env:
+          CI: true
 
   deploy:
     needs: test
@@ -41,6 +50,7 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       contents: read
+      actions: read # lets the deploy step find the uploaded site
       pages: write
       id-token: write
     concurrency:
@@ -50,15 +60,15 @@ jobs:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with:
           node-version: 22
           cache: npm
       - run: npm ci
       - run: npm run build
       - uses: actions/configure-pages@v5
-      - uses: actions/upload-pages-artifact@v3
+      - uses: actions/upload-pages-artifact@v4
         with:
           path: dist
       - id: deployment

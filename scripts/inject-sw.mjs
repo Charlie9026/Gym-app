@@ -14,7 +14,9 @@ const files = [];
   }
 })(dist);
 
-const precache = files.filter((f) => f !== 'sw.js' && !f.endsWith('.map')).sort();
+// Firebase is only downloaded when you use cloud backup, so it isn't pre-saved for
+// everyone; the worker saves it the first time it's actually loaded.
+const precache = files.filter((f) => f !== 'sw.js' && !f.endsWith('.map') && !/(^|\/)firebase-[^/]*\.js$/.test(f)).sort();
 const hash = createHash('sha1');
 for (const f of precache) hash.update(f).update(readFileSync(join(dist, f)));
 const version = hash.digest('hex').slice(0, 10);

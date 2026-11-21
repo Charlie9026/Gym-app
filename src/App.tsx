@@ -9,7 +9,8 @@ import { Settings } from './components/Settings';
 import { DialogHost } from './components/DialogHost';
 import { RestTimer } from './components/RestTimer';
 import { primeAudio } from './restAlert';
-import { useWakeLock } from './pwa';
+import { useStorageProtection, useWakeLock } from './pwa';
+import { useCloudSync } from './cloud/useCloudSync';
 import { applyTheme, getTheme } from './themes';
 import { CalendarIcon, ChartIcon, DumbbellIcon, GearIcon, ListIcon } from './components/Icons';
 
@@ -35,6 +36,10 @@ export default function App() {
 
   // Keep the screen awake while a workout is in progress.
   useWakeLock(!!data.activeWorkout);
+  // Once you've logged something, ask the browser not to clear the app's data.
+  useStorageProtection(data.workouts.length > 0);
+  // Cloud backup and sync (switched off until Firebase is set up).
+  const cloud = useCloudSync(data, update);
 
   useLayoutEffect(() => applyTheme(getTheme(data.settings.theme)), [data.settings.theme]);
 
@@ -91,7 +96,7 @@ export default function App() {
             }}
           />
         )}
-        {tab === 'settings' && <Settings data={data} update={update} />}
+        {tab === 'settings' && <Settings data={data} update={update} cloud={cloud} />}
         {activeRest && <div className="rest-spacer" aria-hidden="true" />}
       </main>
 

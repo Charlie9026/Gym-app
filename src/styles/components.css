@@ -562,3 +562,29 @@
 .st-head > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 .paste-box { display: flex; flex-direction: column; gap: 8px; padding-top: 4px; }
+
+/* Storage protection status (Settings → Backup) */
+.protect-row { display: flex; align-items: center; gap: 10px; padding: 9px 12px; border-radius: var(--radius-sm); background: var(--field); }
+.protect-row .small { flex: 1; line-height: 1.35; }
+.protect-dot { width: 9px; height: 9px; border-radius: 50%; background: var(--muted); flex: none; }
+.protect-row.ok .protect-dot { background: var(--good); box-shadow: 0 0 0 3px var(--good-soft); }
+
+/* Cloud backup card */
+.cloud-card { gap: 12px; }
+.cloud-status { display: inline-flex; align-items: center; gap: 6px; font-size: .75rem; font-weight: 700; padding: 3px 10px; border-radius: 999px; background: var(--field); color: var(--muted); }
+.cloud-dot { width: 8px; height: 8px; border-radius: 50%; background: currentColor; }
+.cloud-status.s-synced { color: var(--good); background: var(--good-soft); }
+.cloud-status.s-syncing .cloud-dot, .cloud-status.s-connecting .cloud-dot { animation: cloud-pulse 1.1s ease-in-out infinite; }
+.cloud-status.s-syncing { color: var(--accent); background: var(--accent-soft); }
+.cloud-status.s-error { color: var(--danger); background: var(--danger-soft); }
+@keyframes cloud-pulse { 50% { opacity: .3; } }
+.cloud-account { display: flex; align-items: center; gap: 12px; }
+.cloud-avatar { display: grid; place-items: center; width: 40px; height: 40px; border-radius: 50%; flex: none; font-weight: 800; background: var(--accent-soft); color: var(--accent); }
+.cloud-who { display: flex; flex-direction: column; min-width: 0; }
+.cloud-who strong, .cloud-who .small { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.google-btn { display: inline-flex; align-items: center; justify-content: center; gap: 10px; }
+.google-btn svg { width: 18px; height: 18px; }
+.or-row { display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: .75rem; font-weight: 600; }
+.or-row::before, .or-row::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+.cloud-form { display: flex; flex-direction: column; gap: 8px; }
+.forgot { align-self: center; }

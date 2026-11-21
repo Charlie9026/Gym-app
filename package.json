@@ -10,9 +10,11 @@
     "preview": "vite preview",
     "build:single": "npm run build && node scripts/build-single.mjs",
     "test": "vitest run",
-    "test:e2e": "playwright test"
+    "test:e2e": "playwright test",
+    "test:sync": "firebase emulators:exec --only auth,firestore --project demo-gym-log 'playwright test -c playwright.sync.config.ts'"
   },
   "dependencies": {
+    "firebase": "^13.4.0",
     "react": "^19.3.1",
     "react-dom": "^19.3.1"
   },
@@ -22,6 +24,7 @@
     "@types/react": "^19.3.0",
     "@types/react-dom": "^19.3.0",
     "@vitejs/plugin-react": "^6.1.2",
+    "firebase-tools": "^15.37.0",
     "oxlint": "^1.90.0",
     "typescript": "~7.0.2",
     "vite": "^8.3.6",

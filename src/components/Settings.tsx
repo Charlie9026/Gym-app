@@ -1,5 +1,6 @@
 import { ask, notify } from '../dialog';
-import { useRef, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
+import { requestStorageProtection, storageProtection, type StorageProtection } from '../pwa';
 import type { AppData, Unit } from '../types';
 import { emptyData, isAppData, migrate, type Update } from '../store';
 import { THEMES, getTheme, type Theme } from '../themes';
@@ -8,12 +9,18 @@ import { Switch } from './Switch';
 import { requestNotify } from '../restAlert';
 import { REST_OPTIONS, restLabel } from '../sets';
 import { isEmbedded } from '../env';
+import { CloudCard } from './CloudCard';
+import type { CloudSync } from '../cloud/useCloudSync';
 import { addDemoWeek, hasDemoData, removeDemoWeek } from '../demo';
 
-export function Settings({ data, update }: { data: AppData; update: Update }) {
+export function Settings({ data, update, cloud }: { data: AppData; update: Update; cloud: CloudSync }) {
   const fileRef = useRef<HTMLInputElement>(null);
   const [pasting, setPasting] = useState(false);
   const [pasted, setPasted] = useState('');
+  const [protection, setProtection] = useState<StorageProtection>('unknown');
+  useEffect(() => {
+    void storageProtection().then(setProtection);
+  }, []);
 
   const exportData = () => {
     const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
@@ -159,11 +166,31 @@ export function Settings({ data, update }: { data: AppData; update: Update }) {
         <p className="muted small">Switching converts all displayed weights; nothing you logged is lost.</p>
       </div>
 
+      <CloudCard cloud={cloud} />
+
       <div className="card">
         <h3>Backup</h3>
         <p className="muted small">
           Your data lives only in this browser. Back it up now and then so you don’t lose it.
         </p>
+        {protection !== 'unknown' && !isEmbedded && (
+          <div className={'protect-row' + (protection === 'protected' ? ' ok' : '')}>
+            <span className="protect-dot" aria-hidden="true" />
+            <span className="small">
+              {protection === 'protected'
+                ? 'Storage protected: your browser won’t clear this data when space runs low.'
+                : 'Storage not protected yet: your browser may clear this data if your phone runs low on space.'}
+            </span>
+            {protection !== 'protected' && (
+              <button className="btn-ghost small-btn" onClick={() => void requestStorageProtection().then((r) => {
+                setProtection(r);
+                notify(r === 'protected' ? 'Storage protected' : 'Your browser didn’t allow it yet. Adding the app to your home screen usually does.');
+              })}>
+                Protect
+              </button>
+            )}
+          </div>
+        )}
         <div className="finish-row">
           {!isEmbedded && <button className="btn-secondary" onClick={exportData}>Export JSON</button>}
           <button className="btn-secondary" onClick={copyData}>Copy backup</button>

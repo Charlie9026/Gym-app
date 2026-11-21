@@ -31,6 +31,27 @@ Once installed it opens full screen, works offline, keeps the screen awake durin
 Your data lives in the browser it was logged in, so a new address starts empty. To move it, use **Settings → Copy backup**
 on the old copy and **Settings → Paste backup** on the new one.
 
+## Cloud backup (Firebase)
+
+Cloud backup is off until a Firebase project is connected. Once it is, Settings shows a
+**Cloud backup** card: sign in with Google or email and your workouts, saved workouts,
+exercises and settings back up and sync between devices (the workout in progress stays on
+the device you're using). It works offline and catches up when you're back online.
+
+One-time setup (free Spark plan):
+
+1. Go to <https://console.firebase.google.com>, **Create a project** (Google Analytics not needed).
+2. **Build → Authentication → Get started**, then under **Sign-in method** enable **Google** and **Email/Password**.
+3. **Authentication → Settings → Authorized domains → Add domain**: `<your-github-username>.github.io`.
+4. **Build → Firestore Database → Create database** (production mode, any nearby location).
+   Then open the **Rules** tab, paste the contents of [`firestore.rules`](firestore.rules) and **Publish**.
+5. **Project settings (gear) → General → Your apps → Web (`</>`)**, register an app (no Hosting needed)
+   and copy the `firebaseConfig` values into [`src/cloud/config.ts`](src/cloud/config.ts).
+   These values are public by design; your data is protected by sign-in and the rules.
+6. Push. The site rebuilds and the Cloud backup card appears in Settings.
+
+`npm run test:sync` tests sync against the local Firebase emulator (needs Java).
+
 ## Development
 
 ```bash
@@ -40,6 +61,7 @@ npm run build      # type-check + production build to dist/ (also prepares the o
 npm run lint       # lint; warnings count as failures
 npm test           # unit tests (Vitest) for the app's logic
 npm run test:e2e   # end-to-end tests (Playwright) against the production build
+npm run test:sync  # cloud sync tests against the local Firebase emulator (needs Java)
 ```
 
 Every push runs lint, the build and both test suites on GitHub Actions; the site is only published if they pass.
@@ -55,11 +77,14 @@ src/
   workout.ts, utils.ts   workout helpers, units, formatting
   themes.ts              colour themes
   dialog.ts              in-app dialogs, toasts and Undo
-  pwa.ts, restAlert.ts   installed-app extras (offline, screen awake), rest chime/notification
+  pwa.ts, restAlert.ts   installed-app extras (offline, screen awake, storage protection), rest chime/notification
+  cloud/                 cloud backup: Firebase config, sync engine (records.ts), sync hook
   components/            one file per screen and shared pieces (SetsTable, ChipGroup, MorphSelect…)
   styles/                base, components, screens, app-shell
   *.test.ts              unit tests
 e2e/                     end-to-end tests (Playwright)
+e2e-sync/                cloud sync tests (Firebase emulator)
+firestore.rules          who can read/write cloud data (each account only its own)
 public/                  icons, manifest, service worker
 scripts/                 build helpers (service worker list, single-file build)
 ```

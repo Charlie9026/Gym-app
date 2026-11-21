@@ -7,4 +7,8 @@ export default defineConfig({
   // Relative URLs, so the build works at any address (a project page like
   // user.github.io/Gym-app/, a custom domain, or a local folder).
   base: './',
+  build: {
+    // The Firebase chunk is large but only downloaded when you use cloud backup.
+    chunkSizeWarningLimit: 700,
+  },
 })

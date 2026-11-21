@@ -1,10 +1,15 @@
 // Bundles dist/ into one self-contained HTML file (dist-single/gym-log.html)
 // for hosts that need a single page, e.g. a claude.ai artifact.
-import { mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 
-const assets = readdirSync('dist/assets');
-const js = readFileSync('dist/assets/' + assets.find((f) => f.endsWith('.js')), 'utf8');
-const css = readFileSync('dist/assets/' + assets.find((f) => f.endsWith('.css')), 'utf8');
+// Use the files index.html actually loads (there are other chunks, e.g. Firebase,
+// which the single-file copy doesn't need: cloud backup is off inside the viewer).
+const indexHtml = readFileSync('dist/index.html', 'utf8');
+const entryJs = indexHtml.match(/<script[^>]+src="\.?\/?(assets\/[^"]+\.js)"/)?.[1];
+const entryCss = indexHtml.match(/<link[^>]+href="\.?\/?(assets\/[^"]+\.css)"/)?.[1];
+if (!entryJs || !entryCss) throw new Error('could not find the entry script/stylesheet in dist/index.html');
+const js = readFileSync('dist/' + entryJs, 'utf8');
+const css = readFileSync('dist/' + entryCss, 'utf8');
 if (/<\/script/i.test(js)) throw new Error('bundle contains </script>, cannot inline safely');
 
 const html = `<title>Gym Log</title>

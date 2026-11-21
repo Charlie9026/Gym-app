@@ -27,3 +27,6 @@ dist-single
 # test output
 test-results
 playwright-report
+dist-sync
+firebase-debug.log
+firestore-debug.log

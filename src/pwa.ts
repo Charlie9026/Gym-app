@@ -50,3 +50,37 @@ export function useWakeLock(on: boolean) {
     };
   }, [on]);
 }
+
+export type StorageProtection = 'protected' | 'not-protected' | 'unknown';
+
+/** Whether the browser has promised not to clear the app's data under storage pressure. */
+export async function storageProtection(): Promise<StorageProtection> {
+  try {
+    if (!navigator.storage?.persisted) return 'unknown';
+    return (await navigator.storage.persisted()) ? 'protected' : 'not-protected';
+  } catch {
+    return 'unknown';
+  }
+}
+
+/**
+ * Ask the browser to keep the app's data even when the device is low on space.
+ * Most browsers decide silently (installed apps and frequently used sites get it);
+ * the result can be checked with storageProtection().
+ */
+export async function requestStorageProtection(): Promise<StorageProtection> {
+  try {
+    if (!navigator.storage?.persist) return 'unknown';
+    if (await navigator.storage.persisted()) return 'protected';
+    return (await navigator.storage.persist()) ? 'protected' : 'not-protected';
+  } catch {
+    return 'unknown';
+  }
+}
+
+/** Once there's something worth keeping (a logged workout), ask for storage protection. */
+export function useStorageProtection(hasData: boolean) {
+  useEffect(() => {
+    if (hasData && !isEmbedded) void requestStorageProtection();
+  }, [hasData]);
+}
