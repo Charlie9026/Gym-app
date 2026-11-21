@@ -6,6 +6,7 @@ import { LineChart, type Point } from './LineChart';
 import { SetPills, SetText, topSet } from './SetPills';
 import { MorphSelect } from './MorphSelect';
 import { StatCards } from './StatCards';
+import { CountUp, TrendBadge } from './CountUp';
 import { RepeatIcon, StackIcon, TrophyIcon, WeightIcon } from './Icons';
 import { MUSCLE_CODE } from '../exercises';
 
@@ -107,9 +108,7 @@ export function Progress({ data, initialExercise }: { data: AppData; initialExer
         <div className="chart-title">
           <span>{name} · {METRICS.find((m) => m.id === metric)!.label} ({unit})</span>
           {points.length > 1 && (
-            <span className={'trend' + (change < 0 ? ' down' : '')}>
-              {change >= 0 ? '▲' : '▼'} {Math.abs(change).toFixed(1)}% since first session
-            </span>
+            <TrendBadge change={change} />
           )}
         </div>
         <LineChart
@@ -135,7 +134,7 @@ export function Progress({ data, initialExercise }: { data: AppData; initialExer
               <div className="session-metric">
                 <span className="eyebrow">{METRICS.find((m) => m.id === metric)!.label}</span>
                 <strong>
-                  {toDisplay(metricOf(s), unit).toLocaleString()} <span className="unit">{unit}</span>
+                  <CountUp value={toDisplay(metricOf(s), unit)} /> <span className="unit">{unit}</span>
                 </strong>
               </div>
             </div>
