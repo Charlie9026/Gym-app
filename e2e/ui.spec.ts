@@ -64,3 +64,27 @@ test('choosing a theme recolours the app and is remembered', async ({ page }) =>
   await page.reload();
   await expect.poll(accent).toBe('#E8650A');
 });
+
+test('the tab bar highlight fits its tab even if the bar resizes as the app opens', async ({ page }) => {
+  // Installed apps on iPhone can settle their screen width just after the first
+  // paint. Simulate that: shrink the bar right after the highlight is placed,
+  // with no font arriving later to trigger another measurement.
+  await page.route(/fonts\.(googleapis|gstatic)\.com/, (r) => r.abort());
+  await page.addInitScript(() => {
+    new MutationObserver((_, mo) => {
+      if (!document.querySelector('.tabbar-blob.ready')) return;
+      mo.disconnect();
+      queueMicrotask(() => ((document.querySelector('.tabbar') as HTMLElement).style.width = '260px'));
+    }).observe(document, { subtree: true, childList: true, attributes: true });
+  });
+  await openApp(page);
+  await expect
+    .poll(() =>
+      page.evaluate(() => {
+        const a = document.querySelector('.tabbar button.active')!.getBoundingClientRect();
+        const b = document.querySelector('.tabbar-blob')!.getBoundingClientRect();
+        return [Math.round(b.width - a.width), Math.round(b.left - a.left)];
+      }),
+    )
+    .toEqual([0, 0]);
+});

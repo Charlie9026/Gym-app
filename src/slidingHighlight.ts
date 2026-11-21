@@ -32,9 +32,11 @@ export function placeHighlight(container: HTMLElement | null, pill: HTMLElement 
 
 /**
  * Slide the pill whenever `deps` change (jumping into place the first time), and
- * re-align when the container changes size (rotation, wrapping, a scrollbar
- * appearing). Re-aligning animates, so a resize mid-slide redirects the slide
- * instead of cancelling it.
+ * keep it aligned when anything it depends on changes size: the container
+ * (rotation, wrapping, the screen settling as an installed app opens), the items
+ * themselves (fonts arriving), or the page coming back from the background.
+ * A correction mid-slide redirects the slide; otherwise it jumps, so fixing a
+ * stale measurement is invisible rather than a stray slide.
  */
 export function useSlidingHighlight(
   containerRef: RefObject<HTMLElement | null>,
@@ -51,16 +53,27 @@ export function useSlidingHighlight(
   useLayoutEffect(() => {
     const el = containerRef.current;
     if (!el) return;
-    // ResizeObserver fires once on observe; skip that so it can't cancel the first slide.
-    let first = true;
-    const ro = new ResizeObserver(() => {
-      if (first) {
-        first = false;
-        return;
-      }
-      placeHighlight(el, pillRef.current, true, { active, axis });
-    });
+    const realign = () => {
+      const pill = pillRef.current;
+      if (!pill?.classList.contains('ready')) return;
+      const sliding = pill.getAnimations().some((a) => a.playState === 'running');
+      placeHighlight(el, pill, sliding, { active, axis });
+    };
+    // Every report counts, including the first: the size can change between
+    // placing the pill and the observer's first report.
+    const ro = new ResizeObserver(realign);
     ro.observe(el);
-    return () => ro.disconnect();
+    for (const child of el.children) ro.observe(child);
+    const onShow = () => document.visibilityState === 'visible' && realign();
+    document.addEventListener('visibilitychange', onShow);
+    window.addEventListener('pageshow', realign);
+    let live = true;
+    document.fonts?.ready.then(() => live && realign());
+    return () => {
+      live = false;
+      ro.disconnect();
+      document.removeEventListener('visibilitychange', onShow);
+      window.removeEventListener('pageshow', realign);
+    };
   }, [containerRef, pillRef, active, axis]);
 }
