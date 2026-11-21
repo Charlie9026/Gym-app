@@ -129,7 +129,9 @@ main {
   backdrop-filter: var(--blur);
   -webkit-backdrop-filter: var(--blur);
 }
-.search::placeholder, .text-input::placeholder, .notes::placeholder, .num-input::placeholder { color: var(--muted); }
+.search::placeholder, .text-input::placeholder, .notes::placeholder { color: var(--muted); }
+/* Faded hint of last session's numbers; disappears as soon as you type. */
+.num-input::placeholder { color: var(--muted); opacity: .55; font-weight: 600; }
 .select { appearance: auto; }
 .notes { min-height: 84px; resize: vertical; }
 .title-input {

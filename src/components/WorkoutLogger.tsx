@@ -106,9 +106,12 @@ function ActiveWorkout({
 
   const addExercise = (exerciseId: string) => {
     const prev = lastSetsFor(data.workouts, exerciseId);
-    const sets: SetEntry[] = prev.length
-      ? prev.map((s) => ({ weight: s.weight, reps: s.reps, done: false }))
-      : [{ weight: 0, reps: 0, done: false }];
+    // Fields start empty; last time's numbers show as faded hints.
+    const sets: SetEntry[] = Array.from({ length: Math.max(1, prev.length) }, () => ({
+      weight: 0,
+      reps: 0,
+      done: false,
+    }));
     setActive((w) => ({ ...w, exercises: [...w.exercises, { exerciseId, sets }] }));
     setPicking(false);
   };
@@ -218,6 +221,15 @@ function ActiveWorkout({
       {active.exercises.map((ex, exIdx) => {
         const info = exById.get(ex.exerciseId);
         const prev = lastSetsFor(data.workouts, ex.exerciseId);
+        const targets = template?.exercises.find((t) => t.exerciseId === ex.exerciseId)?.sets ?? [];
+        /** Faded suggestion for a set: last session, then the saved workout, then the set above. */
+        const hintFor = (i: number): { weight: number; reps: number } | undefined => {
+          if (prev[i]) return prev[i];
+          if (targets[i]) return targets[i];
+          const above = ex.sets[i - 1];
+          if (above && (above.weight || above.reps)) return above;
+          return (i > 0 ? hintFor(i - 1) : undefined) ?? prev[prev.length - 1] ?? targets[targets.length - 1];
+        };
         return (
           <div className="card" key={exIdx}>
             <div className="ex-header">
@@ -248,6 +260,7 @@ function ActiveWorkout({
             </div>
             {ex.sets.map((s, setIdx) => {
               const p = prev[setIdx];
+              const hint = hintFor(setIdx);
               return (
                 <div className={'set-grid' + (s.done ? ' done' : '')} key={setIdx}>
                   <button
@@ -267,23 +280,27 @@ function ActiveWorkout({
                     ariaLabel={`Set ${setIdx + 1} weight`}
                     value={toDisplay(s.weight, unit)}
                     onChange={(n) => setSet(exIdx, setIdx, { weight: fromDisplay(n, unit) })}
-                    placeholder="0"
+                    placeholder={hint?.weight ? String(toDisplay(hint.weight, unit)) : '0'}
                   />
                   <NumberInput
                     ariaLabel={`Set ${setIdx + 1} reps`}
                     value={s.reps}
                     decimals={false}
                     onChange={(n) => setSet(exIdx, setIdx, { reps: n })}
-                    placeholder="0"
+                    placeholder={hint?.reps ? String(hint.reps) : '0'}
                   />
                   <button
                     className={'check' + (s.done ? ' on' : '')}
                     aria-label={s.done ? 'Mark set not done' : 'Mark set done'}
                     aria-pressed={s.done}
                     onClick={() => {
-                      const done = !s.done;
-                      setSet(exIdx, setIdx, { done });
-                      if (done) setRestEnd(Date.now() + REST_SECONDS * 1000);
+                      if (s.done) return setSet(exIdx, setIdx, { done: false });
+                      // Ticking with empty fields accepts the faded suggestion.
+                      const weight = s.weight || hint?.weight || 0;
+                      const reps = s.reps || hint?.reps || 0;
+                      if (!reps) return notify('Enter the reps for this set first.');
+                      setSet(exIdx, setIdx, { weight, reps, done: true });
+                      setRestEnd(Date.now() + REST_SECONDS * 1000);
                     }}
                   >
                     ✓
@@ -294,13 +311,7 @@ function ActiveWorkout({
             <button
               className="btn-ghost full"
               onClick={() =>
-                setExercise(exIdx, (e) => {
-                  const last = e.sets[e.sets.length - 1];
-                  return {
-                    ...e,
-                    sets: [...e.sets, { weight: last?.weight ?? 0, reps: last?.reps ?? 0, done: false }],
-                  };
-                })
+                setExercise(exIdx, (e) => ({ ...e, sets: [...e.sets, { weight: 0, reps: 0, done: false }] }))
               }
             >
               + Add set

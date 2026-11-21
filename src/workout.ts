@@ -13,7 +13,8 @@ export function newWorkoutFrom(source?: WorkoutTemplate | Workout): Workout {
     exercises:
       source?.exercises.map((ex) => ({
         exerciseId: ex.exerciseId,
-        sets: ex.sets.map((s) => ({ weight: s.weight, reps: s.reps, done: false })),
+        // Start empty: the logger shows the previous numbers as faded hints.
+        sets: ex.sets.map(() => ({ weight: 0, reps: 0, done: false })),
       })) ?? [],
   };
 }
