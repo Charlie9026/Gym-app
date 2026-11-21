@@ -1,3 +1,4 @@
+import { ask, notify } from '../dialog';
 import { useMemo, useState } from 'react';
 import { MUSCLE_GROUPS, type AppData, type MuscleGroup } from '../types';
 import type { Update } from '../store';
@@ -26,7 +27,7 @@ export function ExerciseLibrary({ data, update }: { data: AppData; update: Updat
     const name = newName.trim();
     if (!name) return;
     if (data.exercises.some((e) => e.name.toLowerCase() === name.toLowerCase())) {
-      alert(`“${name}” already exists.`);
+      notify(`“${name}” is already in your library.`);
       return;
     }
     update((d) => ({
@@ -77,11 +78,12 @@ export function ExerciseLibrary({ data, update }: { data: AppData; update: Updat
                         aria-label={`Delete ${e.name}`}
                         onClick={() => {
                           if (n > 0) {
-                            alert(`${e.name} is used in ${n} logged session(s), so it can’t be deleted.`);
+                            notify(`${e.name} is used in ${n} logged session${n === 1 ? '' : 's'}, so it can’t be deleted.`);
                             return;
                           }
-                          if (confirm(`Delete ${e.name}?`))
-                            update((d) => ({ ...d, exercises: d.exercises.filter((x) => x.id !== e.id) }));
+                          ask(`Delete ${e.name}?`, { confirmLabel: 'Delete' }).then(
+                            (ok) => ok && update((d) => ({ ...d, exercises: d.exercises.filter((x) => x.id !== e.id) })),
+                          );
                         }}
                       >
                         ✕

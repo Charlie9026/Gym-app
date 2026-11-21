@@ -1,3 +1,4 @@
+import { ask, notify } from '../dialog';
 import { useRef } from 'react';
 import type { AppData, Unit } from '../types';
 import { emptyData, isAppData, type Update } from '../store';
@@ -15,15 +16,24 @@ export function Settings({ data, update }: { data: AppData; update: Update }) {
     URL.revokeObjectURL(url);
   };
 
+  const copyData = async () => {
+    try {
+      await navigator.clipboard.writeText(JSON.stringify(data));
+      notify('Backup copied. Paste it into a note or email to keep it safe.');
+    } catch {
+      notify('Copying isn’t allowed here. Use Export JSON instead.');
+    }
+  };
+
   const importData = async (file: File) => {
     try {
       const parsed = JSON.parse(await file.text());
       if (!isAppData(parsed)) throw new Error('not a backup');
-      if (!confirm('Replace all current data with this backup?')) return;
+      if (!(await ask('Replace all current data with this backup?', { confirmLabel: 'Replace' }))) return;
       update(() => ({ ...emptyData(), ...parsed }));
-      alert('Backup restored.');
+      notify('Backup restored');
     } catch {
-      alert('That file doesn’t look like a valid gym backup.');
+      notify('That file isn’t a valid gym backup. Pick a file exported from this app.');
     }
   };
 
@@ -54,6 +64,7 @@ export function Settings({ data, update }: { data: AppData; update: Update }) {
         </p>
         <div className="finish-row">
           <button className="btn-secondary" onClick={exportData}>Export JSON</button>
+          <button className="btn-secondary" onClick={copyData}>Copy backup</button>
           <button className="btn-secondary" onClick={() => fileRef.current?.click()}>Import JSON</button>
         </div>
         <input
@@ -74,7 +85,9 @@ export function Settings({ data, update }: { data: AppData; update: Update }) {
         <button
           className="btn-danger"
           onClick={() =>
-            confirm('Delete ALL workouts and custom exercises? This cannot be undone.') && update(() => emptyData())
+            ask('Delete ALL workouts and custom exercises? This cannot be undone.', { confirmLabel: 'Delete everything' }).then(
+              (ok) => ok && update(() => emptyData()),
+            )
           }
         >
           Reset all data

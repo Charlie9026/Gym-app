@@ -1,3 +1,4 @@
+import { ask } from '../dialog';
 import { useEffect, useMemo, useState } from 'react';
 import type { AppData, SetEntry, Workout, WorkoutExercise } from '../types';
 import type { Update } from '../store';
@@ -127,9 +128,9 @@ function ActiveWorkout({
       .map((ex) => ({ ...ex, sets: completedSets(ex.sets) }))
       .filter((ex) => ex.sets.length > 0);
     if (exercises.length === 0) {
-      if (confirm('No sets are marked as done. Discard this workout?')) {
-        update((d) => ({ ...d, activeWorkout: null }));
-      }
+      ask('No sets are marked as done. Discard this workout?', { confirmLabel: 'Discard' }).then(
+        (ok) => ok && update((d) => ({ ...d, activeWorkout: null })),
+      );
       return;
     }
     const finished: Workout = { ...active, exercises, finishedAt: new Date().toISOString() };
@@ -139,9 +140,9 @@ function ActiveWorkout({
   };
 
   const discard = () => {
-    if (confirm('Discard this workout? Everything logged in it will be lost.')) {
-      update((d) => ({ ...d, activeWorkout: null }));
-    }
+    ask('Discard this workout? Everything logged in it will be lost.', { confirmLabel: 'Discard' }).then(
+      (ok) => ok && update((d) => ({ ...d, activeWorkout: null })),
+    );
   };
 
   return (
@@ -174,8 +175,10 @@ function ActiveWorkout({
                   className="icon-btn danger"
                   aria-label="Remove exercise"
                   onClick={() =>
-                    confirm(`Remove ${info?.name ?? 'this exercise'}?`) &&
-                    setActive((w) => ({ ...w, exercises: w.exercises.filter((_, i) => i !== exIdx) }))
+                    ask(`Remove ${info?.name ?? 'this exercise'} from this workout?`, { confirmLabel: 'Remove' }).then(
+                      (ok) =>
+                        ok && setActive((w) => ({ ...w, exercises: w.exercises.filter((_, i) => i !== exIdx) })),
+                    )
                   }
                 >
                   ✕

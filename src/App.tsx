@@ -5,6 +5,7 @@ import { History } from './components/History';
 import { Progress } from './components/Progress';
 import { ExerciseLibrary } from './components/ExerciseLibrary';
 import { Settings } from './components/Settings';
+import { DialogHost } from './dialog';
 
 type Tab = 'workout' | 'history' | 'progress' | 'exercises' | 'settings';
 
@@ -69,6 +70,7 @@ export default function App() {
           </button>
         ))}
       </nav>
+      <DialogHost />
     </div>
   );
 }

@@ -1,3 +1,4 @@
+import { ask } from '../dialog';
 import { useMemo, useState } from 'react';
 import type { AppData } from '../types';
 import type { Update } from '../store';
@@ -84,8 +85,9 @@ export function History({ data, update, onRepeat }: Props) {
                   <button
                     className="btn-danger"
                     onClick={() =>
-                      confirm(`Delete “${w.name}” from ${fmtDate(w.date)}?`) &&
-                      update((d) => ({ ...d, workouts: d.workouts.filter((x) => x.id !== w.id) }))
+                      ask(`Delete “${w.name}” from ${fmtDate(w.date)}?`, { confirmLabel: 'Delete' }).then(
+                        (ok) => ok && update((d) => ({ ...d, workouts: d.workouts.filter((x) => x.id !== w.id) })),
+                      )
                     }
                   >
                     Delete
