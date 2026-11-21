@@ -1,102 +1,206 @@
-import { ask, notify } from '../dialog';
 import { useMemo, useState } from 'react';
-import { MUSCLE_GROUPS, type AppData, type MuscleGroup } from '../types';
+import { MUSCLE_GROUPS, type AppData, type MuscleGroup, type SetEntry } from '../types';
 import type { Update } from '../store';
-import { uid } from '../utils';
+import { ask, notify } from '../dialog';
+import { e1rm, toDisplay, uid } from '../utils';
+import { relativeDay } from '../workout';
+import { ChevronIcon, PlusIcon, TrashIcon } from './Icons';
 
-export function ExerciseLibrary({ data, update }: { data: AppData; update: Update }) {
+interface Props {
+  data: AppData;
+  update: Update;
+  /** Open an exercise's progress chart. */
+  onOpen: (exerciseId: string) => void;
+}
+
+const MUSCLE_CODE: Record<MuscleGroup, string> = {
+  Chest: 'CH', Back: 'BK', Legs: 'LG', Shoulders: 'SH', Biceps: 'BI', Triceps: 'TR', Core: 'CO', 'Full Body': 'FB', Cardio: 'CA', Other: '··',
+};
+
+type Filter = 'All' | 'Logged' | MuscleGroup;
+
+interface Usage {
+  sessions: number;
+  best: SetEntry;
+  last: string;
+}
+
+export function ExerciseLibrary({ data, update, onOpen }: Props) {
   const [query, setQuery] = useState('');
+  const [filter, setFilter] = useState<Filter>('All');
+  const [adding, setAdding] = useState(false);
   const [newName, setNewName] = useState('');
   const [newMuscle, setNewMuscle] = useState<MuscleGroup>('Chest');
+  const unit = data.settings.unit;
 
   const usage = useMemo(() => {
-    const m = new Map<string, number>();
-    for (const w of data.workouts) for (const ex of w.exercises) m.set(ex.exerciseId, (m.get(ex.exerciseId) ?? 0) + 1);
+    const m = new Map<string, Usage>();
+    for (const w of data.workouts) {
+      for (const ex of w.exercises) {
+        const best = ex.sets.reduce((a, b) => (e1rm(b) > e1rm(a) ? b : a), ex.sets[0]);
+        const u = m.get(ex.exerciseId);
+        if (!u) m.set(ex.exerciseId, { sessions: 1, best, last: w.date });
+        else {
+          u.sessions++;
+          u.last = w.date;
+          if (e1rm(best) > e1rm(u.best)) u.best = best;
+        }
+      }
+    }
     return m;
   }, [data.workouts]);
 
   const q = query.trim().toLowerCase();
+  const visible = data.exercises.filter(
+    (e) =>
+      e.name.toLowerCase().includes(q) &&
+      (filter === 'All' || (filter === 'Logged' ? usage.has(e.id) : e.muscle === filter)),
+  );
   const groups = MUSCLE_GROUPS.map((g) => ({
     group: g,
-    items: data.exercises
-      .filter((e) => e.muscle === g && e.name.toLowerCase().includes(q))
-      .sort((a, b) => a.name.localeCompare(b.name)),
+    items: visible.filter((e) => e.muscle === g).sort((a, b) => a.name.localeCompare(b.name)),
   })).filter((g) => g.items.length > 0);
+  const presentMuscles = MUSCLE_GROUPS.filter((g) => data.exercises.some((e) => e.muscle === g));
 
   const add = () => {
     const name = newName.trim();
-    if (!name) return;
+    if (!name) return notify('Type a name for the exercise first.');
     if (data.exercises.some((e) => e.name.toLowerCase() === name.toLowerCase())) {
-      notify(`“${name}” is already in your library.`);
-      return;
+      return notify(`“${name}” is already in your library.`);
     }
     update((d) => ({
       ...d,
       exercises: [...d.exercises, { id: 'custom-' + uid(), name, muscle: newMuscle, custom: true }],
     }));
+    notify(`${name} added`);
     setNewName('');
+    setAdding(false);
+  };
+
+  const remove = async (id: string, name: string) => {
+    const n = usage.get(id)?.sessions ?? 0;
+    if (n > 0) return notify(`${name} is used in ${n} logged session${n === 1 ? '' : 's'}, so it can’t be deleted.`);
+    if (await ask(`Delete ${name}?`, { confirmLabel: 'Delete' })) {
+      update((d) => ({ ...d, exercises: d.exercises.filter((x) => x.id !== id) }));
+    }
   };
 
   return (
     <div className="screen">
-      <h1>Exercises</h1>
-      <div className="card">
-        <h3>Add custom exercise</h3>
-        <div className="add-row">
+      <header className="page-head">
+        <div className="page-title-row">
+          <h1>Exercises</h1>
+          <button className="btn-secondary icon-text compact" onClick={() => setAdding((a) => !a)} aria-expanded={adding}>
+            <PlusIcon /> New
+          </button>
+        </div>
+        <div className="summary-chips">
+          <span className="chip-stat"><strong>{data.exercises.length}</strong> exercises</span>
+          <span className="chip-stat"><strong>{usage.size}</strong> logged</span>
+        </div>
+      </header>
+
+      {adding && (
+        <div className="card add-card">
+          <h3>New exercise</h3>
           <input
+            id="new-exercise-name"
             className="text-input"
             placeholder="e.g. Cable Lateral Raise"
             value={newName}
+            autoFocus
             onChange={(e) => setNewName(e.target.value)}
             onKeyDown={(e) => e.key === 'Enter' && add()}
           />
-          <select className="select" value={newMuscle} onChange={(e) => setNewMuscle(e.target.value as MuscleGroup)}>
-            {MUSCLE_GROUPS.map((m) => <option key={m}>{m}</option>)}
-          </select>
-          <button className="btn-primary" onClick={add}>Add</button>
+          <div className="chips wrap" role="radiogroup" aria-label="Muscle group">
+            {MUSCLE_GROUPS.map((m) => (
+              <button
+                key={m}
+                role="radio"
+                aria-checked={m === newMuscle}
+                className={'chip' + (m === newMuscle ? ' active' : '')}
+                onClick={() => setNewMuscle(m)}
+              >
+                {m}
+              </button>
+            ))}
+          </div>
+          <div className="finish-row">
+            <button className="btn-secondary" onClick={() => setAdding(false)}>Cancel</button>
+            <button className="btn-primary" onClick={add}>Add exercise</button>
+          </div>
         </div>
+      )}
+
+      <input
+        id="exercise-search"
+        className="search"
+        placeholder="Search exercises…"
+        value={query}
+        onChange={(e) => setQuery(e.target.value)}
+      />
+      <div className="chips">
+        {(['All', 'Logged', ...presentMuscles] as Filter[]).map((f) => (
+          <button key={f} className={'chip' + (f === filter ? ' active' : '')} onClick={() => setFilter(f)}>
+            {f}
+          </button>
+        ))}
       </div>
 
-      <input className="search" placeholder="Search exercises…" value={query} onChange={(e) => setQuery(e.target.value)} />
-
       {groups.map(({ group, items }) => (
-        <div key={group}>
-          <h2>{group}</h2>
+        <section className="ex-group" key={group}>
+          <div className="section-head">
+            <h2>{group}</h2>
+            <span className="muted small">{items.length}</span>
+          </div>
           <div className="card list-card">
             {items.map((e) => {
-              const n = usage.get(e.id) ?? 0;
+              const u = usage.get(e.id);
+              const content = (
+                <>
+                  <span className={'muscle-badge' + (u ? ' logged' : '')} aria-hidden="true">{MUSCLE_CODE[e.muscle]}</span>
+                  <span className="ex-row-text">
+                    <span className="ex-row-name">
+                      {e.name}
+                      {e.custom && <span className="badge">custom</span>}
+                    </span>
+                    <span className="muted small">
+                      {u
+                        ? `${u.sessions} session${u.sessions === 1 ? '' : 's'} · best ${
+                            u.best.weight > 0 ? `${toDisplay(u.best.weight, unit).toLocaleString()} ${unit} × ${u.best.reps}` : `${u.best.reps} reps`
+                          } · ${relativeDay(u.last)}`
+                        : 'Not logged yet'}
+                    </span>
+                  </span>
+                </>
+              );
               return (
-                <div className="list-row" key={e.id}>
-                  <span>
-                    {e.name} {e.custom && <span className="badge">custom</span>}
-                  </span>
-                  <span className="row-actions">
-                    <span className="muted small">{n ? `${n} session${n === 1 ? '' : 's'}` : ''}</span>
-                    {e.custom && (
-                      <button
-                        className="icon-btn danger"
-                        aria-label={`Delete ${e.name}`}
-                        onClick={() => {
-                          if (n > 0) {
-                            notify(`${e.name} is used in ${n} logged session${n === 1 ? '' : 's'}, so it can’t be deleted.`);
-                            return;
-                          }
-                          ask(`Delete ${e.name}?`, { confirmLabel: 'Delete' }).then(
-                            (ok) => ok && update((d) => ({ ...d, exercises: d.exercises.filter((x) => x.id !== e.id) })),
-                          );
-                        }}
-                      >
-                        ✕
-                      </button>
-                    )}
-                  </span>
+                <div className="ex-row" key={e.id}>
+                  {u ? (
+                    <button className="ex-row-main" onClick={() => onOpen(e.id)} aria-label={`${e.name}, view progress`}>
+                      {content}
+                      <span className="chev"><ChevronIcon /></span>
+                    </button>
+                  ) : (
+                    <div className="ex-row-main">{content}</div>
+                  )}
+                  {e.custom && !u && (
+                    <button className="icon-btn danger" aria-label={`Delete ${e.name}`} onClick={() => remove(e.id, e.name)}>
+                      <TrashIcon />
+                    </button>
+                  )}
                 </div>
               );
             })}
           </div>
-        </div>
+        </section>
       ))}
-      {groups.length === 0 && <div className="card center muted">No matches.</div>}
+      {groups.length === 0 && (
+        <div className="card center">
+          <strong>No matches</strong>
+          <p className="muted small">Try another search, or add it with the New button.</p>
+        </div>
+      )}
     </div>
   );
 }

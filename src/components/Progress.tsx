@@ -1,7 +1,8 @@
 import { useMemo, useState } from 'react';
 import type { AppData, SetEntry } from '../types';
-import { e1rm, fmtDate, toDisplay } from '../utils';
+import { e1rm, fmtDate, fmtWeight, toDisplay } from '../utils';
 import { LineChart, type Point } from './LineChart';
+import { SetPills } from './SetPills';
 
 type Metric = 'e1rm' | 'max' | 'volume';
 const METRICS: { id: Metric; label: string }[] = [
@@ -15,7 +16,7 @@ interface Session {
   sets: SetEntry[];
 }
 
-export function Progress({ data }: { data: AppData }) {
+export function Progress({ data, initialExercise }: { data: AppData; initialExercise?: string }) {
   const unit = data.settings.unit;
 
   // Exercises that have history, most recently trained first.
@@ -27,7 +28,7 @@ export function Progress({ data }: { data: AppData }) {
       .sort((a, b) => lastSeen.get(b.id)!.localeCompare(lastSeen.get(a.id)!));
   }, [data.workouts, data.exercises]);
 
-  const [selected, setSelected] = useState<string>('');
+  const [selected, setSelected] = useState<string>(initialExercise ?? '');
   const [metric, setMetric] = useState<Metric>('e1rm');
   const exerciseId = trained.some((e) => e.id === selected) ? selected : trained[0]?.id;
 
@@ -81,10 +82,10 @@ export function Progress({ data }: { data: AppData }) {
       </select>
 
       <div className="stats">
-        <Stat label="Heaviest" value={`${toDisplay(heaviest.weight, unit)} ${unit}`} sub={`× ${heaviest.reps} · ${fmtDate(heaviest.date)}`} />
-        <Stat label="Best est. 1RM" value={`${toDisplay(e1rm(bestE1), unit)} ${unit}`} sub={`${toDisplay(bestE1.weight, unit)} × ${bestE1.reps}`} />
-        <Stat label="Most reps" value={`${mostReps.reps}`} sub={`@ ${toDisplay(mostReps.weight, unit)} ${unit}`} />
-        <Stat label="Best volume" value={`${toDisplay(bestVolValue, unit)} ${unit}`} sub={fmtDate(bestVol.date)} />
+        <Stat label="Heaviest" value={fmtWeight(heaviest.weight, unit)} sub={`${heaviest.reps} reps · ${fmtDate(heaviest.date)}`} />
+        <Stat label="Best est. 1RM" value={fmtWeight(e1rm(bestE1), unit)} sub={`${fmtWeight(bestE1.weight, unit)} × ${bestE1.reps} reps`} />
+        <Stat label="Most reps" value={`${mostReps.reps}`} sub={`at ${fmtWeight(mostReps.weight, unit)}`} />
+        <Stat label="Best volume" value={fmtWeight(bestVolValue, unit)} sub={fmtDate(bestVol.date)} />
       </div>
 
       <div className="card">
@@ -112,25 +113,27 @@ export function Progress({ data }: { data: AppData }) {
       </div>
 
       <h2>Sessions</h2>
-      <div className="card table-wrap">
-        <table className="table">
-          <thead>
-            <tr>
-              <th>Date</th>
-              <th>Sets</th>
-              <th className="num">{METRICS.find((m) => m.id === metric)!.label}</th>
-            </tr>
-          </thead>
-          <tbody>
-            {[...sessions].reverse().map((s, i) => (
-              <tr key={i}>
-                <td>{fmtDate(s.date)}</td>
-                <td className="small">{s.sets.map((x) => `${toDisplay(x.weight, unit)}×${x.reps}`).join(', ')}</td>
-                <td className="num">{toDisplay(metricOf(s), unit)}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+      <div className="session-list">
+        {[...sessions].reverse().map((s, i) => (
+          <article className="card session" key={i}>
+            <div className="session-head">
+              <div>
+                <h3>{fmtDate(s.date)}</h3>
+                <span className="muted small">
+                  {s.sets.length} set{s.sets.length === 1 ? '' : 's'} ·{' '}
+                  {s.sets.reduce((n, x) => n + x.reps, 0)} reps
+                </span>
+              </div>
+              <div className="session-metric">
+                <span className="eyebrow">{METRICS.find((m) => m.id === metric)!.label}</span>
+                <strong>
+                  {toDisplay(metricOf(s), unit).toLocaleString()} <span className="unit">{unit}</span>
+                </strong>
+              </div>
+            </div>
+            <SetPills sets={s.sets} unit={unit} />
+          </article>
+        ))}
       </div>
     </div>
   );

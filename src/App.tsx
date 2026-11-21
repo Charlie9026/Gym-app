@@ -23,6 +23,7 @@ export default function App() {
   const [data, update] = useAppData();
   const [tab, setTab] = useState<Tab>('workout');
   const [prs, setPrs] = useState<string[] | null>(null);
+  const [progressEx, setProgressEx] = useState<string | undefined>(undefined);
 
   useLayoutEffect(() => applyTheme(getTheme(data.settings.theme)), [data.settings.theme]);
 
@@ -56,8 +57,18 @@ export default function App() {
           />
         )}
         {tab === 'history' && <History data={data} update={update} onRepeat={() => setTab('workout')} />}
-        {tab === 'progress' && <Progress data={data} />}
-        {tab === 'exercises' && <ExerciseLibrary data={data} update={update} />}
+        {tab === 'progress' && <Progress key={progressEx ?? 'default'} data={data} initialExercise={progressEx} />}
+        {tab === 'exercises' && (
+          <ExerciseLibrary
+            data={data}
+            update={update}
+            onOpen={(id) => {
+              setProgressEx(id);
+              setTab('progress');
+              window.scrollTo({ top: 0 });
+            }}
+          />
+        )}
         {tab === 'settings' && <Settings data={data} update={update} />}
       </main>
 
@@ -66,7 +77,10 @@ export default function App() {
           <button
             key={t.id}
             className={tab === t.id ? 'active' : ''}
-            onClick={() => setTab(t.id)}
+            onClick={() => {
+              setTab(t.id);
+              window.scrollTo({ top: 0 });
+            }}
             aria-current={tab === t.id ? 'page' : undefined}
           >
             <span className="tab-icon" aria-hidden>{t.icon}</span>

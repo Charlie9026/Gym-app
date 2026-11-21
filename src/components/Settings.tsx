@@ -1,7 +1,7 @@
 import { ask, notify } from '../dialog';
 import { useRef } from 'react';
 import type { AppData, Unit } from '../types';
-import { emptyData, isAppData, type Update } from '../store';
+import { emptyData, isAppData, migrate, type Update } from '../store';
 import { THEMES, getTheme, type Theme } from '../themes';
 import { addDemoWeek, hasDemoData, removeDemoWeek } from '../demo';
 
@@ -32,7 +32,7 @@ export function Settings({ data, update }: { data: AppData; update: Update }) {
       const parsed = JSON.parse(await file.text());
       if (!isAppData(parsed)) throw new Error('not a backup');
       if (!(await ask('Replace all current data with this backup?', { confirmLabel: 'Replace' }))) return;
-      update(() => ({ ...emptyData(), ...parsed }));
+      update(() => migrate({ ...emptyData(), ...parsed }));
       notify('Backup restored');
     } catch {
       notify('That file isn’t a valid gym backup. Pick a file exported from this app.');

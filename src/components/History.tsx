@@ -1,9 +1,11 @@
-import { ask, askText, notify } from '../dialog';
 import { useMemo, useState } from 'react';
-import type { AppData } from '../types';
+import { ask, askText, notify } from '../dialog';
+import type { AppData, Workout } from '../types';
 import type { Update } from '../store';
 import { e1rm, fmtDate, fmtDuration, fmtWeight, toDisplay, workoutVolume } from '../utils';
 import { newTemplate, newWorkoutFrom, templateExercisesFrom } from '../workout';
+import { ChevronIcon, TrashIcon } from './Icons';
+import { SetPills } from './SetPills';
 
 interface Props {
   data: AppData;
@@ -11,118 +13,168 @@ interface Props {
   onRepeat: () => void;
 }
 
+function weekStart(d: Date): number {
+  const k = (d.getDay() + 6) % 7;
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate() - k).getTime();
+}
+
+function weekLabel(start: number): string {
+  const thisWeek = weekStart(new Date());
+  if (start === thisWeek) return 'This week';
+  if (start === thisWeek - 7 * 86400000) return 'Last week';
+  const end = new Date(start + 6 * 86400000);
+  const fmt = (d: Date) => d.toLocaleDateString(undefined, { day: 'numeric', month: 'short' });
+  return `${fmt(new Date(start))} – ${fmt(end)}`;
+}
+
 export function History({ data, update, onRepeat }: Props) {
   const [open, setOpen] = useState<string | null>(null);
   const unit = data.settings.unit;
   const exById = useMemo(() => new Map(data.exercises.map((e) => [e.id, e])), [data.exercises]);
-  const workouts = [...data.workouts].reverse();
 
-  if (workouts.length === 0) {
+  const weeks = useMemo(() => {
+    const groups: { start: number; workouts: Workout[]; volume: number }[] = [];
+    for (const w of [...data.workouts].reverse()) {
+      const start = weekStart(new Date(w.date));
+      let g = groups[groups.length - 1];
+      if (!g || g.start !== start) groups.push((g = { start, workouts: [], volume: 0 }));
+      g.workouts.push(w);
+      g.volume += workoutVolume(w);
+    }
+    return groups;
+  }, [data.workouts]);
+
+  if (data.workouts.length === 0) {
     return (
       <div className="screen">
         <h1>History</h1>
-        <div className="card center muted">No workouts logged yet. Finish a workout and it’ll show up here.</div>
+        <div className="card center">
+          <strong>No workouts yet</strong>
+          <p className="muted small">Finish a workout and it shows up here, grouped by week.</p>
+        </div>
       </div>
     );
   }
 
+  const totalVolume = weeks.reduce((n, g) => n + g.volume, 0);
+  const name = (id: string) => exById.get(id)?.name ?? 'Deleted exercise';
+
+  const saveAsTemplate = async (w: Workout) => {
+    const n = await askText('Save this to My workouts', w.name, { confirmLabel: 'Save workout', placeholder: 'e.g. Chest day' });
+    if (!n) return;
+    update((d) => ({ ...d, templates: [...d.templates, newTemplate(n, templateExercisesFrom(w))] }));
+    notify(`${n} added to My workouts`);
+  };
+
+  const remove = async (w: Workout) => {
+    const ok = await ask(`Delete “${w.name}” from ${fmtDate(w.date)}?`, { confirmLabel: 'Delete' });
+    if (ok) update((d) => ({ ...d, workouts: d.workouts.filter((x) => x.id !== w.id) }));
+  };
+
   return (
     <div className="screen">
-      <h1>History</h1>
-      <p className="muted small">
-        {workouts.length} workout{workouts.length === 1 ? '' : 's'} logged
-      </p>
-      {workouts.map((w) => {
-        const isOpen = open === w.id;
-        return (
-          <div className="card" key={w.id}>
-            <button className="history-head" onClick={() => setOpen(isOpen ? null : w.id)} aria-expanded={isOpen}>
-              <div>
-                <h3>{w.name}</h3>
-                <div className="muted small">
-                  {fmtDate(w.date)}
-                  {w.finishedAt && ` · ${fmtDuration(w.date, w.finishedAt)}`}
-                  {` · ${fmtWeight(workoutVolume(w), unit)} volume`}
-                </div>
-              </div>
-              <span className="muted">{isOpen ? '▴' : '▾'}</span>
-            </button>
+      <header className="page-head">
+        <h1>History</h1>
+        <div className="summary-chips">
+          <span className="chip-stat">
+            <strong>{data.workouts.length}</strong> workout{data.workouts.length === 1 ? '' : 's'}
+          </span>
+          <span className="chip-stat">
+            <strong>{fmtWeight(totalVolume, unit)}</strong> lifted
+          </span>
+        </div>
+      </header>
 
-            {!isOpen && (
-              <ul className="summary-list">
-                {w.exercises.map((ex, i) => {
-                  const best = ex.sets.reduce((a, b) => (e1rm(b) > e1rm(a) ? b : a), ex.sets[0]);
-                  return (
-                    <li key={i}>
-                      <span>
-                        {ex.sets.length} × {exById.get(ex.exerciseId)?.name ?? 'Deleted exercise'}
-                      </span>
-                      <span className="muted">
-                        {toDisplay(best.weight, unit)} {unit} × {best.reps}
-                      </span>
-                    </li>
-                  );
-                })}
-              </ul>
-            )}
-
-            {isOpen && (
-              <div className="history-detail">
-                {w.exercises.map((ex, i) => (
-                  <div key={i} className="detail-ex">
-                    <strong>{exById.get(ex.exerciseId)?.name ?? 'Deleted exercise'}</strong>
-                    <ol>
-                      {ex.sets.map((s, j) => (
-                        <li key={j}>
-                          {toDisplay(s.weight, unit)} {unit} × {s.reps}
-                        </li>
-                      ))}
-                    </ol>
-                  </div>
-                ))}
-                {w.notes && <p className="notes-view">{w.notes}</p>}
-                <button
-                  className="btn-ghost full"
-                  onClick={async () => {
-                    const name = await askText('Save this to My workouts', w.name, {
-                      confirmLabel: 'Save workout',
-                      placeholder: 'e.g. Chest day',
-                    });
-                    if (!name) return;
-                    update((d) => ({ ...d, templates: [...d.templates, newTemplate(name, templateExercisesFrom(w))] }));
-                    notify(`${name} added to My workouts`);
-                  }}
-                >
-                  Save to My workouts
-                </button>
-                <div className="finish-row">
-                  <button
-                    className="btn-danger"
-                    onClick={() =>
-                      ask(`Delete “${w.name}” from ${fmtDate(w.date)}?`, { confirmLabel: 'Delete' }).then(
-                        (ok) => ok && update((d) => ({ ...d, workouts: d.workouts.filter((x) => x.id !== w.id) })),
-                      )
-                    }
-                  >
-                    Delete
-                  </button>
-                  <button
-                    className="btn-primary"
-                    disabled={!!data.activeWorkout}
-                    title={data.activeWorkout ? 'Finish your current workout first' : undefined}
-                    onClick={() => {
-                      update((d) => ({ ...d, activeWorkout: newWorkoutFrom(w) }));
-                      onRepeat();
-                    }}
-                  >
-                    Repeat workout
-                  </button>
-                </div>
-              </div>
-            )}
+      {weeks.map((g) => (
+        <section className="week-group" key={g.start}>
+          <div className="section-head">
+            <h2>{weekLabel(g.start)}</h2>
+            <span className="muted small">
+              {g.workouts.length} workout{g.workouts.length === 1 ? '' : 's'} · {fmtWeight(g.volume, unit)}
+            </span>
           </div>
-        );
-      })}
+
+          {g.workouts.map((w) => {
+            const isOpen = open === w.id;
+            const d = new Date(w.date);
+            const sets = w.exercises.reduce((n, e) => n + e.sets.length, 0);
+            return (
+              <article className={'card workout-card' + (isOpen ? ' open' : '')} key={w.id}>
+                <button className="workout-head" onClick={() => setOpen(isOpen ? null : w.id)} aria-expanded={isOpen}>
+                  <span className="date-tile" aria-hidden="true">
+                    <span>{d.toLocaleDateString(undefined, { weekday: 'short' })}</span>
+                    <strong>{d.getDate()}</strong>
+                  </span>
+                  <span className="workout-title">
+                    <h3>{w.name}</h3>
+                    <span className="meta">
+                      {w.finishedAt && <span>{fmtDuration(w.date, w.finishedAt)}</span>}
+                      <span>{fmtWeight(workoutVolume(w), unit)}</span>
+                      <span>
+                        {sets} set{sets === 1 ? '' : 's'}
+                      </span>
+                    </span>
+                  </span>
+                  <span className="chev"><ChevronIcon /></span>
+                </button>
+
+                {!isOpen && (
+                  <ul className="ex-summary">
+                    {w.exercises.map((ex, i) => {
+                      const best = ex.sets.reduce((a, b) => (e1rm(b) > e1rm(a) ? b : a), ex.sets[0]);
+                      return (
+                        <li key={i}>
+                          <span className="ex-name">{name(ex.exerciseId)}</span>
+                          <span className="ex-best">
+                            <span className="muted">
+                              {ex.sets.length} set{ex.sets.length === 1 ? '' : 's'} ·
+                            </span>{' '}
+                            {best.weight > 0 ? `${toDisplay(best.weight, unit).toLocaleString()} ${unit} × ${best.reps}` : `${best.reps} reps`}
+                          </span>
+                        </li>
+                      );
+                    })}
+                  </ul>
+                )}
+
+                {isOpen && (
+                  <div className="workout-detail">
+                    {w.exercises.map((ex, i) => (
+                      <div key={i} className="detail-ex">
+                        <div className="detail-ex-head">
+                          <strong>{name(ex.exerciseId)}</strong>
+                          <span className="muted small">{exById.get(ex.exerciseId)?.muscle}</span>
+                        </div>
+                        <SetPills sets={ex.sets} unit={unit} />
+                      </div>
+                    ))}
+                    {w.notes && <p className="notes-view">{w.notes}</p>}
+                    <div className="detail-actions">
+                      <button
+                        className="btn-primary"
+                        disabled={!!data.activeWorkout}
+                        title={data.activeWorkout ? 'Finish your current workout first' : undefined}
+                        onClick={() => {
+                          update((dd) => ({ ...dd, activeWorkout: newWorkoutFrom(w) }));
+                          onRepeat();
+                        }}
+                      >
+                        Repeat
+                      </button>
+                      <button className="btn-secondary" onClick={() => saveAsTemplate(w)}>
+                        Save to My workouts
+                      </button>
+                      <button className="icon-btn danger big-icon" aria-label={`Delete ${w.name}`} onClick={() => remove(w)}>
+                        <TrashIcon />
+                      </button>
+                    </div>
+                  </div>
+                )}
+              </article>
+            );
+          })}
+        </section>
+      ))}
     </div>
   );
 }

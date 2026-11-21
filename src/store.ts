@@ -27,6 +27,22 @@ export function isAppData(x: unknown): x is AppData {
   );
 }
 
+/** Bring older saved data up to date. */
+export function migrate(d: AppData): AppData {
+  // "Arms" was split into Biceps and Triceps; new presets get added too.
+  const presetById = new Map(PRESET_EXERCISES.map((e) => [e.id, e]));
+  const exercises = d.exercises.map((e) => {
+    if ((e.muscle as string) !== 'Arms') return e;
+    const preset = presetById.get(e.id);
+    if (preset) return { ...e, muscle: preset.muscle };
+    const tri = /tri|push ?down|skull|dip|extension|kickback|close.?grip/i.test(e.name);
+    return { ...e, muscle: tri ? ('Triceps' as const) : ('Biceps' as const) };
+  });
+  const known = new Set(exercises.map((e) => e.id));
+  for (const p of PRESET_EXERCISES) if (!known.has(p.id)) exercises.push(p);
+  return { ...d, exercises };
+}
+
 function load(): AppData {
   try {
     const raw = localStorage.getItem(KEY);
@@ -34,7 +50,7 @@ function load(): AppData {
     const parsed = JSON.parse(raw);
     if (!isAppData(parsed)) return emptyData();
     const base = emptyData();
-    return { ...base, ...parsed, settings: { ...base.settings, ...parsed.settings } };
+    return migrate({ ...base, ...parsed, settings: { ...base.settings, ...parsed.settings } });
   } catch {
     return emptyData();
   }
