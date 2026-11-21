@@ -1,4 +1,4 @@
-import { useLayoutEffect, useState, type ReactNode } from 'react';
+import { useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { useAppData } from './store';
 import { WorkoutLogger } from './components/WorkoutLogger';
 import { History } from './components/History';
@@ -26,6 +26,29 @@ export default function App() {
   const [progressEx, setProgressEx] = useState<string | undefined>(undefined);
 
   useLayoutEffect(() => applyTheme(getTheme(data.settings.theme)), [data.settings.theme]);
+
+  // Sliding highlight behind the active tab.
+  const navRef = useRef<HTMLElement>(null);
+  const blobRef = useRef<HTMLSpanElement>(null);
+  useLayoutEffect(() => {
+    const nav = navRef.current;
+    const blob = blobRef.current;
+    if (!nav || !blob) return;
+    const place = (animate: boolean) => {
+      const btn = nav.querySelector<HTMLElement>('button.active');
+      if (!btn) return;
+      blob.classList.toggle('no-anim', !animate);
+      blob.style.width = `${btn.offsetWidth}px`;
+      blob.style.transform = `translateX(${btn.offsetLeft}px)`;
+      blob.classList.add('ready');
+      if (!animate) requestAnimationFrame(() => blob.classList.remove('no-anim'));
+    };
+    place(blob.classList.contains('ready'));
+    // Re-measure without animating when the bar changes size (rotation, resize).
+    const ro = new ResizeObserver(() => place(false));
+    ro.observe(nav);
+    return () => ro.disconnect();
+  }, [tab]);
 
   return (
     <div className="app">
@@ -72,7 +95,10 @@ export default function App() {
         {tab === 'settings' && <Settings data={data} update={update} />}
       </main>
 
-      <nav className="tabbar">
+      <nav className="tabbar" ref={navRef}>
+        <span className="tabbar-track" aria-hidden="true">
+          <span className="tabbar-blob" ref={blobRef} />
+        </span>
         {TABS.map((t) => (
           <button
             key={t.id}
