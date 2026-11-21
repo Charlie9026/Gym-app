@@ -3,6 +3,7 @@ import { useRef } from 'react';
 import type { AppData, Unit } from '../types';
 import { emptyData, isAppData, type Update } from '../store';
 import { THEMES, getTheme, type Theme } from '../themes';
+import { addDemoWeek, hasDemoData, removeDemoWeek } from '../demo';
 
 export function Settings({ data, update }: { data: AppData; update: Update }) {
   const fileRef = useRef<HTMLInputElement>(null);
@@ -101,6 +102,42 @@ export function Settings({ data, update }: { data: AppData; update: Update }) {
             e.target.value = '';
           }}
         />
+      </div>
+
+      <div className="card">
+        <h3>Sample data</h3>
+        <p className="muted small">
+          Fill the app with a sample week: chest and arms, back and shoulders, and leg days twice each, with Thursday
+          off. It also adds the three as saved workouts. You can remove it again here.
+        </p>
+        <div className="finish-row">
+          {hasDemoData(data) ? (
+            <button
+              className="btn-secondary"
+              onClick={async () => {
+                const ok = await ask('Remove the sample week and its saved workouts?', {
+                  confirmLabel: 'Remove',
+                  detail: 'Workouts you logged yourself are kept.',
+                });
+                if (!ok) return;
+                update(removeDemoWeek);
+                notify('Sample week removed');
+              }}
+            >
+              Remove sample week
+            </button>
+          ) : (
+            <button
+              className="btn-secondary"
+              onClick={() => {
+                update(addDemoWeek);
+                notify('Sample week added. Check the Workout and Progress tabs.');
+              }}
+            >
+              Load sample week
+            </button>
+          )}
+        </div>
       </div>
 
       <div className="card">
