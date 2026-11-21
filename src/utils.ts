@@ -16,7 +16,7 @@ export function fromDisplay(value: number, unit: Unit): number {
 }
 
 export function fmtWeight(kg: number, unit: Unit): string {
-  return `${toDisplay(kg, unit)} ${unit}`;
+  return `${toDisplay(kg, unit).toLocaleString(undefined, { maximumFractionDigits: 1 })} ${unit}`;
 }
 
 /** Estimated one-rep max (Epley formula). */

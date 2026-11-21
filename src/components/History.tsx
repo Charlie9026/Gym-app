@@ -1,9 +1,9 @@
-import { ask } from '../dialog';
+import { ask, askText, notify } from '../dialog';
 import { useMemo, useState } from 'react';
 import type { AppData } from '../types';
 import type { Update } from '../store';
 import { e1rm, fmtDate, fmtDuration, fmtWeight, toDisplay, workoutVolume } from '../utils';
-import { newWorkoutFrom } from '../workout';
+import { newTemplate, newWorkoutFrom, templateExercisesFrom } from '../workout';
 
 interface Props {
   data: AppData;
@@ -81,6 +81,20 @@ export function History({ data, update, onRepeat }: Props) {
                   </div>
                 ))}
                 {w.notes && <p className="notes-view">{w.notes}</p>}
+                <button
+                  className="btn-ghost full"
+                  onClick={async () => {
+                    const name = await askText('Save this to My workouts', w.name, {
+                      confirmLabel: 'Save workout',
+                      placeholder: 'e.g. Chest day',
+                    });
+                    if (!name) return;
+                    update((d) => ({ ...d, templates: [...d.templates, newTemplate(name, templateExercisesFrom(w))] }));
+                    notify(`${name} added to My workouts`);
+                  }}
+                >
+                  Save to My workouts
+                </button>
                 <div className="finish-row">
                   <button
                     className="btn-danger"

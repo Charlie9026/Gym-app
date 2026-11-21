@@ -10,6 +10,7 @@ export function emptyData(): AppData {
     version: 1,
     exercises: PRESET_EXERCISES,
     workouts: [],
+    templates: [],
     activeWorkout: null,
     settings: { unit: 'kg', theme: systemDefaultThemeId() },
   };

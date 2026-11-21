@@ -1,18 +1,19 @@
-import { ask } from '../dialog';
+import { ask, askText, notify } from '../dialog';
 import { useEffect, useMemo, useState } from 'react';
 import type { AppData, SetEntry, Workout, WorkoutExercise } from '../types';
 import type { Update } from '../store';
 import {
   completedSets,
   e1rm,
-  fmtDate,
   fmtWeight,
   fromDisplay,
   toDisplay,
 } from '../utils';
 import { ExercisePicker } from './ExercisePicker';
 import { NumberInput } from './NumberInput';
-import { newWorkoutFrom } from '../workout';
+import { newTemplate, newWorkoutFrom, structureChanged, templateExercisesFrom } from '../workout';
+import { WorkoutHome } from './WorkoutHome';
+import { TemplateEditor } from './TemplateEditor';
 
 interface Props {
   data: AppData;
@@ -47,34 +48,32 @@ function useElapsed(startIso: string) {
 
 export function WorkoutLogger({ data, update, onFinished }: Props) {
   const active = data.activeWorkout;
-  const lastWorkout = data.workouts[data.workouts.length - 1];
+  // undefined = not editing; null = creating a new saved workout; string = editing that one
+  const [editing, setEditing] = useState<string | null | undefined>(undefined);
+
+  if (editing !== undefined) {
+    return (
+      <TemplateEditor
+        key={editing ?? 'new'}
+        data={data}
+        update={update}
+        templateId={editing}
+        onClose={() => {
+          setEditing(undefined);
+          window.scrollTo({ top: 0 });
+        }}
+      />
+    );
+  }
 
   if (!active) {
     return (
-      <div className="screen">
-        <h1>Workout</h1>
-        <div className="card center">
-          <p className="muted">Ready to train?</p>
-          <button
-            className="btn-primary big"
-            onClick={() => update((d) => ({ ...d, activeWorkout: newWorkoutFrom() }))}
-          >
-            Start empty workout
-          </button>
-          {lastWorkout && (
-            <button
-              className="btn-secondary big"
-              onClick={() => update((d) => ({ ...d, activeWorkout: newWorkoutFrom(lastWorkout) }))}
-            >
-              Repeat “{lastWorkout.name}”
-              <span className="muted small"> · {fmtDate(lastWorkout.date)}</span>
-            </button>
-          )}
-        </div>
-        <p className="muted small center-text">
-          Tip: you can also repeat any past workout from the History tab.
-        </p>
-      </div>
+      <WorkoutHome
+        data={data}
+        onStartEmpty={() => update((d) => ({ ...d, activeWorkout: newWorkoutFrom() }))}
+        onStartTemplate={(t) => update((d) => ({ ...d, activeWorkout: newWorkoutFrom(t) }))}
+        onEdit={setEditing}
+      />
     );
   }
 
@@ -123,19 +122,73 @@ function ActiveWorkout({
       return { ...w, exercises };
     });
 
-  const finish = () => {
+  const template = active.templateId ? data.templates.find((t) => t.id === active.templateId) : undefined;
+
+  const saveAsTemplate = async () => {
+    const name = await askText('Save this to My workouts', active.name, {
+      detail: 'It will appear on the Workout screen so you can start it in one tap next time.',
+      confirmLabel: 'Save workout',
+      placeholder: 'e.g. Chest day',
+    });
+    if (!name) return;
+    const t = newTemplate(name, templateExercisesFrom(active));
+    update((d) => ({
+      ...d,
+      templates: [...d.templates, t],
+      activeWorkout: d.activeWorkout ? { ...d.activeWorkout, templateId: t.id, name } : null,
+    }));
+    notify(`${name} added to My workouts`);
+  };
+
+  const finish = async () => {
     const exercises = active.exercises
       .map((ex) => ({ ...ex, sets: completedSets(ex.sets) }))
       .filter((ex) => ex.sets.length > 0);
     if (exercises.length === 0) {
-      ask('No sets are marked as done. Discard this workout?', { confirmLabel: 'Discard' }).then(
-        (ok) => ok && update((d) => ({ ...d, activeWorkout: null })),
-      );
+      const ok = await ask('No sets are marked as done. Discard this workout?', { confirmLabel: 'Discard' });
+      if (ok) update((d) => ({ ...d, activeWorkout: null }));
       return;
     }
     const finished: Workout = { ...active, exercises, finishedAt: new Date().toISOString() };
     const prs = findPRs(data.workouts, finished, (id) => exById.get(id)?.name ?? 'Exercise', unit);
-    update((d) => ({ ...d, workouts: [...d.workouts, finished], activeWorkout: null }));
+    const done = templateExercisesFrom(finished);
+
+    // Work out what happens to My workouts.
+    let created: ReturnType<typeof newTemplate> | null = null;
+    let replaceExercises = false;
+    if (!template) {
+      const name = await askText('Save this to My workouts?', active.name, {
+        detail: 'Saved workouts appear on the Workout screen, ready to start in one tap.',
+        confirmLabel: 'Save workout',
+        cancelLabel: 'Not now',
+        placeholder: 'e.g. Chest day',
+      });
+      if (name) created = newTemplate(name, done);
+    } else if (structureChanged(template.exercises, done)) {
+      replaceExercises = await ask(`Update “${template.name}” to match today?`, {
+        detail: 'You changed the exercises or number of sets. Keep it as is to leave the saved workout unchanged.',
+        confirmLabel: 'Update',
+        cancelLabel: 'Keep as is',
+        danger: false,
+      });
+    } else {
+      // Same exercises and sets: carry today's weights and reps forward for next time.
+      replaceExercises = true;
+    }
+
+    update((d) => ({
+      ...d,
+      workouts: [...d.workouts, { ...finished, templateId: created?.id ?? finished.templateId }],
+      templates: created
+        ? [...d.templates, created]
+        : replaceExercises && template
+          ? d.templates.map((t) =>
+              t.id === template.id ? { ...t, exercises: done, updatedAt: new Date().toISOString() } : t,
+            )
+          : d.templates,
+      activeWorkout: null,
+    }));
+    if (created) notify(`${created.name} added to My workouts`);
     onFinished(prs);
   };
 
@@ -156,6 +209,7 @@ function ActiveWorkout({
         />
         <span className="timer" aria-label="Elapsed time">{elapsed}</span>
       </div>
+      {template && <div className="from-template muted small">From My workouts · {template.name}</div>}
 
       {active.exercises.length === 0 && (
         <div className="card center muted">Add your first exercise to get going.</div>
@@ -266,11 +320,16 @@ function ActiveWorkout({
         onChange={(e) => setActive((w) => ({ ...w, notes: e.target.value }))}
       />
 
+      {!template && active.exercises.length > 0 && (
+        <button className="btn-ghost full" onClick={saveAsTemplate}>Save to My workouts</button>
+      )}
+
       <div className="finish-row">
         <button className="btn-danger" onClick={discard}>Discard</button>
         <button className="btn-primary" onClick={finish}>Finish workout</button>
       </div>
 
+      {restEnd && <div className="rest-spacer" aria-hidden="true" />}
       {restEnd && <RestTimer end={restEnd} onChange={setRestEnd} />}
 
       {picking && (

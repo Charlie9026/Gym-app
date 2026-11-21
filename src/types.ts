@@ -49,6 +49,28 @@ export interface Workout {
   exercises: WorkoutExercise[];
   /** ISO timestamp of when the workout was finished */
   finishedAt?: string;
+  /** Saved workout this session was started from, if any */
+  templateId?: string;
+}
+
+/** A target set in a saved workout. Weight in kg. */
+export interface TemplateSet {
+  weight: number;
+  reps: number;
+}
+
+export interface TemplateExercise {
+  exerciseId: string;
+  sets: TemplateSet[];
+}
+
+/** A saved, reusable workout ("My workouts"). */
+export interface WorkoutTemplate {
+  id: string;
+  name: string;
+  exercises: TemplateExercise[];
+  createdAt: string;
+  updatedAt: string;
 }
 
 export type Unit = 'kg' | 'lb';
@@ -63,6 +85,7 @@ export interface AppData {
   version: 1;
   exercises: Exercise[];
   workouts: Workout[];
+  templates: WorkoutTemplate[];
   activeWorkout: Workout | null;
   settings: Settings;
 }

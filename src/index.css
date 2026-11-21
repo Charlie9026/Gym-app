@@ -343,3 +343,78 @@ button:focus-visible, input:focus-visible, select:focus-visible, textarea:focus-
 @media (prefers-reduced-motion: reduce) {
   * { transition: none !important; animation: none !important; }
 }
+
+/* ---------- Workout home ---------- */
+.home { gap: 14px; }
+.home-head { display: flex; flex-direction: column; gap: 2px; padding: 4px 2px 0; }
+.home-head h1 { margin: 0; }
+
+.week-card { gap: 12px; }
+.week-days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 6px; }
+.week-day {
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+  font-size: .72rem; font-weight: 700; color: var(--muted);
+}
+.week-day i {
+  display: block; width: 100%; max-width: 34px; height: 6px; border-radius: 999px;
+  background: var(--field); border: 1px solid var(--edge);
+}
+.week-day.trained i { background: var(--accent); border-color: var(--accent); box-shadow: 0 0 12px var(--accent-glow); }
+.week-day.today span { color: var(--text); }
+.week-day.today:not(.trained) i { border-color: var(--accent); }
+.week-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; padding-top: 12px; border-top: 1px solid var(--line); }
+.week-stats > div { min-width: 0; }
+.week-num { font-size: 1.02rem; font-weight: 800; letter-spacing: -0.01em; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+.start-empty {
+  display: flex; align-items: center; gap: 14px; width: 100%; text-align: left;
+  padding: 16px 18px; border-radius: var(--radius); border: 1px solid transparent;
+  background: var(--accent); color: var(--on-accent);
+  box-shadow: 0 12px 30px var(--accent-glow), inset 0 1px 0 rgba(255,255,255,.18);
+  transition: transform .12s ease, filter .12s ease;
+}
+.start-empty:hover { filter: brightness(1.06); }
+.start-empty:active { transform: scale(.985); }
+.start-icon {
+  display: grid; place-items: center; width: 42px; height: 42px; border-radius: 14px; flex-shrink: 0;
+  background: rgba(255,255,255,.18);
+}
+.start-text { flex: 1; display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.start-text strong { font-size: 1.05rem; }
+.start-text .small { opacity: .8; }
+
+.my-workouts { display: flex; flex-direction: column; gap: 10px; }
+.section-head { display: flex; justify-content: space-between; align-items: center; padding: 6px 2px 0; }
+.section-head h2 { margin: 0; }
+.small-btn { display: inline-flex; align-items: center; gap: 4px; font-size: .85rem; padding: 6px 8px; }
+.small-btn svg { width: 16px; height: 16px; }
+.empty-templates { gap: 8px; }
+.empty-templates p { margin: 0 0 6px; max-width: 34ch; line-height: 1.5; }
+.template-list { display: flex; flex-direction: column; gap: 10px; }
+.template-card { gap: 10px; }
+.tpl-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 10px; }
+.tpl-title { display: flex; flex-direction: column; gap: 3px; min-width: 0; }
+.tpl-title h3 { font-size: 1.12rem; }
+.icon-btn svg { width: 17px; height: 17px; }
+.tags { display: flex; flex-wrap: wrap; gap: 6px; }
+.tag {
+  font-size: .7rem; font-weight: 700; padding: 3px 9px; border-radius: 999px;
+  background: var(--accent-soft); color: var(--accent);
+}
+.tpl-exercises { margin: 0; line-height: 1.45; }
+.tpl-foot { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding-top: 10px; border-top: 1px solid var(--line); }
+.start-btn { display: inline-flex; align-items: center; gap: 6px; padding: 9px 16px; border-radius: 999px; }
+
+/* ---------- Saved workout editor ---------- */
+.editor-bar { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.back-btn { display: inline-flex; align-items: center; gap: 2px; padding-left: 0; }
+.back-btn svg { width: 20px; height: 20px; }
+.name-input { font-size: 1.6rem; }
+.tset-grid { display: grid; grid-template-columns: 34px 1fr 1fr 34px; gap: 8px; align-items: center; padding: 3px 6px; }
+.tset-head { font-size: .68rem; color: var(--muted); text-transform: uppercase; font-weight: 700; letter-spacing: .08em; }
+.set-num.static { display: grid; place-items: center; }
+.icon-text { display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+.icon-text svg { width: 18px; height: 18px; }
+.from-template { margin-top: -8px; padding-left: 2px; }
+.dialog-detail { margin-top: -8px !important; font-weight: 500 !important; }
+.rest-spacer { height: 64px; flex-shrink: 0; }
