@@ -1,6 +1,6 @@
 import { useMemo, useState, type ReactNode } from 'react';
 import { ChipGroup } from './ChipGroup';
-import type { AppData, ExerciseType, SetEntry, Units } from '../types';
+import type { AppData, Exercise, ExerciseType, SetEntry, Units } from '../types';
 import { e1rm, fmtDate, fmtWeight, toDisplay } from '../utils';
 import {
   MEASURES,
@@ -12,6 +12,7 @@ import {
   typeOf,
   unitsOf,
   workingSets,
+  type Measure,
 } from '../sets';
 import { LineChart, type Point } from './LineChart';
 import { SetPills, SetText } from './SetPills';
@@ -20,11 +21,24 @@ import { StatCards, type StatItem } from './StatCards';
 import { CountUp, TrendBadge } from './CountUp';
 import { CalendarIcon, ClockIcon, RepeatIcon, RouteIcon, StackIcon, TrophyIcon, WeightIcon } from './Icons';
 import { MUSCLE_CODE } from '../exercises';
+import { useExerciseMap } from '../hooks';
+import { caloriesOn, workoutCalories } from '../calories';
 
 interface Session {
   date: string;
   sets: SetEntry[];
+  /** Calories for this exercise in that workout (0 when off or unknown). */
+  kcal: number;
 }
+
+/** Extra chart measure for every exercise once calories can be shown. */
+const KCAL_MEASURE: Measure = {
+  id: 'calories',
+  label: 'Calories',
+  unitLabel: () => 'kcal',
+  value: () => 0, // filled in from the session (needs the whole workout)
+  format: (v) => Math.round(v).toLocaleString(),
+};
 
 type Range = '1m' | '3m' | 'all';
 const RANGES: { value: Range; label: string }[] = [
@@ -110,6 +124,9 @@ function sessionSummary(type: ExerciseType, sets: SetEntry[], units: Units): str
 
 export function Progress({ data, initialExercise }: { data: AppData; initialExercise?: string }) {
   const units = unitsOf(data.settings);
+  const exById = useExerciseMap(data.exercises);
+  const showKcal = caloriesOn(data.settings);
+  const bodyKg = data.settings.bodyWeightKg;
 
   // Exercises that have history, most recently trained first.
   const trained = useMemo(() => {
@@ -130,13 +147,15 @@ export function Progress({ data, initialExercise }: { data: AppData; initialExer
   // Sessions for this exercise, counting working sets only (warm-ups are left out of progress).
   const sessions: Session[] = useMemo(
     () =>
-      data.workouts.flatMap((w) =>
-        w.exercises
-          .filter((ex) => ex.exerciseId === exerciseId)
-          .map((ex) => ({ date: w.date, sets: ex.sets }))
-          .filter((s) => workingSets(s.sets).length > 0),
-      ),
-    [data.workouts, exerciseId],
+      data.workouts.flatMap((w) => {
+        const kcal = showKcal ? workoutCalories(w, exById, bodyKg).byExercise : [];
+        return w.exercises
+          .map((ex, i) => ({ ex, kcal: kcal[i] ?? 0 }))
+          .filter(({ ex }) => ex.exerciseId === exerciseId)
+          .map(({ ex, kcal }) => ({ date: w.date, sets: ex.sets, kcal }))
+          .filter((s) => workingSets(s.sets).length > 0);
+      }),
+    [data.workouts, exerciseId, showKcal, exById, bodyKg],
   );
 
   if (trained.length === 0 || !exercise) {
@@ -148,10 +167,10 @@ export function Progress({ data, initialExercise }: { data: AppData; initialExer
     );
   }
 
-  const measures = MEASURES[type];
+  const measures = showKcal && sessions.some((s) => s.kcal > 0) ? [...MEASURES[type], KCAL_MEASURE] : MEASURES[type];
   const measure = measures.find((m) => m.id === metricId) ?? measures[0];
   const unitLabel = measure.unitLabel(units);
-  const valueOf = (s: Session) => measure.value(s.sets, units);
+  const valueOf = (s: Session) => (measure === KCAL_MEASURE ? s.kcal : measure.value(s.sets, units));
 
   // Chart points for the chosen range (sessions without a value for this measure are skipped).
   const from = rangeStart(range);
@@ -187,6 +206,8 @@ export function Progress({ data, initialExercise }: { data: AppData; initialExer
         onChange={setSelected}
         options={trained.map((e) => ({ value: e.id, label: e.name, badge: MUSCLE_CODE[e.muscle], hint: e.muscle }))}
       />
+
+      {showKcal && <CaloriesCard data={data} exById={exById} />}
 
       {sessions.length === 0 ? (
         <div className="card center muted">Only warm-up sets are logged for {exercise.name} so far.</div>
@@ -287,5 +308,66 @@ function SessionCard(p: {
       </div>
       {p.pills}
     </article>
+  );
+}
+
+/** Monday 00:00 of the week a date falls in. */
+function weekOf(iso: string): number {
+  const d = new Date(iso);
+  return new Date(d.getFullYear(), d.getMonth(), d.getDate() - ((d.getDay() + 6) % 7)).getTime();
+}
+
+/** Calories burned per week across all workouts. */
+function CaloriesCard({ data, exById }: { data: AppData; exById: Map<string, Exercise> }) {
+  const [range, setRange] = useState<Range>('3m');
+  const bodyKg = data.settings.bodyWeightKg;
+  const weeks = useMemo(() => {
+    const m = new Map<number, number>();
+    for (const w of data.workouts) {
+      const kcal = workoutCalories(w, exById, bodyKg).total;
+      if (kcal > 0) m.set(weekOf(w.date), (m.get(weekOf(w.date)) ?? 0) + kcal);
+    }
+    return [...m.entries()].sort((a, b) => a[0] - b[0]);
+  }, [data.workouts, exById, bodyKg]);
+
+  if (weeks.length === 0) {
+    return (
+      <div className="card kcal-card">
+        <div className="chart-title"><span>Calories burned</span></div>
+        <p className="muted small">
+          {bodyKg
+            ? 'Finish a workout to see calories burned each week.'
+            : 'Add your body weight in Settings to see roughly how many calories your workouts burn.'}
+        </p>
+      </div>
+    );
+  }
+
+  const from = rangeStart(range);
+  const shown = weeks.filter(([start]) => start + 7 * 86400000 > from);
+  const points: Point[] = shown.map(([start, kcal]) => ({ date: new Date(start).toISOString(), value: kcal }));
+  const thisWeek = weeks.find(([start]) => start === weekOf(new Date().toISOString()))?.[1] ?? 0;
+  const avg = shown.length ? sumOf(shown.map(([, k]) => k)) / shown.length : 0;
+  const fmt = (v: number) => Math.round(v).toLocaleString();
+
+  return (
+    <div className="card kcal-card">
+      <div className="chart-controls">
+        <div className="chart-title"><span>Calories burned per week</span></div>
+        <ChipGroup label="Calories date range" variant="segmented" kind="radio" value={range} onChange={setRange} options={RANGES} />
+      </div>
+      <div className="summary-chips">
+        <span className="chip-stat"><strong><CountUp value={thisWeek} format={fmt} /></strong> kcal this week</span>
+        <span className="chip-stat"><strong><CountUp value={avg} format={fmt} /></strong> kcal a week on average</span>
+      </div>
+      {points.length === 0 ? (
+        <p className="muted small center-text chart-empty">
+          No workouts {range === '1m' ? 'in the last month' : 'in the last 3 months'}. Try a longer range.
+        </p>
+      ) : (
+        <LineChart points={points} animKey={`kcal-${range}`} label="Calories burned per week" format={fmt} />
+      )}
+      <p className="muted small kcal-note">Estimates are a rough guide. Typed-in numbers from your machine or watch are used where you added them.</p>
+    </div>
   );
 }

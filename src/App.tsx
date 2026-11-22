@@ -12,6 +12,8 @@ import { primeAudio } from './restAlert';
 import { useStorageProtection, useWakeLock } from './pwa';
 import { useCloudSync } from './cloud/useCloudSync';
 import { Welcome } from './components/Welcome';
+import { caloriesOn, fmtKcal, workoutCalories } from './calories';
+import { useExerciseMap } from './hooks';
 import { applyTheme, getTheme } from './themes';
 import { CalendarIcon, ChartIcon, DumbbellIcon, GearIcon, ListIcon } from './components/Icons';
 
@@ -30,7 +32,7 @@ const WELCOME_KEY = 'gym-app-welcome-v1';
 export default function App() {
   const [data, update] = useAppData();
   const [tab, setTab] = useState<Tab>('workout');
-  const [prs, setPrs] = useState<string[] | null>(null);
+  const [saved, setSaved] = useState<{ prs: string[]; workoutId: string } | null>(null);
   const [progressEx, setProgressEx] = useState<string | undefined>(undefined);
   // Rest timer for the active workout. Kept here so it survives switching tabs;
   // tied to the workout's id so it never carries over to the next workout.
@@ -43,6 +45,7 @@ export default function App() {
   useStorageProtection(data.workouts.length > 0);
   // Cloud backup and sync (switched off until Firebase is set up).
   const cloud = useCloudSync(data, update);
+  const exById = useExerciseMap(data.exercises);
 
   // First open: ask to sign in or create an account (once; skippable).
   const [welcomeDone, setWelcomeDone] = useState(() => {
@@ -72,6 +75,12 @@ export default function App() {
   }, [cloud.user]);
   const showWelcome = cloud.available && !welcomeDone && !cloud.user && cloud.status !== 'connecting';
 
+  // Calories for the workout just saved (it can change if you edit the workout while the banner shows).
+  const savedWorkout = saved && caloriesOn(data.settings) ? data.workouts.find((w) => w.id === saved.workoutId) : undefined;
+  const savedCalories = savedWorkout ? workoutCalories(savedWorkout, exById, data.settings.bodyWeightKg) : null;
+  const savedKcal = savedCalories?.total ?? 0;
+  const savedKcalText = savedCalories ? `${savedCalories.estimated ? 'About ' : ''}${fmtKcal(savedKcal)} burned` : '';
+
   useLayoutEffect(() => applyTheme(getTheme(data.settings.theme)), [data.settings.theme]);
 
   // Sliding highlight behind the active tab.
@@ -84,19 +93,20 @@ export default function App() {
     <div className="app">
       <div className="glow" aria-hidden="true" />
       <main>
-        {prs && (
+        {saved && (
           <div className="banner" role="status">
             <div>
               <strong>Workout saved</strong>
-              {prs.length > 0 ? (
+              {savedKcal > 0 && <div className="banner-kcal">{savedKcalText}</div>}
+              {saved.prs.length > 0 ? (
                 <ul>
-                  {prs.map((p) => <li key={p}><span className="pr-badge">PR</span> {p}</li>)}
+                  {saved.prs.map((p) => <li key={p}><span className="pr-badge">PR</span> {p}</li>)}
                 </ul>
               ) : (
                 <div className="small">Nice work. Keep showing up.</div>
               )}
             </div>
-            <button className="btn-ghost" onClick={() => setPrs(null)}>Dismiss</button>
+            <button className="btn-ghost" onClick={() => setSaved(null)}>Dismiss</button>
           </div>
         )}
         {tab === 'workout' && (
@@ -108,8 +118,8 @@ export default function App() {
               if (data.settings.restSound !== false) primeAudio(); // runs inside the tap, so audio is allowed
               setRest({ workoutId: data.activeWorkout.id, end: Date.now() + ms, total: ms });
             }}
-            onFinished={(p) => {
-              setPrs(p);
+            onFinished={(prs, workoutId) => {
+              setSaved({ prs, workoutId });
               setTab('history');
             }}
           />
@@ -162,7 +172,7 @@ export default function App() {
           </button>
         ))}
       </nav>
-      {showWelcome && <Welcome cloud={cloud} onSkip={finishWelcome} />}
+      {showWelcome && <Welcome cloud={cloud} data={data} update={update} onSkip={finishWelcome} />}
       <DialogHost />
     </div>
   );

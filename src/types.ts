@@ -65,6 +65,8 @@ export interface SetEntry {
 export interface WorkoutExercise {
   exerciseId: string;
   sets: SetEntry[];
+  /** Calories typed in from a machine or watch (cardio); replaces the estimate. */
+  calories?: number;
 }
 
 export interface Workout {
@@ -124,6 +126,10 @@ export interface Settings {
   restSound?: boolean;
   /** Show a system notification when rest ends, where the browser allows it. */
   restNotify?: boolean;
+  /** Show calories burned (default on). */
+  showCalories?: boolean;
+  /** Body weight in kg, for estimating calories. */
+  bodyWeightKg?: number;
 }
 
 export interface AppData {

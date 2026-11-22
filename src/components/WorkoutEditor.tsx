@@ -110,6 +110,7 @@ export function WorkoutEditor({ data, update, workout, onClose }: Props) {
         onChange={setExercises}
         blankSet={() => ({ weight: 0, reps: 0, done: true })}
         emptyText="This workout has no exercises. Add one, or delete the workout."
+        calories
       />
 
       <textarea

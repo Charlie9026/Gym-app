@@ -98,6 +98,11 @@
 
 .week-num { font-size: 1.02rem; font-weight: 800; letter-spacing: 0; font-variant-numeric: tabular-nums; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
+/* With calories there are four stats: two rows on phones, one row when there is room. */
+.week-stats.four { grid-template-columns: repeat(2, 1fr); row-gap: 12px; }
+@media (min-width: 440px) { .week-stats.four { grid-template-columns: repeat(4, 1fr); } }
+.week-hint { margin: 0; }
+
 .start-empty {
   display: flex; align-items: center; gap: 14px; width: 100%; text-align: left;
   padding: 16px 18px; border-radius: var(--radius); border: 1px solid transparent;

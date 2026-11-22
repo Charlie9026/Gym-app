@@ -8,6 +8,8 @@ import { DEFAULT_REST_SECONDS, isWarmup, typeOf, unitsOf, type AnySet } from '..
 import { ExercisePicker } from './ExercisePicker';
 import { PlusIcon, TrashIcon } from './Icons';
 import { RestChip } from './RestChip';
+import { CaloriesChip } from './CaloriesChip';
+import { caloriesOn, cardioEstimate, isCardio, withCalories } from '../calories';
 import { SetsTable } from './SetsTable';
 
 /**
@@ -17,6 +19,7 @@ import { SetsTable } from './SetsTable';
 export interface EditableExercise<S extends AnySet> {
   exerciseId: string;
   sets: S[];
+  calories?: number;
 }
 
 interface Props<S extends AnySet> {
@@ -27,9 +30,11 @@ interface Props<S extends AnySet> {
   /** A blank set of the right shape (e.g. done: true for past workouts). */
   blankSet: () => S;
   emptyText: string;
+  /** Past workouts: show a calories pill on cardio to type in a machine's number. */
+  calories?: boolean;
 }
 
-export function ExerciseListEditor<S extends AnySet>({ data, update, exercises, onChange, blankSet, emptyText }: Props<S>) {
+export function ExerciseListEditor<S extends AnySet>({ data, update, exercises, onChange, blankSet, emptyText, calories }: Props<S>) {
   const [picking, setPicking] = useState(false);
   const units = unitsOf(data.settings);
   const exById = useExerciseMap(data.exercises);
@@ -72,6 +77,14 @@ export function ExerciseListEditor<S extends AnySet>({ data, update, exercises, 
               <div className="ex-title">
                 <h3>{info?.name ?? 'Unknown exercise'}</h3>
                 {info && <RestChip exercise={info} defaultSeconds={data.settings.restSeconds ?? DEFAULT_REST_SECONDS} update={update} />}
+                {calories && caloriesOn(data.settings) && isCardio(info) && (
+                  <CaloriesChip
+                    name={exName}
+                    value={ex.calories}
+                    estimate={cardioEstimate({ exerciseId: ex.exerciseId, sets: ex.sets as SetEntry[] }, info, data.settings.bodyWeightKg)}
+                    onChange={(kcal) => setEx(i, (e) => withCalories(e, kcal))}
+                  />
+                )}
               </div>
               <div className="row-actions">
                 <button className="icon-btn" aria-label={`Move ${exName} up`} onClick={() => move(i, -1)}>↑</button>

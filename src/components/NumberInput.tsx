@@ -6,10 +6,11 @@ interface Props {
   decimals?: boolean;
   placeholder?: string;
   ariaLabel: string;
+  id?: string;
 }
 
 /** Text-based numeric input that tolerates partial input like "62." while typing. */
-export function NumberInput({ value, onChange, decimals = true, placeholder, ariaLabel }: Props) {
+export function NumberInput({ value, onChange, decimals = true, placeholder, ariaLabel, id }: Props) {
   const [text, setText] = useState(value ? String(value) : '');
   const [lastValue, setLastValue] = useState(value);
 
@@ -22,6 +23,7 @@ export function NumberInput({ value, onChange, decimals = true, placeholder, ari
 
   return (
     <input
+      id={id}
       className="num-input"
       type="text"
       inputMode={decimals ? 'decimal' : 'numeric'}

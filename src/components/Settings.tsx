@@ -10,6 +10,8 @@ import { requestNotify } from '../restAlert';
 import { REST_OPTIONS, restLabel, unitsOf } from '../sets';
 import { isEmbedded } from '../env';
 import { CloudCard } from './CloudCard';
+import { BodyWeightField } from './BodyWeightField';
+import { caloriesOn } from '../calories';
 import { useIsOwner } from '../owner';
 import type { CloudSync } from '../cloud/useCloudSync';
 import { addDemoWeek, hasDemoData, removeDemoWeek } from '../demo';
@@ -183,6 +185,34 @@ export function Settings({ data, update, cloud }: { data: AppData; update: Updat
           />
         </div>
         <p className="muted small">Switching converts everything shown; nothing you logged is lost.</p>
+      </div>
+
+      <div className="card">
+        <h3>Calories</h3>
+        <div className="toggle-row first">
+          <label htmlFor="show-calories">
+            Show calories burned
+            <span className="muted small">On finished workouts, History, this week and Progress.</span>
+          </label>
+          <Switch
+            id="show-calories"
+            label="Show calories burned"
+            checked={caloriesOn(data.settings)}
+            onChange={(v) => update((d) => ({ ...d, settings: { ...d.settings, showCalories: v } }))}
+          />
+        </div>
+        <div className={'collapse' + (caloriesOn(data.settings) ? ' open' : '')} inert={!caloriesOn(data.settings)} aria-hidden={!caloriesOn(data.settings)}>
+          <div className="collapse-inner">
+            <div className="calories-settings">
+              <BodyWeightField settings={data.settings} update={update} id="settings-body-weight" />
+              <p className="muted small">
+                {data.settings.bodyWeightKg
+                  ? 'Calories are estimated from your body weight, the exercises, and how long or far you went. They’re a rough guide. For cardio you can type in the number from your machine or watch instead.'
+                  : 'Add your body weight to see estimated calories. Without it, only calories you type in for cardio are counted.'}
+              </p>
+            </div>
+          </div>
+        </div>
       </div>
 
       <CloudCard cloud={cloud} />

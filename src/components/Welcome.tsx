@@ -1,13 +1,16 @@
 import { useEffect, useRef } from 'react';
 import type { CloudSync } from '../cloud/useCloudSync';
+import type { AppData } from '../types';
+import type { Update } from '../store';
 import { SignInForm } from './SignInForm';
+import { BodyWeightField } from './BodyWeightField';
 
 /**
  * First-open screen: sign in or create an account so your workouts are backed
  * up, or carry on without one (everything still works on this device, offline
  * included; you can sign in later from Settings).
  */
-export function Welcome({ cloud, onSkip }: { cloud: CloudSync; onSkip: () => void }) {
+export function Welcome({ cloud, data, update, onSkip }: { cloud: CloudSync; data: AppData; update: Update; onSkip: () => void }) {
   const ref = useRef<HTMLDivElement>(null);
   useEffect(() => {
     ref.current?.querySelector<HTMLElement>('.google-btn')?.focus();
@@ -32,6 +35,14 @@ export function Welcome({ cloud, onSkip }: { cloud: CloudSync; onSkip: () => voi
             Sign in to back up your workouts and use them on your phone and computer. It’s free.
           </p>
           <SignInForm cloud={cloud} idPrefix="welcome" initialMode="create" />
+        </div>
+
+        <div className="card welcome-card">
+          <p className="muted small">
+            Add your body weight to see roughly how many calories your workouts burn. This is optional, and you can
+            change it later in Settings.
+          </p>
+          <BodyWeightField settings={data.settings} update={update} id="welcome-body-weight" unitPicker />
         </div>
 
         <button className="btn-ghost welcome-skip" onClick={onSkip}>

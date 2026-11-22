@@ -17,6 +17,8 @@ import {
 } from '../sets';
 import { SetsTable } from './SetsTable';
 import { RestChip } from './RestChip';
+import { CaloriesChip } from './CaloriesChip';
+import { caloriesOn, cardioEstimate, isCardio, withCalories } from '../calories';
 import { ExercisePicker } from './ExercisePicker';
 import { lastSetsFor, newTemplate, newWorkoutFrom, structureChanged, templateExercisesFrom } from '../workout';
 import { useExerciseMap } from '../hooks';
@@ -26,7 +28,8 @@ import { TemplateEditor } from './TemplateEditor';
 interface Props {
   data: AppData;
   update: Update;
-  onFinished: (prs: string[]) => void;
+  /** Called with the new personal bests and the finished workout's id. */
+  onFinished: (prs: string[], workoutId: string) => void;
   /** Start the rest timer (lives in App so it keeps running across tabs). */
   onRest: (ms: number) => void;
 }
@@ -97,6 +100,7 @@ function ActiveWorkout({
   const [picking, setPicking] = useState(false);
   const elapsed = useElapsed(active.date);
   const units = unitsOf(data.settings);
+  const showKcal = caloriesOn(data.settings);
   const exById = useExerciseMap(data.exercises);
 
   const setActive = (fn: (w: Workout) => Workout) =>
@@ -200,7 +204,7 @@ function ActiveWorkout({
       activeWorkout: null,
     }));
     if (created) notify(`${created.name} added to My workouts`);
-    onFinished(prs);
+    onFinished(prs, finished.id);
   };
 
   const discard = () => {
@@ -276,6 +280,14 @@ function ActiveWorkout({
               <div className="ex-title">
                 <h3>{info?.name ?? 'Unknown exercise'}</h3>
                 {info && <RestChip exercise={info} defaultSeconds={data.settings.restSeconds ?? DEFAULT_REST_SECONDS} update={update} />}
+                {showKcal && isCardio(info) && (
+                  <CaloriesChip
+                    name={exName}
+                    value={ex.calories}
+                    estimate={cardioEstimate(ex, info, data.settings.bodyWeightKg)}
+                    onChange={(kcal) => setExercise(exIdx, (e) => withCalories(e, kcal))}
+                  />
+                )}
               </div>
               <div className="row-actions">
                 <button className="icon-btn" aria-label={`Move ${exName} up`} onClick={() => moveExercise(exIdx, -1)}>↑</button>

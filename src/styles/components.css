@@ -628,3 +628,23 @@
 .welcome-card > .muted { margin: 0; }
 .welcome-skip { align-self: center; font-weight: 700; }
 .welcome-note { margin: -10px 0 0; text-align: center; }
+
+/* Calories: settings card and body weight field */
+.toggle-row.first { border-top: none; padding-top: 0; }
+.calories-settings { display: flex; flex-direction: column; gap: 10px; padding-top: 12px; border-top: 1px solid var(--line); }
+.calories-settings p { margin: 0; line-height: 1.45; }
+.body-weight { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.body-weight label { font-weight: 700; }
+.body-weight-input { display: flex; align-items: center; gap: 8px; }
+.body-weight-input .num-input { width: 96px; height: 42px; }
+.body-weight.stacked { flex-direction: column; align-items: stretch; gap: 8px; }
+.body-weight.stacked .body-weight-input { gap: 10px; }
+.body-weight.stacked .num-input { flex: 1; width: auto; min-width: 0; }
+.body-weight.stacked .chips.seg .chip { padding: 9px 18px; }
+.rest-chip svg path { stroke-linejoin: round; }
+.kcal-panel { display: flex; flex-wrap: wrap; align-items: center; gap: 8px 10px; }
+.kcal-input { display: flex; align-items: center; gap: 6px; }
+.kcal-input .num-input { width: 84px; }
+.banner-kcal { color: var(--accent); font-weight: 700; font-size: 0.9rem; margin-top: 2px; }
+.kcal-card p { margin: 0; }
+.kcal-note { line-height: 1.4; }

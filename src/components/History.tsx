@@ -10,6 +10,7 @@ import { newTemplate, newWorkoutFrom, templateExercisesFrom } from '../workout';
 import { ChevronIcon, TrashIcon } from './Icons';
 import { SetPills } from './SetPills';
 import { CountUp } from './CountUp';
+import { caloriesOn, fmtKcal, workoutCalories } from '../calories';
 
 interface Props {
   data: AppData;
@@ -41,6 +42,13 @@ export function History({ data, update, onRepeat }: Props) {
   const units = unitsOf(data.settings);
   const unit = units.weight;
   const exById = useExerciseMap(data.exercises);
+  const showKcal = caloriesOn(data.settings);
+  const kcalById = useMemo(() => {
+    const m = new Map<string, number>();
+    if (showKcal) for (const w of data.workouts) m.set(w.id, workoutCalories(w, exById, data.settings.bodyWeightKg).total);
+    return m;
+  }, [showKcal, data.workouts, exById, data.settings.bodyWeightKg]);
+  const totalKcal = [...kcalById.values()].reduce((a, b) => a + b, 0);
 
   const weeks = useMemo(() => {
     const groups: { start: number; workouts: Workout[]; volume: number }[] = [];
@@ -113,6 +121,11 @@ export function History({ data, update, onRepeat }: Props) {
           <span className="chip-stat">
             <strong><CountUp value={toDisplay(totalVolume, unit)} from={0} /> {unit}</strong> lifted
           </span>
+          {totalKcal > 0 && (
+            <span className="chip-stat">
+              <strong><CountUp value={totalKcal} from={0} /> kcal</strong> burned
+            </span>
+          )}
         </div>
       </header>
 
@@ -142,6 +155,7 @@ export function History({ data, update, onRepeat }: Props) {
                     <span className="meta">
                       {w.finishedAt && <span>{fmtDuration(w.date, w.finishedAt)}</span>}
                       <span>{fmtWeight(workoutVolume(w), unit)}</span>
+                      {(kcalById.get(w.id) ?? 0) > 0 && <span>{fmtKcal(kcalById.get(w.id)!)}</span>}
                       <span>
                         {sets} set{sets === 1 ? '' : 's'}
                       </span>

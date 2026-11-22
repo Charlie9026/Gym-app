@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { openApp, tab } from './helpers.ts';
+import { openApp, stored, tab } from './helpers.ts';
 
 test('first open asks you to sign in or create an account', async ({ page }) => {
   await openApp(page, { welcome: true });
@@ -36,4 +36,16 @@ test('fits a 320px phone without sideways scrolling', async ({ page }) => {
     return w.scrollWidth - w.clientWidth;
   });
   expect(overflow).toBeLessThanOrEqual(0);
+});
+
+test('first open lets you add your body weight for calories (optional)', async ({ page }) => {
+  await openApp(page, { welcome: true });
+  const welcome = page.getByRole('dialog', { name: 'Overload' });
+  await welcome.getByRole('radio', { name: 'lb' }).click();
+  await welcome.getByLabel('Body weight in lb').fill('165');
+  await page.getByRole('button', { name: 'Not now, use on this device only' }).click();
+  expect((await stored(page)).settings).toMatchObject({ unit: 'lb' });
+  expect((await stored(page)).settings.bodyWeightKg).toBeCloseTo(74.84, 1);
+  await tab(page, 'Settings');
+  await expect(page.getByLabel('Body weight in lb')).toHaveValue('165');
 });

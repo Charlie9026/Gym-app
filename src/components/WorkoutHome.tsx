@@ -3,6 +3,7 @@ import { useMemo } from 'react';
 import type { AppData, WorkoutTemplate } from '../types';
 import { fmtWeight, workoutVolume } from '../utils';
 import { relativeDay } from '../workout';
+import { caloriesOn, workoutCalories } from '../calories';
 import { ChevronIcon, EditIcon, PlayIcon, PlusIcon } from './Icons';
 
 interface Props {
@@ -23,12 +24,15 @@ export function WorkoutHome({ data, onStartEmpty, onStartTemplate, onEdit }: Pro
   const unit = data.settings.unit;
   const exById = useExerciseMap(data.exercises);
   const now = useToday();
+  const showKcal = caloriesOn(data.settings);
+  const bodyKg = data.settings.bodyWeightKg;
 
   const week = useMemo(() => {
     const start = startOfWeek(now).getTime();
     const trained = new Set<number>();
     let volume = 0;
     let count = 0;
+    let kcal = 0;
     for (const w of data.workouts) {
       const t = Date.parse(w.date);
       if (t < start) continue;
@@ -36,10 +40,11 @@ export function WorkoutHome({ data, onStartEmpty, onStartTemplate, onEdit }: Pro
       const d = new Date(t);
       trained.add(Math.round((new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime() - start) / 86400000));
       volume += workoutVolume(w);
+      kcal += workoutCalories(w, exById, bodyKg).total;
       count++;
     }
-    return { trained, volume, count, today: (now.getDay() + 6) % 7 };
-  }, [data.workouts, now]);
+    return { trained, volume, count, kcal, today: (now.getDay() + 6) % 7 };
+  }, [data.workouts, now, exById, bodyKg]);
 
   const lastWorkout = data.workouts[data.workouts.length - 1];
 
@@ -81,7 +86,7 @@ export function WorkoutHome({ data, onStartEmpty, onStartTemplate, onEdit }: Pro
             </div>
           ))}
         </div>
-        <div className="week-stats">
+        <div className={'week-stats' + (showKcal ? ' four' : '')}>
           <div>
             <div className="week-num">{week.count}</div>
             <div className="muted small">workout{week.count === 1 ? '' : 's'}</div>
@@ -90,11 +95,20 @@ export function WorkoutHome({ data, onStartEmpty, onStartTemplate, onEdit }: Pro
             <div className="week-num">{week.volume ? fmtWeight(week.volume, unit) : '—'}</div>
             <div className="muted small">lifted</div>
           </div>
+          {showKcal && (
+            <div>
+              <div className="week-num">{week.kcal ? week.kcal.toLocaleString() : '—'}</div>
+              <div className="muted small">kcal</div>
+            </div>
+          )}
           <div>
             <div className="week-num">{lastWorkout ? relativeDay(lastWorkout.date) : '—'}</div>
             <div className="muted small">last session</div>
           </div>
         </div>
+        {showKcal && !bodyKg && (
+          <p className="muted small week-hint">Add your body weight in Settings to see calories burned.</p>
+        )}
       </section>
 
       <button className="start-empty" onClick={onStartEmpty}>
