@@ -14,6 +14,8 @@ import { NumberInput } from './NumberInput';
 interface Props {
   type: ExerciseType;
   units: Units;
+  /** Distance exercise logged by time only: the distance column is hidden. */
+  timeOnly?: boolean;
   exerciseName: string;
   sets: AnySet[];
   mode: 'log' | 'edit';
@@ -26,10 +28,12 @@ interface Props {
   onToggleWarmup: (i: number) => void;
   onRemove: (i: number) => void;
   onAdd: () => void;
+  /** Log mode: the set the stopwatch is timing. */
+  timingIndex?: number;
 }
 
 export function SetsTable(props: Props) {
-  const { type, units, sets, mode, prev = [], hintFor, onChange, onToggleDone, exerciseName } = props;
+  const { type, units, timeOnly, timingIndex, sets, mode, prev = [], hintFor, onChange, onToggleDone, exerciseName } = props;
   const [menuFor, setMenuFor] = useState<number | null>(null);
   const log = mode === 'log';
   const unit = units.weight;
@@ -38,11 +42,13 @@ export function SetsTable(props: Props) {
   // Working sets are numbered 1, 2, 3…; warm-ups show "W".
   const labels = sets.map((s, i) => (isWarmup(s) ? 'W' : String(sets.slice(0, i + 1).filter((x) => !isWarmup(x)).length)));
 
+  // A time-only distance exercise is laid out like a timed one.
+  const layout = type === 'distance' && timeOnly ? 'time' : type;
   const fieldHeads =
-    type === 'weight' ? [unit, 'Reps'] : type === 'reps' ? ['Reps'] : type === 'time' ? ['Time'] : [dist, 'Time'];
+    layout === 'weight' ? [unit, 'Reps'] : layout === 'reps' ? ['Reps'] : layout === 'time' ? ['Time'] : [dist, 'Time'];
 
   return (
-    <div className={`sets t-${type} m-${mode}`}>
+    <div className={`sets t-${layout} m-${mode}`}>
       <div className="st-row st-head" aria-hidden="true">
         <span>Set</span>
         {log && <span>Previous</span>}
@@ -59,7 +65,7 @@ export function SetsTable(props: Props) {
         const warmNo = sets.slice(0, i + 1).filter(isWarmup).length;
         const name = `${exerciseName} set ${labels[i] === 'W' ? `warm-up ${warmNo}` : labels[i]}`;
         return (
-          <div className={'st-row' + (done ? ' done' : '') + (isWarmup(s) ? ' warm' : '')} key={i}>
+          <div className={'st-row' + (done ? ' done' : '') + (isWarmup(s) ? ' warm' : '') + (i === timingIndex ? ' timing' : '')} key={i}>
             <SetBadge
               label={labels[i]}
               warm={isWarmup(s)}
@@ -88,7 +94,7 @@ export function SetsTable(props: Props) {
                 placeholder={hint?.reps ? String(hint.reps) : '0'}
               />
             )}
-            {type === 'distance' && (
+            {layout === 'distance' && (
               <NumberInput
                 ariaLabel={`${name} distance`}
                 value={toDistDisplay(s.meters ?? 0, dist)}

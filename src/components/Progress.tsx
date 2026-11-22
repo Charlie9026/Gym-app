@@ -10,7 +10,9 @@ import {
   toDistDisplay,
   topSet,
   typeOf,
+  unitsFor,
   unitsOf,
+  paceUnit,
   workingSets,
   type Measure,
 } from '../sets';
@@ -88,13 +90,13 @@ function statsFor(type: ExerciseType, sessions: Session[], units: Units): StatIt
     const dist = (s: Session) => toDistDisplay(sumOf(s.sets.map((x) => x.meters ?? 0)), d);
     const km = (n: number) => (Math.round(n * 100) / 100).toLocaleString(); // distances keep 2 decimals, as elsewhere
     const longest = bestBy(sessions, dist);
-    const paced = all.filter((x) => paceOf(x, d) > 0);
-    const fastest = paced.length ? paced.reduce((a, b) => (paceOf(b, d) < paceOf(a, d) ? b : a)) : null;
+    const paced = all.filter((x) => paceOf(x, units) > 0);
+    const fastest = paced.length ? paced.reduce((a, b) => (paceOf(b, units) < paceOf(a, units) ? b : a)) : null;
     return [
       { label: 'Longest', icon: <RouteIcon />, value: dist(longest), format: km, unit: d, sub: fmtDate(longest.date) },
       {
-        label: 'Best pace', icon: <ClockIcon />, value: fastest ? paceOf(fastest, d) : 0, format: (n) => (n ? fmtTime(n) : '—'),
-        unit: fastest ? `/${d}` : undefined, sub: fastest ? fmtDate(fastest.date) : 'needs distance and time',
+        label: 'Best pace', icon: <ClockIcon />, value: fastest ? paceOf(fastest, units) : 0, format: (n) => (n ? fmtTime(n) : '—'),
+        unit: fastest ? paceUnit(units) : undefined, sub: fastest ? fmtDate(fastest.date) : 'needs distance and time',
       },
       { label: 'Total distance', icon: <StackIcon />, value: toDistDisplay(sumOf(all.map((x) => x.meters ?? 0)), d), format: km, unit: d, sub: count },
       { label: 'Sessions', icon: <CalendarIcon />, value: sessions.length, sub: `since ${fmtDate(sessions[0].date)}` },
@@ -123,7 +125,7 @@ function sessionSummary(type: ExerciseType, sets: SetEntry[], units: Units): str
 }
 
 export function Progress({ data, initialExercise }: { data: AppData; initialExercise?: string }) {
-  const units = unitsOf(data.settings);
+  const appUnits = unitsOf(data.settings);
   const exById = useExerciseMap(data.exercises);
   const showKcal = caloriesOn(data.settings);
   const bodyKg = data.settings.bodyWeightKg;
@@ -143,6 +145,8 @@ export function Progress({ data, initialExercise }: { data: AppData; initialExer
   const exerciseId = trained.some((e) => e.id === selected) ? selected : trained[0]?.id;
   const exercise = trained.find((e) => e.id === exerciseId);
   const type = typeOf(exercise);
+  // This exercise's own distance unit (e.g. metres for rowing) and pace.
+  const units = unitsFor(exercise, appUnits);
 
   // Sessions for this exercise, counting working sets only (warm-ups are left out of progress).
   const sessions: Session[] = useMemo(
@@ -167,7 +171,10 @@ export function Progress({ data, initialExercise }: { data: AppData; initialExer
     );
   }
 
-  const measures = showKcal && sessions.some((s) => s.kcal > 0) ? [...MEASURES[type], KCAL_MEASURE] : MEASURES[type];
+  // Time-only distance exercises chart time first and get the timed stat cards.
+  const timeOnly = type === 'distance' && !!exercise.timeOnly;
+  const base = timeOnly ? [...MEASURES.distance].sort((a, b) => Number(b.id === 'duration') - Number(a.id === 'duration')) : MEASURES[type];
+  const measures = showKcal && sessions.some((s) => s.kcal > 0) ? [...base, KCAL_MEASURE] : base;
   const measure = measures.find((m) => m.id === metricId) ?? measures[0];
   const unitLabel = measure.unitLabel(units);
   const valueOf = (s: Session) => (measure === KCAL_MEASURE ? s.kcal : measure.value(s.sets, units));
@@ -194,7 +201,7 @@ export function Progress({ data, initialExercise }: { data: AppData; initialExer
   const raw = first ? ((last - first) / first) * 100 : 0;
   const change = measure.lowerIsBetter ? -raw : raw;
 
-  const stats = sessions.length ? statsFor(type, sessions.map((s) => ({ ...s, sets: workingSets(s.sets) })), units) : [];
+  const stats = sessions.length ? statsFor(timeOnly ? 'time' : type, sessions.map((s) => ({ ...s, sets: workingSets(s.sets) })), units) : [];
 
   return (
     <div className="screen">

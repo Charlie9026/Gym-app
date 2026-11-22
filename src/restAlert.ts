@@ -62,16 +62,43 @@ export async function requestNotify(): Promise<NotifyResult> {
   }
 }
 
+const canNotify = () => 'Notification' in window && Notification.permission === 'granted';
+
+/**
+ * Show a system notification. Goes through the service worker where there is one
+ * (Android only allows that), otherwise straight from the page.
+ */
+export async function showNotice(title: string, options: NotificationOptions & { timestamp?: number }): Promise<void> {
+  if (!canNotify()) return;
+  try {
+    const reg = 'serviceWorker' in navigator ? await navigator.serviceWorker.getRegistration() : undefined;
+    if (reg) return await reg.showNotification(title, options);
+  } catch {
+    /* fall back to a page notification */
+  }
+  try {
+    new Notification(title, options);
+  } catch {
+    /* not allowed here */
+  }
+}
+
+/** Remove notifications with this tag (e.g. once you're back in the app). */
+export async function closeNotices(tag: string): Promise<void> {
+  try {
+    const reg = 'serviceWorker' in navigator ? await navigator.serviceWorker.getRegistration() : undefined;
+    for (const n of (await reg?.getNotifications({ tag })) ?? []) n.close();
+  } catch {
+    /* nothing to close */
+  }
+}
+
 /** Show "Rest over" at the given time if the app is in the background. Returns a cancel function. */
 export function scheduleNotification(atMs: number): () => void {
-  if (!('Notification' in window) || Notification.permission !== 'granted') return () => {};
+  if (!canNotify()) return () => {};
   const t = window.setTimeout(() => {
     if (!document.hidden) return; // the on-screen bar already shows it
-    try {
-      new Notification('Rest over', { body: 'Time for your next set.', tag: 'gym-rest' });
-    } catch {
-      /* some browsers only allow notifications from a service worker */
-    }
+    void showNotice('Rest over', { body: 'Time for your next set.', tag: 'gym-rest' });
   }, Math.max(0, atMs - Date.now()));
   return () => clearTimeout(t);
 }

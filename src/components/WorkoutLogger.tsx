@@ -11,13 +11,18 @@ import {
   paceOf,
   toDistDisplay,
   typeOf,
+  unitsFor,
   unitsOf,
+  paceUnit,
   workingSets,
   type AnySet,
 } from '../sets';
 import { SetsTable } from './SetsTable';
 import { RestChip } from './RestChip';
 import { CaloriesChip } from './CaloriesChip';
+import { afterSetRemoved, startStopwatch, stopStopwatch, stopwatchTarget } from '../stopwatch';
+import { StopwatchIcon } from './Icons';
+import { DistanceChip } from './DistanceChip';
 import { caloriesOn, cardioEstimate, isCardio, withCalories } from '../calories';
 import { ExercisePicker } from './ExercisePicker';
 import { lastSetsFor, newTemplate, newWorkoutFrom, structureChanged, templateExercisesFrom } from '../workout';
@@ -30,6 +35,8 @@ interface Props {
   update: Update;
   /** Called with the new personal bests and the finished workout's id. */
   onFinished: (prs: string[], workoutId: string) => void;
+  /** A stopwatch is starting (the rest timer gives way to it). */
+  onStopwatchStart: () => void;
   /** Start the rest timer (lives in App so it keeps running across tabs). */
   onRest: (ms: number) => void;
 }
@@ -56,7 +63,7 @@ function useElapsed(startIso: string) {
   return h ? `${h}:${pad(m)}:${pad(s)}` : `${m}:${pad(s)}`;
 }
 
-export function WorkoutLogger({ data, update, onFinished, onRest }: Props) {
+export function WorkoutLogger({ data, update, onFinished, onRest, onStopwatchStart }: Props) {
   const active = data.activeWorkout;
   // undefined = not editing; null = creating a new saved workout; string = editing that one
   const [editing, setEditing] = useState<string | null | undefined>(undefined);
@@ -87,7 +94,7 @@ export function WorkoutLogger({ data, update, onFinished, onRest }: Props) {
     );
   }
 
-  return <ActiveWorkout data={data} active={active} update={update} onFinished={onFinished} onRest={onRest} />;
+  return <ActiveWorkout data={data} active={active} update={update} onFinished={onFinished} onRest={onRest} onStopwatchStart={onStopwatchStart} />;
 }
 
 function ActiveWorkout({
@@ -96,10 +103,12 @@ function ActiveWorkout({
   update,
   onFinished,
   onRest,
+  onStopwatchStart,
 }: Props & { active: Workout }) {
   const [picking, setPicking] = useState(false);
   const elapsed = useElapsed(active.date);
   const units = unitsOf(data.settings);
+  const timing = stopwatchTarget(active);
   const showKcal = caloriesOn(data.settings);
   const exById = useExerciseMap(data.exercises);
 
@@ -155,7 +164,9 @@ function ActiveWorkout({
   };
 
   const finish = async () => {
-    const exercises = active.exercises
+    // A running stopwatch counts: its time goes into the set it was timing.
+    const timed = stopStopwatch(active);
+    const exercises = timed.exercises
       .map((ex) => ({ ...ex, sets: completedSets(ex.sets) }))
       .filter((ex) => ex.sets.length > 0);
     if (exercises.length === 0) {
@@ -164,7 +175,7 @@ function ActiveWorkout({
       return;
     }
     const name = active.name.trim() || defaultWorkoutName(new Date(active.date));
-    const finished: Workout = { ...active, name, exercises, finishedAt: new Date().toISOString() };
+    const finished: Workout = { ...timed, name, exercises, finishedAt: new Date().toISOString() };
     const prs = findPRs(data.workouts, finished, exById, units);
     const done = templateExercisesFrom(finished);
 
@@ -263,7 +274,13 @@ function ActiveWorkout({
         const removeSet = (i: number) => {
           if (ex.sets.length <= 1) return notify('An exercise needs at least one set. Remove the exercise instead.');
           const removed = ex.sets[i];
-          setExercise(exIdx, (e) => ({ ...e, sets: e.sets.filter((_, k) => k !== i) }));
+          setActive((w) =>
+            afterSetRemoved(
+              { ...w, exercises: w.exercises.map((e, k) => (k === exIdx ? { ...e, sets: e.sets.filter((_, x) => x !== i) } : e)) },
+              ex.exerciseId,
+              i,
+            ),
+          );
           notify(`Set removed from ${exName}`, {
             undo: () => setExercise(exIdx, (e) => ({ ...e, sets: [...e.sets.slice(0, i), removed, ...e.sets.slice(i)] })),
           });
@@ -279,15 +296,18 @@ function ActiveWorkout({
             <div className="ex-header">
               <div className="ex-title">
                 <h3>{info?.name ?? 'Unknown exercise'}</h3>
-                {info && <RestChip exercise={info} defaultSeconds={data.settings.restSeconds ?? DEFAULT_REST_SECONDS} update={update} />}
-                {showKcal && isCardio(info) && (
-                  <CaloriesChip
-                    name={exName}
-                    value={ex.calories}
-                    estimate={cardioEstimate(ex, info, data.settings.bodyWeightKg)}
-                    onChange={(kcal) => setExercise(exIdx, (e) => withCalories(e, kcal))}
-                  />
-                )}
+                <div className="ex-pills">
+                  {info && <RestChip exercise={info} defaultSeconds={data.settings.restSeconds ?? DEFAULT_REST_SECONDS} update={update} />}
+                  {info && typeOf(info) === 'distance' && <DistanceChip exercise={info} units={units} update={update} />}
+                  {showKcal && isCardio(info) && (
+                    <CaloriesChip
+                      name={exName}
+                      value={ex.calories}
+                      estimate={cardioEstimate(ex, info, data.settings.bodyWeightKg)}
+                      onChange={(kcal) => setExercise(exIdx, (e) => withCalories(e, kcal))}
+                    />
+                  )}
+                </div>
               </div>
               <div className="row-actions">
                 <button className="icon-btn" aria-label={`Move ${exName} up`} onClick={() => moveExercise(exIdx, -1)}>↑</button>
@@ -299,7 +319,8 @@ function ActiveWorkout({
             </div>
             <SetsTable
               type={type}
-              units={units}
+              units={unitsFor(info, units)}
+              timeOnly={!!info?.timeOnly}
               exerciseName={info?.name ?? 'Exercise'}
               sets={ex.sets}
               mode="log"
@@ -310,7 +331,19 @@ function ActiveWorkout({
               onToggleWarmup={(i) => setSet(exIdx, i, { kind: isWarmup(ex.sets[i]) ? undefined : 'warmup' })}
               onRemove={removeSet}
               onAdd={() => setExercise(exIdx, (e) => ({ ...e, sets: [...e.sets, { weight: 0, reps: 0, done: false }] }))}
+              timingIndex={timing?.exIdx === exIdx ? timing.setIdx : undefined}
             />
+            {(type === 'time' || type === 'distance') && !active.stopwatch && (
+              <button
+                className="btn-secondary stopwatch-start"
+                onClick={() => {
+                  onStopwatchStart();
+                  setActive((w) => startStopwatch(w, exIdx));
+                }}
+              >
+                <StopwatchIcon /> Start stopwatch
+              </button>
+            )}
           </div>
         );
       })}
@@ -359,6 +392,7 @@ function findPRs(
     const info = exById.get(ex.exerciseId);
     const type = typeOf(info);
     const name = info?.name ?? 'Exercise';
+    const u = unitsFor(info, units);
     const prior = workingSets(
       history.flatMap((h) => h.exercises.filter((e) => e.exerciseId === ex.exerciseId).flatMap((e) => e.sets)),
     );
@@ -375,9 +409,9 @@ function findPRs(
       if (best(now, (s) => s.seconds ?? 0) > best(prior, (s) => s.seconds ?? 0)) prs.push(`${name}: longest ${fmtTime(best(now, (s) => s.seconds ?? 0))}`);
     } else {
       const far = (s: SetEntry) => s.meters ?? 0;
-      const pace = (s: SetEntry) => paceOf(s, units.distance) || Infinity;
-      if (best(now, far) > best(prior, far)) prs.push(`${name}: longest ${toDistDisplay(best(now, far), units.distance)} ${units.distance}`);
-      else if (Math.min(...now.map(pace)) < Math.min(...prior.map(pace))) prs.push(`${name}: fastest pace ${fmtTime(Math.min(...now.map(pace)))} /${units.distance}`);
+      const pace = (s: SetEntry) => paceOf(s, u) || Infinity;
+      if (best(now, far) > best(prior, far)) prs.push(`${name}: longest ${toDistDisplay(best(now, far), u.distance)} ${u.distance}`);
+      else if (Math.min(...now.map(pace)) < Math.min(...prior.map(pace))) prs.push(`${name}: fastest pace ${fmtTime(Math.min(...now.map(pace)))} ${paceUnit(u)}`);
     }
   }
   return prs;

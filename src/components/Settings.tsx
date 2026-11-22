@@ -7,7 +7,7 @@ import { THEMES, getTheme, type Theme } from '../themes';
 import { ChipGroup } from './ChipGroup';
 import { Switch } from './Switch';
 import { requestNotify } from '../restAlert';
-import { REST_OPTIONS, restLabel, unitsOf } from '../sets';
+import { REST_OPTIONS, appDistanceUnit, restLabel, unitsOf } from '../sets';
 import { isEmbedded } from '../env';
 import { CloudCard } from './CloudCard';
 import { BodyWeightField } from './BodyWeightField';
@@ -20,6 +20,24 @@ export function Settings({ data, update, cloud }: { data: AppData; update: Updat
   // Backup, sample data and reset are only shown to the app's owner.
   const owner = useIsOwner(cloud.user?.email);
   const units = unitsOf(data.settings);
+
+  /** Turn a notification setting on (asking the browser first) or off. */
+  const setNotify = async (key: 'restNotify' | 'stopwatchNotify', on: boolean, okMessage: string) => {
+    if (!on) return update((d) => ({ ...d, settings: { ...d.settings, [key]: false } }));
+    const r = await requestNotify();
+    if (r === 'granted') {
+      update((d) => ({ ...d, settings: { ...d.settings, [key]: true } }));
+      notify(okMessage);
+    } else {
+      notify(
+        isEmbedded
+          ? 'Notifications aren’t allowed inside this page. Open the app in its own tab to use them.'
+          : r === 'denied'
+            ? 'Notifications are blocked. Allow them for this site in your browser settings.'
+            : 'This browser doesn’t support notifications.',
+      );
+    }
+  };
   const fileRef = useRef<HTMLInputElement>(null);
   const [pasting, setPasting] = useState(false);
   const [pasted, setPasted] = useState('');
@@ -102,7 +120,7 @@ export function Settings({ data, update, cloud }: { data: AppData; update: Updat
 
       <div className="card">
         <div className="card-head">
-          <h3>Rest timer</h3>
+          <h3>Rest and stopwatch</h3>
           <span className="muted small">{restLabel(data.settings.restSeconds ?? 90)}</span>
         </div>
         <ChipGroup
@@ -139,22 +157,19 @@ export function Settings({ data, update, cloud }: { data: AppData; update: Updat
             id="rest-notify"
             label="Notify when rest ends"
             checked={!!data.settings.restNotify}
-            onChange={async (v) => {
-              if (!v) return update((d) => ({ ...d, settings: { ...d.settings, restNotify: false } }));
-              const r = await requestNotify();
-              if (r === 'granted') {
-                update((d) => ({ ...d, settings: { ...d.settings, restNotify: true } }));
-                notify('You’ll get a notification when rest ends.');
-              } else {
-                notify(
-                  isEmbedded
-                    ? 'Notifications aren’t allowed inside this page. Open the app in its own tab to use them.'
-                    : r === 'denied'
-                      ? 'Notifications are blocked. Allow them for this site in your browser settings.'
-                      : 'This browser doesn’t support notifications.',
-                );
-              }
-            }}
+            onChange={(v) => setNotify('restNotify', v, 'You’ll get a notification when rest ends.')}
+          />
+        </div>
+        <div className="toggle-row">
+          <label htmlFor="stopwatch-notify">
+            Notify while the stopwatch runs
+            <span className="muted small">If you switch away with the stopwatch running, a notification shows when it started.</span>
+          </label>
+          <Switch
+            id="stopwatch-notify"
+            label="Notify while the stopwatch runs"
+            checked={!!data.settings.stopwatchNotify}
+            onChange={(v) => setNotify('stopwatchNotify', v, 'You’ll get a notification while the stopwatch runs in the background.')}
           />
         </div>
       </div>
@@ -169,7 +184,7 @@ export function Settings({ data, update, cloud }: { data: AppData; update: Updat
             variant="segmented"
             value={units.weight}
             // Keep the distance unit as it is (it used to follow the weight unit).
-            onChange={(u) => update((d) => ({ ...d, settings: { ...d.settings, distanceUnit: unitsOf(d.settings).distance, unit: u } }))}
+            onChange={(u) => update((d) => ({ ...d, settings: { ...d.settings, distanceUnit: appDistanceUnit(d.settings), unit: u } }))}
             options={(['kg', 'lb'] as Unit[]).map((u) => ({ value: u, label: u }))}
           />
         </div>
@@ -179,7 +194,7 @@ export function Settings({ data, update, cloud }: { data: AppData; update: Updat
             label="Distance unit"
             kind="radio"
             variant="segmented"
-            value={units.distance}
+            value={appDistanceUnit(data.settings)}
             onChange={(u) => update((d) => ({ ...d, settings: { ...d.settings, distanceUnit: u } }))}
             options={(['km', 'mi'] as DistanceUnit[]).map((u) => ({ value: u, label: u }))}
           />

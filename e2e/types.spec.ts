@@ -64,7 +64,8 @@ test('pounds mode shows miles and pace per mile', async ({ page }) => {
   await expect(page.locator('.ex-summary').first()).toContainText('3.11 mi in 25:00');
   await tab(page, 'Progress');
   await pickProgressExercise(page, 'Running Cardio');
-  await expect(page.locator('.neu-card', { hasText: 'Best pace' })).toContainText('8:02');
+  // 1500 s over the exact 3.107 mi (not the rounded 3.11 shown) is 8:02.8, so 8:03.
+  await expect(page.locator('.neu-card', { hasText: 'Best pace' })).toContainText('8:03');
 });
 
 test('cardio presets: pick from the Cardio group and log a swim and a stair climb', async ({ page }) => {

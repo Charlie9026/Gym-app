@@ -4,7 +4,7 @@ import { answerDialog, loadSampleWeek, openApp, stored, tab } from './helpers.ts
 test('default rest time and turning the timer off', async ({ page }) => {
   await openApp(page);
   await loadSampleWeek(page);
-  const card = page.locator('.card', { hasText: 'Rest timer' });
+  const card = page.locator('.card', { hasText: 'Rest and stopwatch' });
   await card.locator('.chip', { hasText: '2 min' }).click();
   expect((await stored(page)).settings.restSeconds).toBe(120);
   await tab(page, 'Workout');

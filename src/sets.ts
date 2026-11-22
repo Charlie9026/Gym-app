@@ -3,7 +3,7 @@
  * time, distance) and on warm-up vs working sets. Every screen uses these so
  * they all agree on what a set means, how it's written and what "best" is.
  */
-import type { DistanceUnit, Exercise, ExerciseType, SetEntry, Settings, TemplateSet, Units } from './types';
+import type { DistUnit, DistanceUnit, Exercise, ExerciseType, SetEntry, Settings, TemplateSet, Units } from './types';
 import { e1rm, toDisplay } from './utils';
 
 export type AnySet = TemplateSet | SetEntry;
@@ -31,13 +31,39 @@ export const hasAnyValue = (s: AnySet) => s.reps > 0 || (s.seconds ?? 0) > 0 || 
 
 // ---------- distance & time ----------
 /** The units to show, from the settings. */
-export const unitsOf = (s: Pick<Settings, 'unit' | 'distanceUnit'>): Units => ({
-  weight: s.unit,
-  distance: s.distanceUnit ?? (s.unit === 'lb' ? 'mi' : 'km'),
-});
-const M_PER: Record<DistanceUnit, number> = { km: 1000, mi: 1609.344 };
-export const toDistDisplay = (m: number, d: DistanceUnit) => Math.round((m / M_PER[d]) * 100) / 100;
-export const fromDistDisplay = (v: number, d: DistanceUnit) => v * M_PER[d];
+export const unitsOf = (s: Pick<Settings, 'unit' | 'distanceUnit'>): Units => ({ weight: s.unit, distance: appDistanceUnit(s) });
+
+/** The app-wide distance unit: chosen in Settings, else following the weight unit (kg → km, lb → mi). */
+export const appDistanceUnit = (s: Pick<Settings, 'unit' | 'distanceUnit'>): DistanceUnit =>
+  s.distanceUnit ?? (s.unit === 'lb' ? 'mi' : 'km');
+const M_PER: Record<DistUnit, number> = { m: 1, km: 1000, mi: 1609.344, yd: 0.9144 };
+/** Distance units an exercise can use, in the order they're offered. */
+export const DIST_UNITS: DistUnit[] = ['m', 'km', 'mi', 'yd'];
+/** Metres and yards are shown as whole numbers, km and miles to 2 decimals. */
+export const toDistDisplay = (m: number, d: DistUnit) => {
+  const f = d === 'm' || d === 'yd' ? 1 : 100;
+  return Math.round((m / M_PER[d]) * f) / f;
+};
+export const fromDistDisplay = (v: number, d: DistUnit) => v * M_PER[d];
+
+/** Machines that show metres: rowing and ski ergs, and pools. */
+const METRE_PRESETS = new Set(['preset-rowing-machine', 'preset-ski-erg', 'preset-swimming']);
+const isSwim = (ex: Pick<Exercise, 'id' | 'name'>) => ex.id === 'preset-swimming' || /swim/i.test(ex.name);
+
+/** The distance unit an exercise is shown in: its own choice, a default for its machine, then Settings. */
+export function distUnitFor(ex: Pick<Exercise, 'id' | 'distanceUnit'> | undefined, units: Units): DistUnit {
+  return ex?.distanceUnit ?? (ex && METRE_PRESETS.has(ex.id) ? 'm' : units.distance);
+}
+
+/** Units for one exercise: its distance unit, with pace per 500 m (100 m for swimming) or per 100 yd. */
+export function unitsFor(ex: Pick<Exercise, 'id' | 'name' | 'distanceUnit'> | undefined, units: Units): Units {
+  const distance = distUnitFor(ex, units);
+  const paceEvery = distance === 'm' ? (ex && isSwim(ex) ? 100 : 500) : distance === 'yd' ? 100 : 1;
+  return { ...units, distance, paceEvery };
+}
+
+/** "/km", "/500m", "/100yd". */
+export const paceUnit = (u: Units) => `/${(u.paceEvery ?? 1) > 1 ? u.paceEvery : ''}${u.distance}`;
 
 export function fmtTime(totalSeconds: number): string {
   const t = Math.max(0, Math.round(totalSeconds));
@@ -57,9 +83,9 @@ export function parseTime(text: string): number | null {
   return parts.reduce((acc, p) => acc * 60 + p, 0);
 }
 
-/** Seconds per km/mi; 0 when it can't be worked out. */
-export function paceOf(s: AnySet, dist: DistanceUnit): number {
-  const d = toDistDisplay(s.meters ?? 0, dist);
+/** Seconds per pace unit (e.g. per km, or per 500 m); 0 when it can't be worked out. */
+export function paceOf(s: AnySet, u: Pick<Units, 'distance' | 'paceEvery'>): number {
+  const d = (s.meters ?? 0) / M_PER[u.distance] / (u.paceEvery ?? 1);
   return d > 0 && (s.seconds ?? 0) > 0 ? (s.seconds as number) / d : 0;
 }
 
@@ -155,12 +181,10 @@ export const MEASURES: Record<ExerciseType, Measure[]> = {
   distance: [
     { id: 'distance', label: 'Distance', unitLabel: (u) => u.distance, value: (s, u) => toDistDisplay(sum(workingSets(s).map((x) => x.meters ?? 0)), u.distance), format: (v) => (Math.round(v * 100) / 100).toLocaleString() },
     {
-      id: 'pace', label: 'Pace', unitLabel: (u) => `/${u.distance}`, lowerIsBetter: true,
+      id: 'pace', label: 'Pace', unitLabel: paceUnit, lowerIsBetter: true,
       value: (s, u) => {
         const w = workingSets(s);
-        const d = toDistDisplay(sum(w.map((x) => x.meters ?? 0)), u.distance);
-        const t = sum(w.map((x) => x.seconds ?? 0));
-        return d > 0 && t > 0 ? t / d : 0;
+        return paceOf({ weight: 0, reps: 0, meters: sum(w.map((x) => x.meters ?? 0)), seconds: sum(w.map((x) => x.seconds ?? 0)) }, u);
       },
       format: fmtTime,
     },

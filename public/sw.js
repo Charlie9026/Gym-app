@@ -80,3 +80,14 @@ self.addEventListener('fetch', (event) => {
     ),
   );
 });
+
+// Tapping a notification (rest over, stopwatch running) brings the app back.
+self.addEventListener('notificationclick', (event) => {
+  event.notification.close();
+  event.waitUntil(
+    self.clients.matchAll({ type: 'window', includeUncontrolled: true }).then((list) => {
+      const open = list.find((c) => c.url.startsWith(scope));
+      return open ? open.focus() : self.clients.openWindow(scope);
+    }),
+  );
+});

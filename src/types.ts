@@ -47,6 +47,10 @@ export interface Exercise {
   type?: ExerciseType;
   /** Rest after a set of this exercise, in seconds; falls back to the app setting. */
   restSeconds?: number;
+  /** Distance exercises: unit to show; falls back to a default for the machine, then Settings. */
+  distanceUnit?: DistUnit;
+  /** Distance exercises: log time only (the distance column is hidden). */
+  timeOnly?: boolean;
 }
 
 /** Warm-up sets are excluded from volume, PRs and progress. Missing = working set. */
@@ -80,6 +84,17 @@ export interface Workout {
   finishedAt?: string;
   /** Saved workout this session was started from, if any */
   templateId?: string;
+  /** Active workout only: a stopwatch timing one set (cleared when stopped or finished). */
+  stopwatch?: Stopwatch;
+}
+
+/** A running stopwatch for a set of a timed or distance exercise. */
+export interface Stopwatch {
+  exerciseId: string;
+  /** Index of the set within that exercise. */
+  setIndex: number;
+  /** When it started (ms since 1970), so it stays right if the app is closed or in the background. */
+  startedAt: number;
 }
 
 /** A target set in a saved workout. Weight in kg. */
@@ -106,12 +121,17 @@ export interface WorkoutTemplate {
 }
 
 export type Unit = 'kg' | 'lb';
+/** The app-wide distance unit (Settings). */
 export type DistanceUnit = 'km' | 'mi';
+/** Any distance unit an exercise can be shown in (machines and pools often use metres or yards). */
+export type DistUnit = 'm' | 'km' | 'mi' | 'yd';
 
-/** The units everything is shown in: weight and distance are chosen separately. */
+/** The units something is shown in: weight and distance are chosen separately. */
 export interface Units {
   weight: Unit;
-  distance: DistanceUnit;
+  distance: DistUnit;
+  /** Pace is per this many distance units (e.g. 500 for rowing in metres); default 1. */
+  paceEvery?: number;
 }
 
 export interface Settings {
@@ -126,6 +146,8 @@ export interface Settings {
   restSound?: boolean;
   /** Show a system notification when rest ends, where the browser allows it. */
   restNotify?: boolean;
+  /** Show a notification while the stopwatch runs and the app is in the background. */
+  stopwatchNotify?: boolean;
   /** Show calories burned (default on). */
   showCalories?: boolean;
   /** Body weight in kg, for estimating calories. */

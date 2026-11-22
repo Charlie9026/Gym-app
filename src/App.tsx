@@ -14,6 +14,9 @@ import { useCloudSync } from './cloud/useCloudSync';
 import { Welcome } from './components/Welcome';
 import { caloriesOn, fmtKcal, workoutCalories } from './calories';
 import { useExerciseMap } from './hooks';
+import { StopwatchBar } from './components/StopwatchBar';
+import { cancelStopwatch, stopStopwatch, stopwatchTarget } from './stopwatch';
+import { DEFAULT_REST_SECONDS } from './sets';
 import { applyTheme, getTheme } from './themes';
 import { CalendarIcon, ChartIcon, DumbbellIcon, GearIcon, ListIcon } from './components/Icons';
 
@@ -81,6 +84,17 @@ export default function App() {
   const savedKcal = savedCalories?.total ?? 0;
   const savedKcalText = savedCalories ? `${savedCalories.estimated ? 'About ' : ''}${fmtKcal(savedKcal)} burned` : '';
 
+  // The running stopwatch, if any, and what it's timing ("Air Bike · set 2").
+  const stopwatch = (() => {
+    const w = data.activeWorkout;
+    const t = w && stopwatchTarget(w);
+    if (!w?.stopwatch || !t) return null;
+    const ex = w.exercises[t.exIdx];
+    const n = ex.sets.slice(0, t.setIdx + 1).filter((s) => s.kind !== 'warmup').length;
+    const which = ex.sets[t.setIdx].kind === 'warmup' ? 'warm-up' : `set ${n}`;
+    return { startedAt: w.stopwatch.startedAt, label: `${exById.get(ex.exerciseId)?.name ?? 'Exercise'} · ${which}` };
+  })();
+
   useLayoutEffect(() => applyTheme(getTheme(data.settings.theme)), [data.settings.theme]);
 
   // Sliding highlight behind the active tab.
@@ -118,6 +132,7 @@ export default function App() {
               if (data.settings.restSound !== false) primeAudio(); // runs inside the tap, so audio is allowed
               setRest({ workoutId: data.activeWorkout.id, end: Date.now() + ms, total: ms });
             }}
+            onStopwatchStart={() => setRest(null)}
             onFinished={(prs, workoutId) => {
               setSaved({ prs, workoutId });
               setTab('history');
@@ -139,6 +154,7 @@ export default function App() {
         )}
         {tab === 'settings' && <Settings data={data} update={update} cloud={cloud} />}
         {activeRest && <div className="rest-spacer" aria-hidden="true" />}
+        {stopwatch && <div className="rest-spacer" aria-hidden="true" />}
       </main>
 
       {activeRest && (
@@ -149,6 +165,28 @@ export default function App() {
           onDone={() => setRest(null)}
           sound={data.settings.restSound !== false}
           notify={!!data.settings.restNotify}
+        />
+      )}
+
+      {stopwatch && (
+        <StopwatchBar
+          startedAt={stopwatch.startedAt}
+          label={stopwatch.label}
+          notify={!!data.settings.stopwatchNotify}
+          stacked={!!activeRest}
+          onCancel={() => update((d) => (d.activeWorkout ? { ...d, activeWorkout: cancelStopwatch(d.activeWorkout) } : d))}
+          onStop={() => {
+            const w = data.activeWorkout;
+            if (!w) return;
+            const info = exById.get(w.stopwatch?.exerciseId ?? '');
+            update((d) => (d.activeWorkout ? { ...d, activeWorkout: stopStopwatch(d.activeWorkout) } : d));
+            // Like ticking a set: start the rest timer.
+            const ms = (info?.restSeconds ?? data.settings.restSeconds ?? DEFAULT_REST_SECONDS) * 1000;
+            if (ms > 0) {
+              if (data.settings.restSound !== false) primeAudio();
+              setRest({ workoutId: w.id, end: Date.now() + ms, total: ms });
+            }
+          }}
         />
       )}
 

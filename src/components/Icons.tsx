@@ -137,3 +137,10 @@ export const RouteIcon = () => (
     <path d="M8.5 18H15a3 3 0 0 0 0-6H9a3 3 0 0 1 0-6h6.5" />
   </Icon>
 );
+
+export const StopwatchIcon = () => (
+  <Icon>
+    <circle cx="12" cy="14" r="7.5" />
+    <path d="M12 14V10.5M10 2.5h4M12 2.5v4M18.5 7l1.5-1.5" />
+  </Icon>
+);

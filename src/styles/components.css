@@ -646,3 +646,21 @@
 .kcal-input { display: flex; align-items: center; gap: 6px; }
 .kcal-input .num-input { width: 84px; }
 .banner-kcal { color: var(--accent); font-weight: 700; font-size: 0.9rem; margin-top: 2px; }
+
+/* Pills under an exercise name (rest, distance unit, calories) sit in one wrapping row;
+   each opens its panel full width underneath. */
+.ex-pills { display: flex; flex-wrap: wrap; column-gap: 6px; row-gap: 6px; align-self: stretch; }
+.ex-pills > .rest-chip-wrap { display: contents; }
+.ex-pills > .rest-chip-wrap > .collapse { flex: 0 0 100%; order: 10; margin-top: -6px; }
+/* On exercise cards the panel also runs under the move/remove buttons (see .ex-header in screens.css). */
+.ex-header .ex-pills > .rest-chip-wrap > .collapse { flex-basis: calc(100% + 122px); }
+
+/* Stopwatch: start button on the exercise card, the set being timed, and the bar */
+.stopwatch-start { display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+.stopwatch-start svg { width: 18px; height: 18px; }
+.st-row.timing { box-shadow: inset 0 0 0 1.5px var(--accent); background: var(--accent-soft); }
+.stopwatch-bar .rest-text .small { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.stopwatch-bar .rest-main { flex: 1; min-width: 0; }
+.stopwatch-bar .rest-text { min-width: 0; }
+.stopwatch-bar .row-actions { flex: none; }
+.stopwatch-bar.stacked { bottom: calc(92px + 64px + env(safe-area-inset-bottom, 0px)); }

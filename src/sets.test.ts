@@ -14,6 +14,8 @@ import {
   typeOf,
   workingSets,
   unitsOf,
+  unitsFor,
+  paceUnit,
 } from './sets';
 import type { SetEntry } from './types';
 
@@ -65,10 +67,30 @@ describe('exercise types', () => {
     expect(unitsOf({ unit: 'lb' })).toEqual({ weight: 'lb', distance: 'mi' });
     expect(unitsOf({ unit: 'lb', distanceUnit: 'km' })).toEqual({ weight: 'lb', distance: 'km' });
   });
+  it('gives each exercise its own distance unit and pace', () => {
+    const app = { weight: 'kg', distance: 'km' } as const;
+    const row = { id: 'preset-rowing-machine', name: 'Rowing Machine' };
+    expect(unitsFor(row, app)).toMatchObject({ distance: 'm', paceEvery: 500 });
+    expect(unitsFor({ id: 'preset-swimming', name: 'Swimming' }, app)).toMatchObject({ distance: 'm', paceEvery: 100 });
+    expect(unitsFor({ id: 'preset-running', name: 'Running' }, app)).toMatchObject({ distance: 'km', paceEvery: 1 });
+    expect(unitsFor({ ...row, distanceUnit: 'km' as const }, app).distance).toBe('km');
+    expect(unitsFor({ id: 'c', name: 'Pool', distanceUnit: 'yd' as const }, app)).toMatchObject({ distance: 'yd', paceEvery: 100 });
+    // 2000 m in 8:00 is 2:00 per 500 m.
+    const u = unitsFor(row, app);
+    expect(paceOf(set({ meters: 2000, seconds: 480 }), u)).toBe(120);
+    expect(paceUnit(u)).toBe('/500m');
+    expect(paceUnit(app)).toBe('/km');
+    expect(setText(set({ meters: 2000, seconds: 480 }), 'distance', u)).toBe('2000 m in 8:00');
+  });
+  it('shows metres and yards as whole numbers', () => {
+    expect(toDistDisplay(1999.6, 'm')).toBe(2000);
+    expect(toDistDisplay(91.44, 'yd')).toBe(100);
+    expect(fromDistDisplay(100, 'yd')).toBeCloseTo(91.44);
+  });
   it('converts distances between km/mi and metres', () => {
     expect(toDistDisplay(1609.344, 'mi')).toBe(1);
     expect(fromDistDisplay(5, 'km')).toBe(5000);
-    expect(paceOf(set({ meters: 5000, seconds: 1500 }), 'km')).toBe(300); // 5:00 per km
+    expect(paceOf(set({ meters: 5000, seconds: 1500 }), { distance: 'km' })).toBe(300); // 5:00 per km
   });
 });
 

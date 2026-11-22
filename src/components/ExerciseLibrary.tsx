@@ -4,7 +4,7 @@ import { MUSCLE_GROUPS, type AppData, type ExerciseType, type MuscleGroup, type 
 import type { Update } from '../store';
 import { notify } from '../dialog';
 import { uid } from '../utils';
-import { EXERCISE_TYPES, setScore, setText, topSet, typeOf, unitsOf } from '../sets';
+import { EXERCISE_TYPES, setScore, setText, topSet, typeOf, unitsFor, unitsOf } from '../sets';
 import { relativeDay } from '../workout';
 import { MUSCLE_CODE } from '../exercises';
 import { ChevronIcon, PlusIcon, TrashIcon } from './Icons';
@@ -181,7 +181,7 @@ export function ExerciseLibrary({ data, update, onOpen }: Props) {
                     </span>
                     <span className="muted small">
                       {u
-                        ? `${u.sessions} session${u.sessions === 1 ? '' : 's'} · best ${setText(u.best, typeOf(e), units)} · ${relativeDay(u.last)}`
+                        ? `${u.sessions} session${u.sessions === 1 ? '' : 's'} · best ${setText(u.best, typeOf(e), unitsFor(e, units))} · ${relativeDay(u.last)}`
                         : 'Not logged yet'}
                     </span>
                   </span>

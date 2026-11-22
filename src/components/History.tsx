@@ -4,7 +4,7 @@ import { askText, notify } from '../dialog';
 import type { AppData, Workout } from '../types';
 import type { Update } from '../store';
 import { fmtDuration, fmtWeight, toDisplay, workoutVolume } from '../utils';
-import { setCountText, setText, topSet, typeOf, unitsOf } from '../sets';
+import { setCountText, setText, topSet, typeOf, unitsFor, unitsOf } from '../sets';
 import { WorkoutEditor } from './WorkoutEditor';
 import { newTemplate, newWorkoutFrom, templateExercisesFrom } from '../workout';
 import { ChevronIcon, TrashIcon } from './Icons';
@@ -174,7 +174,7 @@ export function History({ data, update, onRepeat }: Props) {
                         <li key={i}>
                           <span className="ex-name">{name(ex.exerciseId)}</span>
                           <span className="ex-best">
-                            <span className="muted">{setCountText(ex.sets)} ·</span> {setText(topSet(ex.sets, type), type, units)}
+                            <span className="muted">{setCountText(ex.sets)} ·</span> {setText(topSet(ex.sets, type), type, unitsFor(exById.get(ex.exerciseId), units))}
                           </span>
                         </li>
                       );
@@ -192,7 +192,7 @@ export function History({ data, update, onRepeat }: Props) {
                           <strong>{name(ex.exerciseId)}</strong>
                           <span className="muted small">{exById.get(ex.exerciseId)?.muscle}</span>
                         </div>
-                        <SetPills sets={ex.sets} type={typeOf(exById.get(ex.exerciseId))} units={units} />
+                        <SetPills sets={ex.sets} type={typeOf(exById.get(ex.exerciseId))} units={unitsFor(exById.get(ex.exerciseId), units)} />
                       </div>
                     ))}
                     {w.notes && <p className="notes-view">{w.notes}</p>}

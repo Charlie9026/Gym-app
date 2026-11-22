@@ -4,11 +4,12 @@ import { startingSets } from '../workout';
 import { useExerciseMap } from '../hooks';
 import type { Update } from '../store';
 import { notify } from '../dialog';
-import { DEFAULT_REST_SECONDS, isWarmup, typeOf, unitsOf, type AnySet } from '../sets';
+import { DEFAULT_REST_SECONDS, isWarmup, typeOf, unitsFor, unitsOf, type AnySet } from '../sets';
 import { ExercisePicker } from './ExercisePicker';
 import { PlusIcon, TrashIcon } from './Icons';
 import { RestChip } from './RestChip';
 import { CaloriesChip } from './CaloriesChip';
+import { DistanceChip } from './DistanceChip';
 import { caloriesOn, cardioEstimate, isCardio, withCalories } from '../calories';
 import { SetsTable } from './SetsTable';
 
@@ -76,15 +77,18 @@ export function ExerciseListEditor<S extends AnySet>({ data, update, exercises, 
             <div className="ex-header">
               <div className="ex-title">
                 <h3>{info?.name ?? 'Unknown exercise'}</h3>
-                {info && <RestChip exercise={info} defaultSeconds={data.settings.restSeconds ?? DEFAULT_REST_SECONDS} update={update} />}
-                {calories && caloriesOn(data.settings) && isCardio(info) && (
-                  <CaloriesChip
-                    name={exName}
-                    value={ex.calories}
-                    estimate={cardioEstimate({ exerciseId: ex.exerciseId, sets: ex.sets as SetEntry[] }, info, data.settings.bodyWeightKg)}
-                    onChange={(kcal) => setEx(i, (e) => withCalories(e, kcal))}
-                  />
-                )}
+                <div className="ex-pills">
+                  {info && <RestChip exercise={info} defaultSeconds={data.settings.restSeconds ?? DEFAULT_REST_SECONDS} update={update} />}
+                  {info && typeOf(info) === 'distance' && <DistanceChip exercise={info} units={units} update={update} />}
+                  {calories && caloriesOn(data.settings) && isCardio(info) && (
+                    <CaloriesChip
+                      name={exName}
+                      value={ex.calories}
+                      estimate={cardioEstimate({ exerciseId: ex.exerciseId, sets: ex.sets as SetEntry[] }, info, data.settings.bodyWeightKg)}
+                      onChange={(kcal) => setEx(i, (e) => withCalories(e, kcal))}
+                    />
+                  )}
+                </div>
               </div>
               <div className="row-actions">
                 <button className="icon-btn" aria-label={`Move ${exName} up`} onClick={() => move(i, -1)}>↑</button>
@@ -96,7 +100,8 @@ export function ExerciseListEditor<S extends AnySet>({ data, update, exercises, 
             </div>
             <SetsTable
               type={type}
-              units={units}
+              units={unitsFor(info, units)}
+              timeOnly={!!info?.timeOnly}
               exerciseName={exName}
               sets={ex.sets}
               mode="edit"
