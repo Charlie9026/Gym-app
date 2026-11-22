@@ -1,13 +1,13 @@
 import { ask, notify } from '../dialog';
 import { useEffect, useRef, useState } from 'react';
 import { requestStorageProtection, storageProtection, type StorageProtection } from '../pwa';
-import type { AppData, Unit } from '../types';
+import type { AppData, DistanceUnit, Unit } from '../types';
 import { emptyData, isAppData, migrate, type Update } from '../store';
 import { THEMES, getTheme, type Theme } from '../themes';
 import { ChipGroup } from './ChipGroup';
 import { Switch } from './Switch';
 import { requestNotify } from '../restAlert';
-import { REST_OPTIONS, restLabel } from '../sets';
+import { REST_OPTIONS, restLabel, unitsOf } from '../sets';
 import { isEmbedded } from '../env';
 import { CloudCard } from './CloudCard';
 import { useIsOwner } from '../owner';
@@ -17,6 +17,7 @@ import { addDemoWeek, hasDemoData, removeDemoWeek } from '../demo';
 export function Settings({ data, update, cloud }: { data: AppData; update: Update; cloud: CloudSync }) {
   // Backup, sample data and reset are only shown to the app's owner.
   const owner = useIsOwner(cloud.user?.email);
+  const units = unitsOf(data.settings);
   const fileRef = useRef<HTMLInputElement>(null);
   const [pasting, setPasting] = useState(false);
   const [pasted, setPasted] = useState('');
@@ -157,16 +158,31 @@ export function Settings({ data, update, cloud }: { data: AppData; update: Updat
       </div>
 
       <div className="card">
-        <h3>Weight unit</h3>
-        <ChipGroup
-          label="Weight unit"
-          kind="radio"
-          variant="segmented"
-          value={data.settings.unit}
-          onChange={(u) => update((d) => ({ ...d, settings: { ...d.settings, unit: u } }))}
-          options={(['kg', 'lb'] as Unit[]).map((u) => ({ value: u, label: u }))}
-        />
-        <p className="muted small">Switching converts all displayed weights; nothing you logged is lost.</p>
+        <h3>Units</h3>
+        <div className="unit-row">
+          <span className="unit-name">Weight</span>
+          <ChipGroup
+            label="Weight unit"
+            kind="radio"
+            variant="segmented"
+            value={units.weight}
+            // Keep the distance unit as it is (it used to follow the weight unit).
+            onChange={(u) => update((d) => ({ ...d, settings: { ...d.settings, distanceUnit: unitsOf(d.settings).distance, unit: u } }))}
+            options={(['kg', 'lb'] as Unit[]).map((u) => ({ value: u, label: u }))}
+          />
+        </div>
+        <div className="unit-row">
+          <span className="unit-name">Distance</span>
+          <ChipGroup
+            label="Distance unit"
+            kind="radio"
+            variant="segmented"
+            value={units.distance}
+            onChange={(u) => update((d) => ({ ...d, settings: { ...d.settings, distanceUnit: u } }))}
+            options={(['km', 'mi'] as DistanceUnit[]).map((u) => ({ value: u, label: u }))}
+          />
+        </div>
+        <p className="muted small">Switching converts everything shown; nothing you logged is lost.</p>
       </div>
 
       <CloudCard cloud={cloud} />

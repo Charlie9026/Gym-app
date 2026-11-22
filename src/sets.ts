@@ -3,7 +3,7 @@
  * time, distance) and on warm-up vs working sets. Every screen uses these so
  * they all agree on what a set means, how it's written and what "best" is.
  */
-import type { Exercise, ExerciseType, SetEntry, TemplateSet, Unit } from './types';
+import type { DistanceUnit, Exercise, ExerciseType, SetEntry, Settings, TemplateSet, Units } from './types';
 import { e1rm, toDisplay } from './utils';
 
 export type AnySet = TemplateSet | SetEntry;
@@ -30,10 +30,14 @@ export function hasValue(s: AnySet, type: ExerciseType): boolean {
 export const hasAnyValue = (s: AnySet) => s.reps > 0 || (s.seconds ?? 0) > 0 || (s.meters ?? 0) > 0;
 
 // ---------- distance & time ----------
-export const distUnit = (unit: Unit) => (unit === 'kg' ? 'km' : 'mi');
-const M_PER = { km: 1000, mi: 1609.344 };
-export const toDistDisplay = (m: number, unit: Unit) => Math.round((m / M_PER[distUnit(unit)]) * 100) / 100;
-export const fromDistDisplay = (v: number, unit: Unit) => v * M_PER[distUnit(unit)];
+/** The units to show, from the settings. */
+export const unitsOf = (s: Pick<Settings, 'unit' | 'distanceUnit'>): Units => ({
+  weight: s.unit,
+  distance: s.distanceUnit ?? (s.unit === 'lb' ? 'mi' : 'km'),
+});
+const M_PER: Record<DistanceUnit, number> = { km: 1000, mi: 1609.344 };
+export const toDistDisplay = (m: number, d: DistanceUnit) => Math.round((m / M_PER[d]) * 100) / 100;
+export const fromDistDisplay = (v: number, d: DistanceUnit) => v * M_PER[d];
 
 export function fmtTime(totalSeconds: number): string {
   const t = Math.max(0, Math.round(totalSeconds));
@@ -54,8 +58,8 @@ export function parseTime(text: string): number | null {
 }
 
 /** Seconds per km/mi; 0 when it can't be worked out. */
-export function paceOf(s: AnySet, unit: Unit): number {
-  const d = toDistDisplay(s.meters ?? 0, unit);
+export function paceOf(s: AnySet, dist: DistanceUnit): number {
+  const d = toDistDisplay(s.meters ?? 0, dist);
   return d > 0 && (s.seconds ?? 0) > 0 ? (s.seconds as number) / d : 0;
 }
 
@@ -66,14 +70,16 @@ export interface SetPart {
 }
 
 /** A set broken into value/unit parts, e.g. [{72.5,kg},{8,reps}]; rendered by SetText. */
-export function setParts(s: AnySet, type: ExerciseType, unit: Unit): SetPart[] {
+export function setParts(s: AnySet, type: ExerciseType, units: Units): SetPart[] {
+  const unit = units.weight;
+  const dist = units.distance;
   const n = (v: number) => v.toLocaleString(undefined, { maximumFractionDigits: 2 });
   if (type === 'time') return [{ value: fmtTime(s.seconds ?? 0) }];
   if (type === 'distance') {
     const parts: SetPart[] = [];
-    if (s.meters) parts.push({ value: n(toDistDisplay(s.meters, unit)), unit: distUnit(unit) });
+    if (s.meters) parts.push({ value: n(toDistDisplay(s.meters, dist)), unit: dist });
     if (s.seconds) parts.push({ value: fmtTime(s.seconds), unit: parts.length ? 'time' : undefined });
-    return parts.length ? parts : [{ value: '0', unit: distUnit(unit) }];
+    return parts.length ? parts : [{ value: '0', unit: dist }];
   }
   const reps = { value: String(s.reps), unit: s.reps === 1 ? 'rep' : 'reps' };
   if (type === 'weight' && s.weight > 0) return [{ value: n(toDisplay(s.weight, unit)), unit }, reps];
@@ -81,10 +87,11 @@ export function setParts(s: AnySet, type: ExerciseType, unit: Unit): SetPart[] {
 }
 
 /** Plain-text version, e.g. "72.5 kg × 8" or "5.2 km in 25:10". */
-export function setText(s: AnySet, type: ExerciseType, unit: Unit): string {
+export function setText(s: AnySet, type: ExerciseType, units: Units): string {
+  const unit = units.weight;
   if (type === 'time') return fmtTime(s.seconds ?? 0);
   if (type === 'distance') {
-    const d = s.meters ? `${toDistDisplay(s.meters, unit)} ${distUnit(unit)}` : '';
+    const d = s.meters ? `${toDistDisplay(s.meters, units.distance)} ${units.distance}` : '';
     const t = s.seconds ? fmtTime(s.seconds) : '';
     return d && t ? `${d} in ${t}` : d || t || '—';
   }
@@ -118,9 +125,9 @@ export interface Measure {
   id: string;
   label: string;
   /** Unit shown next to values ('' for none). */
-  unitLabel: (unit: Unit) => string;
+  unitLabel: (units: Units) => string;
   /** Value of one session (working sets only), in display units. */
-  value: (sets: AnySet[], unit: Unit) => number;
+  value: (sets: AnySet[], units: Units) => number;
   /** Formats a value for axes and labels. */
   format: (v: number) => string;
   /** For pace, a lower number is better. */
@@ -133,9 +140,9 @@ const max = (xs: number[]) => (xs.length ? Math.max(...xs) : 0);
 
 export const MEASURES: Record<ExerciseType, Measure[]> = {
   weight: [
-    { id: 'e1rm', label: 'Est. 1RM', unitLabel: (u) => u, value: (s, u) => toDisplay(max(workingSets(s).map(e1rm)), u), format: num },
-    { id: 'max', label: 'Heaviest set', unitLabel: (u) => u, value: (s, u) => toDisplay(max(workingSets(s).map((x) => x.weight)), u), format: num },
-    { id: 'volume', label: 'Volume', unitLabel: (u) => u, value: (s, u) => toDisplay(sum(workingSets(s).map((x) => x.weight * x.reps)), u), format: num },
+    { id: 'e1rm', label: 'Est. 1RM', unitLabel: (u) => u.weight, value: (s, u) => toDisplay(max(workingSets(s).map(e1rm)), u.weight), format: num },
+    { id: 'max', label: 'Heaviest set', unitLabel: (u) => u.weight, value: (s, u) => toDisplay(max(workingSets(s).map((x) => x.weight)), u.weight), format: num },
+    { id: 'volume', label: 'Volume', unitLabel: (u) => u.weight, value: (s, u) => toDisplay(sum(workingSets(s).map((x) => x.weight * x.reps)), u.weight), format: num },
   ],
   reps: [
     { id: 'maxReps', label: 'Most reps', unitLabel: () => 'reps', value: (s) => max(workingSets(s).map((x) => x.reps)), format: num },
@@ -146,12 +153,12 @@ export const MEASURES: Record<ExerciseType, Measure[]> = {
     { id: 'totalTime', label: 'Total time', unitLabel: () => '', value: (s) => sum(workingSets(s).map((x) => x.seconds ?? 0)), format: fmtTime },
   ],
   distance: [
-    { id: 'distance', label: 'Distance', unitLabel: distUnit, value: (s, u) => toDistDisplay(sum(workingSets(s).map((x) => x.meters ?? 0)), u), format: (v) => (Math.round(v * 100) / 100).toLocaleString() },
+    { id: 'distance', label: 'Distance', unitLabel: (u) => u.distance, value: (s, u) => toDistDisplay(sum(workingSets(s).map((x) => x.meters ?? 0)), u.distance), format: (v) => (Math.round(v * 100) / 100).toLocaleString() },
     {
-      id: 'pace', label: 'Pace', unitLabel: (u) => `/${distUnit(u)}`, lowerIsBetter: true,
+      id: 'pace', label: 'Pace', unitLabel: (u) => `/${u.distance}`, lowerIsBetter: true,
       value: (s, u) => {
         const w = workingSets(s);
-        const d = toDistDisplay(sum(w.map((x) => x.meters ?? 0)), u);
+        const d = toDistDisplay(sum(w.map((x) => x.meters ?? 0)), u.distance);
         const t = sum(w.map((x) => x.seconds ?? 0));
         return d > 0 && t > 0 ? t / d : 0;
       },

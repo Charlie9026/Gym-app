@@ -1,16 +1,16 @@
 import { useMemo, useState, type ReactNode } from 'react';
 import { ChipGroup } from './ChipGroup';
-import type { AppData, ExerciseType, SetEntry, Unit } from '../types';
+import type { AppData, ExerciseType, SetEntry, Units } from '../types';
 import { e1rm, fmtDate, fmtWeight, toDisplay } from '../utils';
 import {
   MEASURES,
-  distUnit,
   fmtTime,
   paceOf,
   setCountText,
   toDistDisplay,
   topSet,
   typeOf,
+  unitsOf,
   workingSets,
 } from '../sets';
 import { LineChart, type Point } from './LineChart';
@@ -43,7 +43,9 @@ function rangeStart(range: Range): number {
 const sumOf = (xs: number[]) => xs.reduce((a, b) => a + b, 0);
 
 /** The four stat cards for an exercise, by type (working sets only). */
-function statsFor(type: ExerciseType, sessions: Session[], unit: Unit): StatItem[] {
+function statsFor(type: ExerciseType, sessions: Session[], units: Units): StatItem[] {
+  const unit = units.weight;
+  const d = units.distance;
   const all = sessions.flatMap((s) => s.sets.map((set) => ({ ...set, date: s.date })));
   const bestBy = <T,>(xs: T[], f: (x: T) => number) => xs.reduce((a, b) => (f(b) > f(a) ? b : a), xs[0]);
   const count = `${sessions.length} session${sessions.length === 1 ? '' : 's'}`;
@@ -69,18 +71,18 @@ function statsFor(type: ExerciseType, sessions: Session[], unit: Unit): StatItem
     ];
   }
   if (type === 'distance') {
-    const dist = (s: Session) => toDistDisplay(sumOf(s.sets.map((x) => x.meters ?? 0)), unit);
+    const dist = (s: Session) => toDistDisplay(sumOf(s.sets.map((x) => x.meters ?? 0)), d);
     const km = (n: number) => (Math.round(n * 100) / 100).toLocaleString(); // distances keep 2 decimals, as elsewhere
     const longest = bestBy(sessions, dist);
-    const paced = all.filter((x) => paceOf(x, unit) > 0);
-    const fastest = paced.length ? paced.reduce((a, b) => (paceOf(b, unit) < paceOf(a, unit) ? b : a)) : null;
+    const paced = all.filter((x) => paceOf(x, d) > 0);
+    const fastest = paced.length ? paced.reduce((a, b) => (paceOf(b, d) < paceOf(a, d) ? b : a)) : null;
     return [
-      { label: 'Longest', icon: <RouteIcon />, value: dist(longest), format: km, unit: distUnit(unit), sub: fmtDate(longest.date) },
+      { label: 'Longest', icon: <RouteIcon />, value: dist(longest), format: km, unit: d, sub: fmtDate(longest.date) },
       {
-        label: 'Best pace', icon: <ClockIcon />, value: fastest ? paceOf(fastest, unit) : 0, format: (n) => (n ? fmtTime(n) : '—'),
-        unit: fastest ? `/${distUnit(unit)}` : undefined, sub: fastest ? fmtDate(fastest.date) : 'needs distance and time',
+        label: 'Best pace', icon: <ClockIcon />, value: fastest ? paceOf(fastest, d) : 0, format: (n) => (n ? fmtTime(n) : '—'),
+        unit: fastest ? `/${d}` : undefined, sub: fastest ? fmtDate(fastest.date) : 'needs distance and time',
       },
-      { label: 'Total distance', icon: <StackIcon />, value: toDistDisplay(sumOf(all.map((x) => x.meters ?? 0)), unit), format: km, unit: distUnit(unit), sub: count },
+      { label: 'Total distance', icon: <StackIcon />, value: toDistDisplay(sumOf(all.map((x) => x.meters ?? 0)), d), format: km, unit: d, sub: count },
       { label: 'Sessions', icon: <CalendarIcon />, value: sessions.length, sub: `since ${fmtDate(sessions[0].date)}` },
     ];
   }
@@ -98,16 +100,16 @@ function statsFor(type: ExerciseType, sessions: Session[], unit: Unit): StatItem
 }
 
 /** Small summary under a session's date, by type. */
-function sessionSummary(type: ExerciseType, sets: SetEntry[], unit: Unit): string {
+function sessionSummary(type: ExerciseType, sets: SetEntry[], units: Units): string {
   const w = workingSets(sets);
   const counts = setCountText(sets);
   if (type === 'time') return `${counts} · ${fmtTime(sumOf(w.map((x) => x.seconds ?? 0)))} total`;
-  if (type === 'distance') return `${counts} · ${toDistDisplay(sumOf(w.map((x) => x.meters ?? 0)), unit)} ${distUnit(unit)}`;
+  if (type === 'distance') return `${counts} · ${toDistDisplay(sumOf(w.map((x) => x.meters ?? 0)), units.distance)} ${units.distance}`;
   return `${counts} · ${sumOf(w.map((x) => x.reps))} reps`;
 }
 
 export function Progress({ data, initialExercise }: { data: AppData; initialExercise?: string }) {
-  const unit = data.settings.unit;
+  const units = unitsOf(data.settings);
 
   // Exercises that have history, most recently trained first.
   const trained = useMemo(() => {
@@ -148,8 +150,8 @@ export function Progress({ data, initialExercise }: { data: AppData; initialExer
 
   const measures = MEASURES[type];
   const measure = measures.find((m) => m.id === metricId) ?? measures[0];
-  const unitLabel = measure.unitLabel(unit);
-  const valueOf = (s: Session) => measure.value(s.sets, unit);
+  const unitLabel = measure.unitLabel(units);
+  const valueOf = (s: Session) => measure.value(s.sets, units);
 
   // Chart points for the chosen range (sessions without a value for this measure are skipped).
   const from = rangeStart(range);
@@ -173,7 +175,7 @@ export function Progress({ data, initialExercise }: { data: AppData; initialExer
   const raw = first ? ((last - first) / first) * 100 : 0;
   const change = measure.lowerIsBetter ? -raw : raw;
 
-  const stats = sessions.length ? statsFor(type, sessions.map((s) => ({ ...s, sets: workingSets(s.sets) })), unit) : [];
+  const stats = sessions.length ? statsFor(type, sessions.map((s) => ({ ...s, sets: workingSets(s.sets) })), units) : [];
 
   return (
     <div className="screen">
@@ -236,12 +238,12 @@ export function Progress({ data, initialExercise }: { data: AppData; initialExer
               <SessionCard
                 key={i}
                 title={fmtDate(s.date)}
-                summary={sessionSummary(type, s.sets, unit)}
+                summary={sessionSummary(type, s.sets, units)}
                 metricLabel={measure.label}
                 metric={<CountUp value={valueOf(s)} format={measure.format} />}
                 unitLabel={unitLabel}
-                top={<SetText set={topSet(s.sets, type)} type={type} unit={unit} />}
-                pills={<SetPills sets={s.sets} type={type} unit={unit} />}
+                top={<SetText set={topSet(s.sets, type)} type={type} units={units} />}
+                pills={<SetPills sets={s.sets} type={type} units={units} />}
                 pr={prDates.has(s.date)}
               />
             ))}

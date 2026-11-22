@@ -4,7 +4,7 @@ import { startingSets } from '../workout';
 import { useExerciseMap } from '../hooks';
 import type { Update } from '../store';
 import { notify } from '../dialog';
-import { DEFAULT_REST_SECONDS, isWarmup, typeOf, type AnySet } from '../sets';
+import { DEFAULT_REST_SECONDS, isWarmup, typeOf, unitsOf, type AnySet } from '../sets';
 import { ExercisePicker } from './ExercisePicker';
 import { PlusIcon, TrashIcon } from './Icons';
 import { RestChip } from './RestChip';
@@ -31,7 +31,7 @@ interface Props<S extends AnySet> {
 
 export function ExerciseListEditor<S extends AnySet>({ data, update, exercises, onChange, blankSet, emptyText }: Props<S>) {
   const [picking, setPicking] = useState(false);
-  const unit = data.settings.unit;
+  const units = unitsOf(data.settings);
   const exById = useExerciseMap(data.exercises);
 
   const apply = (fn: (xs: EditableExercise<S>[]) => EditableExercise<S>[]) => onChange(fn(exercises));
@@ -83,7 +83,7 @@ export function ExerciseListEditor<S extends AnySet>({ data, update, exercises, 
             </div>
             <SetsTable
               type={type}
-              unit={unit}
+              units={units}
               exerciseName={exName}
               sets={ex.sets}
               mode="edit"

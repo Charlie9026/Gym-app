@@ -104,9 +104,18 @@ export interface WorkoutTemplate {
 }
 
 export type Unit = 'kg' | 'lb';
+export type DistanceUnit = 'km' | 'mi';
+
+/** The units everything is shown in: weight and distance are chosen separately. */
+export interface Units {
+  weight: Unit;
+  distance: DistanceUnit;
+}
 
 export interface Settings {
   unit: Unit;
+  /** Distance unit; when missing it follows the weight unit (kg → km, lb → mi), as before it could be chosen. */
+  distanceUnit?: DistanceUnit;
   /** Colour theme id from themes.ts */
   theme?: string;
   /** Rest timer length after ticking a set, in seconds; 0 turns it off. */

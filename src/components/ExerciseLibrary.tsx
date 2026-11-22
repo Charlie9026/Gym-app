@@ -4,7 +4,7 @@ import { MUSCLE_GROUPS, type AppData, type ExerciseType, type MuscleGroup, type 
 import type { Update } from '../store';
 import { notify } from '../dialog';
 import { uid } from '../utils';
-import { EXERCISE_TYPES, setScore, setText, topSet, typeOf } from '../sets';
+import { EXERCISE_TYPES, setScore, setText, topSet, typeOf, unitsOf } from '../sets';
 import { relativeDay } from '../workout';
 import { MUSCLE_CODE } from '../exercises';
 import { ChevronIcon, PlusIcon, TrashIcon } from './Icons';
@@ -34,7 +34,7 @@ export function ExerciseLibrary({ data, update, onOpen }: Props) {
   const [newName, setNewName] = useState('');
   const [newMuscle, setNewMuscle] = useState<MuscleGroup>('Chest');
   const [newType, setNewType] = useState<ExerciseType>('weight');
-  const unit = data.settings.unit;
+  const units = unitsOf(data.settings);
 
   const usage = useMemo(() => {
     const types = new Map(data.exercises.map((e) => [e.id, typeOf(e)]));
@@ -181,7 +181,7 @@ export function ExerciseLibrary({ data, update, onOpen }: Props) {
                     </span>
                     <span className="muted small">
                       {u
-                        ? `${u.sessions} session${u.sessions === 1 ? '' : 's'} · best ${setText(u.best, typeOf(e), unit)} · ${relativeDay(u.last)}`
+                        ? `${u.sessions} session${u.sessions === 1 ? '' : 's'} · best ${setText(u.best, typeOf(e), units)} · ${relativeDay(u.last)}`
                         : 'Not logged yet'}
                     </span>
                   </span>

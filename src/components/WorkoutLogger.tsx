@@ -1,17 +1,17 @@
 import { ask, askText, notify } from '../dialog';
 import { useEffect, useState } from 'react';
-import type { AppData, Exercise, ExerciseType, SetEntry, Workout, WorkoutExercise } from '../types';
+import type { AppData, Exercise, ExerciseType, SetEntry, Workout, WorkoutExercise, Units } from '../types';
 import type { Update } from '../store';
 import { completedSets, defaultWorkoutName, e1rm, fmtWeight } from '../utils';
 import {
   DEFAULT_REST_SECONDS,
-  distUnit,
   fmtTime,
   hasValue,
   isWarmup,
   paceOf,
   toDistDisplay,
   typeOf,
+  unitsOf,
   workingSets,
   type AnySet,
 } from '../sets';
@@ -96,7 +96,7 @@ function ActiveWorkout({
 }: Props & { active: Workout }) {
   const [picking, setPicking] = useState(false);
   const elapsed = useElapsed(active.date);
-  const unit = data.settings.unit;
+  const units = unitsOf(data.settings);
   const exById = useExerciseMap(data.exercises);
 
   const setActive = (fn: (w: Workout) => Workout) =>
@@ -161,7 +161,7 @@ function ActiveWorkout({
     }
     const name = active.name.trim() || defaultWorkoutName(new Date(active.date));
     const finished: Workout = { ...active, name, exercises, finishedAt: new Date().toISOString() };
-    const prs = findPRs(data.workouts, finished, exById, unit);
+    const prs = findPRs(data.workouts, finished, exById, units);
     const done = templateExercisesFrom(finished);
 
     // Work out what happens to My workouts.
@@ -287,7 +287,7 @@ function ActiveWorkout({
             </div>
             <SetsTable
               type={type}
-              unit={unit}
+              units={units}
               exerciseName={info?.name ?? 'Exercise'}
               sets={ex.sets}
               mode="log"
@@ -340,7 +340,7 @@ function findPRs(
   history: Workout[],
   w: Workout,
   exById: Map<string, Exercise>,
-  unit: AppData['settings']['unit'],
+  units: Units,
 ): string[] {
   const prs: string[] = [];
   for (const ex of w.exercises) {
@@ -354,8 +354,8 @@ function findPRs(
     if (prior.length === 0 || now.length === 0) continue; // first time is a baseline, not a PR
     const best = (sets: SetEntry[], f: (s: SetEntry) => number) => Math.max(...sets.map(f));
     if (type === 'weight') {
-      if (best(now, (s) => s.weight) > best(prior, (s) => s.weight)) prs.push(`${name}: heaviest weight ${fmtWeight(best(now, (s) => s.weight), unit)}`);
-      else if (best(now, e1rm) > best(prior, e1rm) + 0.01) prs.push(`${name}: best est. 1RM ${fmtWeight(best(now, e1rm), unit)}`);
+      if (best(now, (s) => s.weight) > best(prior, (s) => s.weight)) prs.push(`${name}: heaviest weight ${fmtWeight(best(now, (s) => s.weight), units.weight)}`);
+      else if (best(now, e1rm) > best(prior, e1rm) + 0.01) prs.push(`${name}: best est. 1RM ${fmtWeight(best(now, e1rm), units.weight)}`);
       else if (best(now, (s) => (s.weight ? 0 : s.reps)) > best(prior, (s) => (s.weight ? 0 : s.reps))) prs.push(`${name}: most reps ${best(now, (s) => s.reps)}`);
     } else if (type === 'reps') {
       if (best(now, (s) => s.reps) > best(prior, (s) => s.reps)) prs.push(`${name}: most reps ${best(now, (s) => s.reps)}`);
@@ -363,9 +363,9 @@ function findPRs(
       if (best(now, (s) => s.seconds ?? 0) > best(prior, (s) => s.seconds ?? 0)) prs.push(`${name}: longest ${fmtTime(best(now, (s) => s.seconds ?? 0))}`);
     } else {
       const far = (s: SetEntry) => s.meters ?? 0;
-      const pace = (s: SetEntry) => paceOf(s, unit) || Infinity;
-      if (best(now, far) > best(prior, far)) prs.push(`${name}: longest ${toDistDisplay(best(now, far), unit)} ${distUnit(unit)}`);
-      else if (Math.min(...now.map(pace)) < Math.min(...prior.map(pace))) prs.push(`${name}: fastest pace ${fmtTime(Math.min(...now.map(pace)))} /${distUnit(unit)}`);
+      const pace = (s: SetEntry) => paceOf(s, units.distance) || Infinity;
+      if (best(now, far) > best(prior, far)) prs.push(`${name}: longest ${toDistDisplay(best(now, far), units.distance)} ${units.distance}`);
+      else if (Math.min(...now.map(pace)) < Math.min(...prior.map(pace))) prs.push(`${name}: fastest pace ${fmtTime(Math.min(...now.map(pace)))} /${units.distance}`);
     }
   }
   return prs;

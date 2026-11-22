@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
-import type { ExerciseType, SetEntry, Unit } from '../types';
-import { distUnit, fmtTime, fromDistDisplay, isWarmup, setText, toDistDisplay, type AnySet } from '../sets';
+import type { ExerciseType, SetEntry, Units } from '../types';
+import { fmtTime, fromDistDisplay, isWarmup, setText, toDistDisplay, type AnySet } from '../sets';
 import { fromDisplay, toDisplay } from '../utils';
 import { DurationInput } from './DurationInput';
 import { NumberInput } from './NumberInput';
@@ -13,7 +13,7 @@ import { NumberInput } from './NumberInput';
  */
 interface Props {
   type: ExerciseType;
-  unit: Unit;
+  units: Units;
   exerciseName: string;
   sets: AnySet[];
   mode: 'log' | 'edit';
@@ -29,15 +29,17 @@ interface Props {
 }
 
 export function SetsTable(props: Props) {
-  const { type, unit, sets, mode, prev = [], hintFor, onChange, onToggleDone, exerciseName } = props;
+  const { type, units, sets, mode, prev = [], hintFor, onChange, onToggleDone, exerciseName } = props;
   const [menuFor, setMenuFor] = useState<number | null>(null);
   const log = mode === 'log';
+  const unit = units.weight;
+  const dist = units.distance;
 
   // Working sets are numbered 1, 2, 3…; warm-ups show "W".
   const labels = sets.map((s, i) => (isWarmup(s) ? 'W' : String(sets.slice(0, i + 1).filter((x) => !isWarmup(x)).length)));
 
   const fieldHeads =
-    type === 'weight' ? [unit, 'Reps'] : type === 'reps' ? ['Reps'] : type === 'time' ? ['Time'] : [distUnit(unit), 'Time'];
+    type === 'weight' ? [unit, 'Reps'] : type === 'reps' ? ['Reps'] : type === 'time' ? ['Time'] : [dist, 'Time'];
 
   return (
     <div className={`sets t-${type} m-${mode}`}>
@@ -67,7 +69,7 @@ export function SetsTable(props: Props) {
               onToggleWarmup={() => props.onToggleWarmup(i)}
               onRemove={() => props.onRemove(i)}
             />
-            {log && <span className="st-prev muted small">{prev[i] ? setText(prev[i], type, unit) : '—'}</span>}
+            {log && <span className="st-prev muted small">{prev[i] ? setText(prev[i], type, units) : '—'}</span>}
 
             {type === 'weight' && (
               <NumberInput
@@ -89,9 +91,9 @@ export function SetsTable(props: Props) {
             {type === 'distance' && (
               <NumberInput
                 ariaLabel={`${name} distance`}
-                value={toDistDisplay(s.meters ?? 0, unit)}
-                onChange={(v) => onChange(i, { meters: fromDistDisplay(v, unit) })}
-                placeholder={hint?.meters ? String(toDistDisplay(hint.meters, unit)) : '0'}
+                value={toDistDisplay(s.meters ?? 0, dist)}
+                onChange={(v) => onChange(i, { meters: fromDistDisplay(v, dist) })}
+                placeholder={hint?.meters ? String(toDistDisplay(hint.meters, dist)) : '0'}
               />
             )}
             {(type === 'time' || type === 'distance') && (

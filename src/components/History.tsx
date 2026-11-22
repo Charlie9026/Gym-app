@@ -4,7 +4,7 @@ import { askText, notify } from '../dialog';
 import type { AppData, Workout } from '../types';
 import type { Update } from '../store';
 import { fmtDuration, fmtWeight, toDisplay, workoutVolume } from '../utils';
-import { setCountText, setText, topSet, typeOf } from '../sets';
+import { setCountText, setText, topSet, typeOf, unitsOf } from '../sets';
 import { WorkoutEditor } from './WorkoutEditor';
 import { newTemplate, newWorkoutFrom, templateExercisesFrom } from '../workout';
 import { ChevronIcon, TrashIcon } from './Icons';
@@ -38,7 +38,8 @@ function weekLabel(start: number): string {
 export function History({ data, update, onRepeat }: Props) {
   const [open, setOpen] = useState<string | null>(null);
   const [editing, setEditing] = useState<string | null>(null);
-  const unit = data.settings.unit;
+  const units = unitsOf(data.settings);
+  const unit = units.weight;
   const exById = useExerciseMap(data.exercises);
 
   const weeks = useMemo(() => {
@@ -159,7 +160,7 @@ export function History({ data, update, onRepeat }: Props) {
                         <li key={i}>
                           <span className="ex-name">{name(ex.exerciseId)}</span>
                           <span className="ex-best">
-                            <span className="muted">{setCountText(ex.sets)} ·</span> {setText(topSet(ex.sets, type), type, unit)}
+                            <span className="muted">{setCountText(ex.sets)} ·</span> {setText(topSet(ex.sets, type), type, units)}
                           </span>
                         </li>
                       );
@@ -177,7 +178,7 @@ export function History({ data, update, onRepeat }: Props) {
                           <strong>{name(ex.exerciseId)}</strong>
                           <span className="muted small">{exById.get(ex.exerciseId)?.muscle}</span>
                         </div>
-                        <SetPills sets={ex.sets} type={typeOf(exById.get(ex.exerciseId))} unit={unit} />
+                        <SetPills sets={ex.sets} type={typeOf(exById.get(ex.exerciseId))} units={units} />
                       </div>
                     ))}
                     {w.notes && <p className="notes-view">{w.notes}</p>}

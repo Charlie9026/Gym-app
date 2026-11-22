@@ -557,6 +557,10 @@
 
 .toggle-row label .small { font-weight: 500; }
 
+.unit-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.unit-name { font-weight: 700; }
+.unit-row .chips.seg .chip { min-width: 64px; padding: 8px 18px; }
+
 .trend.flat { color: var(--muted); background: var(--field); }
 
 .st-head > span { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }

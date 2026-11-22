@@ -13,6 +13,7 @@ import {
   toDistDisplay,
   typeOf,
   workingSets,
+  unitsOf,
 } from './sets';
 import type { SetEntry } from './types';
 
@@ -49,16 +50,25 @@ describe('exercise types', () => {
     expect(hasValue(set({ seconds: 1500 }), 'distance')).toBe(true);
   });
   it('describes sets in plain text per type and unit', () => {
-    expect(setText(set({ weight: 72.5, reps: 8 }), 'weight', 'kg')).toBe('72.5 kg × 8');
-    expect(setText(set({ reps: 12 }), 'reps', 'kg')).toBe('12 reps');
-    expect(setText(set({ seconds: 90 }), 'time', 'kg')).toBe('1:30');
-    expect(setText(set({ meters: 5000, seconds: 1500 }), 'distance', 'kg')).toBe('5 km in 25:00');
-    expect(setText(set({ meters: 5000, seconds: 1500 }), 'distance', 'lb')).toBe('3.11 mi in 25:00');
+    expect(setText(set({ weight: 72.5, reps: 8 }), 'weight', { weight: 'kg', distance: 'km' })).toBe('72.5 kg × 8');
+    expect(setText(set({ reps: 12 }), 'reps', { weight: 'kg', distance: 'km' })).toBe('12 reps');
+    expect(setText(set({ seconds: 90 }), 'time', { weight: 'kg', distance: 'km' })).toBe('1:30');
+    expect(setText(set({ meters: 5000, seconds: 1500 }), 'distance', { weight: 'kg', distance: 'km' })).toBe('5 km in 25:00');
+    expect(setText(set({ meters: 5000, seconds: 1500 }), 'distance', { weight: 'lb', distance: 'mi' })).toBe('3.11 mi in 25:00');
+  });
+  it('shows weight and distance in separately chosen units', () => {
+    expect(setText(set({ meters: 5000, seconds: 1500 }), 'distance', { weight: 'kg', distance: 'mi' })).toBe('3.11 mi in 25:00');
+    expect(setText(set({ weight: 100, reps: 5 }), 'weight', { weight: 'kg', distance: 'mi' })).toBe('100 kg × 5');
+  });
+  it('picks the distance unit from settings, following the weight unit until one is chosen', () => {
+    expect(unitsOf({ unit: 'kg' })).toEqual({ weight: 'kg', distance: 'km' });
+    expect(unitsOf({ unit: 'lb' })).toEqual({ weight: 'lb', distance: 'mi' });
+    expect(unitsOf({ unit: 'lb', distanceUnit: 'km' })).toEqual({ weight: 'lb', distance: 'km' });
   });
   it('converts distances between km/mi and metres', () => {
-    expect(toDistDisplay(1609.344, 'lb')).toBe(1);
-    expect(fromDistDisplay(5, 'kg')).toBe(5000);
-    expect(paceOf(set({ meters: 5000, seconds: 1500 }), 'kg')).toBe(300); // 5:00 per km
+    expect(toDistDisplay(1609.344, 'mi')).toBe(1);
+    expect(fromDistDisplay(5, 'km')).toBe(5000);
+    expect(paceOf(set({ meters: 5000, seconds: 1500 }), 'km')).toBe(300); // 5:00 per km
   });
 });
 
@@ -75,7 +85,7 @@ describe('warm-ups', () => {
   });
   it('are excluded from progress measures', () => {
     const volume = MEASURES.weight.find((m) => m.id === 'volume')!;
-    expect(volume.value(sets, 'kg')).toBe(100 * 6 + 100 * 5);
+    expect(volume.value(sets, { weight: 'kg', distance: 'km' })).toBe(100 * 6 + 100 * 5);
   });
 });
 
@@ -90,7 +100,7 @@ describe('top set and measures', () => {
   it('treats pace as lower-is-better and in display units', () => {
     const pace = MEASURES.distance.find((m) => m.id === 'pace')!;
     expect(pace.lowerIsBetter).toBe(true);
-    expect(pace.value([set({ meters: 10000, seconds: 3000 })], 'kg')).toBe(300);
+    expect(pace.value([set({ meters: 10000, seconds: 3000 })], { weight: 'kg', distance: 'km' })).toBe(300);
   });
 });
 

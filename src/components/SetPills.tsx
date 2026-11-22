@@ -1,8 +1,8 @@
-import type { ExerciseType, Unit } from '../types';
+import type { ExerciseType, Units } from '../types';
 import { isWarmup, setParts, type AnySet } from '../sets';
 
 /** Sets as readable pills, e.g. "72.5 kg × 10 reps", "1:30", "5.2 km · 25:10". Warm-ups are marked W. */
-export function SetPills({ sets, type, unit }: { sets: AnySet[]; type: ExerciseType; unit: Unit }) {
+export function SetPills({ sets, type, units }: { sets: AnySet[]; type: ExerciseType; units: Units }) {
   return (
     <ul className="set-pills">
       {sets.map((s, i) => (
@@ -12,7 +12,7 @@ export function SetPills({ sets, type, unit }: { sets: AnySet[]; type: ExerciseT
               W
             </span>
           )}
-          <SetText set={s} type={type} unit={unit} />
+          <SetText set={s} type={type} units={units} />
         </li>
       ))}
     </ul>
@@ -20,8 +20,8 @@ export function SetPills({ sets, type, unit }: { sets: AnySet[]; type: ExerciseT
 }
 
 /** One set with styled numbers and units. */
-export function SetText({ set, type, unit }: { set: AnySet; type: ExerciseType; unit: Unit }) {
-  const parts = setParts(set, type, unit);
+export function SetText({ set, type, units }: { set: AnySet; type: ExerciseType; units: Units }) {
+  const parts = setParts(set, type, units);
   return (
     <>
       {parts.map((p, i) => (
