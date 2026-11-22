@@ -193,7 +193,10 @@ export function Progress({ data, initialExercise, header }: { data: AppData; ini
 
   // Time-only distance exercises chart time first and get the timed stat cards.
   const timeOnly = type === 'distance' && !!exercise.timeOnly;
-  const base = timeOnly ? [...MEASURES.distance].sort((a, b) => Number(b.id === 'duration') - Number(a.id === 'duration')) : MEASURES[type];
+  const anyAdded = type === 'reps' && sessions.some((s) => s.sets.some((x) => x.weight > 0));
+  const base = timeOnly
+    ? [...MEASURES.distance].sort((a, b) => Number(b.id === 'duration') - Number(a.id === 'duration'))
+    : MEASURES[type].filter((m) => m.id !== 'maxAdded' || anyAdded);
   const measures = showKcal && sessions.some((s) => s.kcal > 0) ? [...base, KCAL_MEASURE] : base;
   const measure = measures.find((m) => m.id === metricId) ?? measures[0];
   const unitLabel = measure.unitLabel(units);

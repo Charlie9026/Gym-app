@@ -113,6 +113,14 @@ describe('exercise types', () => {
     expect(repTarget({ reps: 12, repsOpen: true })).toBe('12+');
     expect(repTarget({ reps: 10 })).toBe('10');
   });
+  it('shows bodyweight sets with added weight, and ranks them by added weight first', () => {
+    const KG = { weight: 'kg', distance: 'km' } as const;
+    expect(setText(set({ weight: 20, reps: 8 }), 'reps', KG)).toBe('+20 kg × 8');
+    expect(setText(set({ reps: 12 }), 'reps', KG)).toBe('12 reps');
+    expect(topSet([set({ reps: 15 }), set({ weight: 10, reps: 6 }), set({ weight: 10, reps: 8 })], 'reps')).toMatchObject({ weight: 10, reps: 8 });
+    const added = MEASURES.reps.find((m) => m.id === 'maxAdded')!;
+    expect(added.value([set({ weight: 20, reps: 5 }), set({ weight: 25, reps: 3 })], KG)).toBe(25);
+  });
   it('converts distances between km/mi and metres', () => {
     expect(toDistDisplay(1609.344, 'mi')).toBe(1);
     expect(fromDistDisplay(5, 'km')).toBe(5000);

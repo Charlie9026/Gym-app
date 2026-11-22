@@ -143,6 +143,8 @@ export function setParts(s: AnySet, type: ExerciseType, units: Units): SetPart[]
   }
   const reps = { value: String(s.reps), unit: s.reps === 1 ? 'rep' : 'reps' };
   if (type === 'weight' && s.weight > 0) return [{ value: n(toDisplay(s.weight, unit)), unit }, reps];
+  // Bodyweight plus added weight (a dip belt, a vest…): "+10 kg × 8 reps".
+  if (type === 'reps' && s.weight > 0) return [{ value: `+${n(toDisplay(s.weight, unit))}`, unit }, reps];
   return [reps];
 }
 
@@ -161,6 +163,7 @@ export function setText(s: AnySet, type: ExerciseType, units: Units): string {
     return st && t ? `${st} in ${t}` : st || t || '—';
   }
   if (type === 'weight' && s.weight > 0) return `${toDisplay(s.weight, unit).toLocaleString()} ${unit} × ${s.reps}`;
+  if (type === 'reps' && s.weight > 0) return `+${toDisplay(s.weight, unit).toLocaleString()} ${unit} × ${s.reps}`;
   return `${s.reps} reps`;
 }
 
@@ -169,7 +172,7 @@ export function setScore(s: AnySet, type: ExerciseType): number {
   if (type === 'time') return s.seconds ?? 0;
   if (type === 'distance') return (s.meters ?? 0) * 1e6 + (s.seconds ? 1e6 / s.seconds : 0);
   if (type === 'steps') return s.reps * 1e6 + (s.seconds ?? 0); // most steps, then longest
-  if (type === 'reps') return s.reps;
+  if (type === 'reps') return s.weight * 1000 + s.reps; // more added weight first, then more reps
   return e1rm(s) || s.reps / 1000; // bodyweight-style sets in a weight exercise still rank by reps
 }
 
@@ -213,6 +216,8 @@ export const MEASURES: Record<ExerciseType, Measure[]> = {
   reps: [
     { id: 'maxReps', label: 'Most reps', unitLabel: () => 'reps', value: (s) => max(workingSets(s).map((x) => x.reps)), format: num },
     { id: 'totalReps', label: 'Total reps', unitLabel: () => 'reps', value: (s) => sum(workingSets(s).map((x) => x.reps)), format: num },
+    // Only offered once some sets have added weight (see Progress).
+    { id: 'maxAdded', label: 'Most added', unitLabel: (u) => `+${u.weight}`, value: (s, u) => toDisplay(max(workingSets(s).map((x) => x.weight)), u.weight), format: num },
   ],
   time: [
     { id: 'longest', label: 'Longest set', unitLabel: () => '', value: (s) => max(workingSets(s).map((x) => x.seconds ?? 0)), format: fmtTime },

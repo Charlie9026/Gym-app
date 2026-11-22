@@ -79,6 +79,12 @@ describe('calories', () => {
     expect(climb({ reps: 1400, seconds: 1200 })).toBe(Math.round(9 * 70 * (20 / 60))); // the time counts when there is one
     expect(climb({ reps: 1400 })).toBe(Math.round(9 * 70 * (20 / 60))); // 1,400 steps at 70 a minute = 20 minutes
   });
+  it('counts added weight on top of the body weight lifted in bodyweight moves', () => {
+    const plain = liftSetCalories(set({ reps: 8 }), 80, true);
+    const weighted = liftSetCalories(set({ weight: 20, reps: 8 }), 80, true);
+    expect(plain).toBeCloseTo(liftSetCalories(set({ reps: 8 }), 80)); // same as before for no added weight
+    expect(weighted - plain).toBeCloseTo((20 * 9.81 * 0.4 * 8) / 0.2 / 4184);
+  });
   it('is on unless switched off', () => {
     expect(caloriesOn({})).toBe(true);
     expect(caloriesOn({ showCalories: false })).toBe(false);

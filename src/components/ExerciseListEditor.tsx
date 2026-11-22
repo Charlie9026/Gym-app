@@ -10,6 +10,7 @@ import { PlusIcon, TrashIcon } from './Icons';
 import { RestChip } from './RestChip';
 import { CaloriesChip } from './CaloriesChip';
 import { DistanceChip } from './DistanceChip';
+import { AddedWeightChip } from './AddedWeightChip';
 import { caloriesOn, cardioEstimate, isCardio, withCalories } from '../calories';
 import { SetsTable, type SetPatch } from './SetsTable';
 
@@ -82,6 +83,7 @@ export function ExerciseListEditor<S extends AnySet>({ data, update, exercises, 
                 <div className="ex-pills">
                   {info && <RestChip exercise={info} defaultSeconds={data.settings.restSeconds ?? DEFAULT_REST_SECONDS} update={update} />}
                   {info && typeOf(info) === 'distance' && <DistanceChip exercise={info} units={units} update={update} />}
+                  {info && typeOf(info) === 'reps' && <AddedWeightChip exercise={info} update={update} />}
                   {calories && caloriesOn(data.settings) && isCardio(info) && (
                     <CaloriesChip
                       name={exName}
@@ -104,6 +106,7 @@ export function ExerciseListEditor<S extends AnySet>({ data, update, exercises, 
               type={type}
               units={unitsFor(info, units)}
               timeOnly={!!info?.timeOnly}
+              addedWeight={!!info?.addedWeight}
               repRanges={repRanges}
               exerciseName={exName}
               sets={ex.sets}

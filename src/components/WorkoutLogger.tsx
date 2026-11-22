@@ -24,6 +24,7 @@ import { CaloriesChip } from './CaloriesChip';
 import { afterSetRemoved, startStopwatch, stopStopwatch, stopwatchTarget } from '../stopwatch';
 import { StopwatchIcon } from './Icons';
 import { DistanceChip } from './DistanceChip';
+import { AddedWeightChip } from './AddedWeightChip';
 import { caloriesOn, cardioEstimate, isCardio, withCalories } from '../calories';
 import { ExercisePicker } from './ExercisePicker';
 import { keepRepTargets, lastSetsFor, newTemplate, newWorkoutFrom, structureChanged, templateExercisesFrom } from '../workout';
@@ -285,7 +286,8 @@ function ActiveWorkout({
           // Ticking with empty fields accepts the faded suggestion.
           const h = hintFor(i);
           const filled = {
-            weight: s.weight || h?.weight || 0,
+            // A bodyweight exercise without the added-weight column never picks up a hidden weight.
+            weight: type === 'reps' && !info?.addedWeight ? 0 : s.weight || h?.weight || 0,
             reps: s.reps || h?.reps || 0,
             seconds: s.seconds || h?.seconds || 0,
             meters: s.meters || h?.meters || 0,
@@ -328,6 +330,7 @@ function ActiveWorkout({
                   )}
                   {info && <RestChip exercise={info} defaultSeconds={data.settings.restSeconds ?? DEFAULT_REST_SECONDS} update={update} />}
                   {info && typeOf(info) === 'distance' && <DistanceChip exercise={info} units={units} update={update} />}
+                  {info && typeOf(info) === 'reps' && <AddedWeightChip exercise={info} update={update} />}
                   {showKcal && isCardio(info) && (
                     <CaloriesChip
                       name={exName}
@@ -350,6 +353,7 @@ function ActiveWorkout({
               type={type}
               units={unitsFor(info, units)}
               timeOnly={!!info?.timeOnly}
+              addedWeight={!!info?.addedWeight}
               exerciseName={info?.name ?? 'Exercise'}
               sets={ex.sets}
               mode="log"
@@ -433,7 +437,9 @@ function findPRs(
       else if (best(now, e1rm) > best(prior, e1rm) + 0.01) prs.push(`${name}: best est. 1RM ${fmtWeight(best(now, e1rm), units.weight)}`);
       else if (best(now, (s) => (s.weight ? 0 : s.reps)) > best(prior, (s) => (s.weight ? 0 : s.reps))) prs.push(`${name}: most reps ${best(now, (s) => s.reps)}`);
     } else if (type === 'reps') {
-      if (best(now, (s) => s.reps) > best(prior, (s) => s.reps)) prs.push(`${name}: most reps ${best(now, (s) => s.reps)}`);
+      const added = (s: SetEntry) => s.weight;
+      if (best(now, added) > best(prior, added)) prs.push(`${name}: most added weight +${fmtWeight(best(now, added), units.weight)}`);
+      else if (best(now, (s) => s.reps) > best(prior, (s) => s.reps)) prs.push(`${name}: most reps ${best(now, (s) => s.reps)}`);
     } else if (type === 'time') {
       if (best(now, (s) => s.seconds ?? 0) > best(prior, (s) => s.seconds ?? 0)) prs.push(`${name}: longest ${fmtTime(best(now, (s) => s.seconds ?? 0))}`);
     } else if (type === 'steps') {

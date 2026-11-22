@@ -33,13 +33,15 @@ interface Props {
   timingIndex?: number;
   /** Saved workouts: reps can be a range like 6–8 or 12+. */
   repRanges?: boolean;
+  /** Bodyweight exercise with added weight (e.g. weighted dips): shows a +kg column. */
+  addedWeight?: boolean;
 }
 
 /** A change to one set (rep range fields only apply to saved workouts). */
 export type SetPatch = Partial<SetEntry> & Partial<Pick<TemplateSet, 'repsTo' | 'repsOpen'>>;
 
 export function SetsTable(props: Props) {
-  const { type, units, timeOnly, timingIndex, repRanges, sets, mode, prev = [], hintFor, onChange, onToggleDone, exerciseName } = props;
+  const { type, units, timeOnly, timingIndex, repRanges, addedWeight, sets, mode, prev = [], hintFor, onChange, onToggleDone, exerciseName } = props;
   const [menuFor, setMenuFor] = useState<number | null>(null);
   const log = mode === 'log';
   const unit = units.weight;
@@ -49,9 +51,10 @@ export function SetsTable(props: Props) {
   const labels = sets.map((s, i) => (isWarmup(s) ? 'W' : String(sets.slice(0, i + 1).filter((x) => !isWarmup(x)).length)));
 
   // A time-only distance exercise is laid out like a timed one.
-  const layout = type === 'distance' && timeOnly ? 'time' : type;
+  // A bodyweight exercise with added weight is laid out like a weighted one.
+  const layout = type === 'distance' && timeOnly ? 'time' : type === 'reps' && addedWeight ? 'weight' : type;
   const fieldHeads =
-    layout === 'weight' ? [unit, 'Reps'] : layout === 'reps' ? ['Reps'] : layout === 'time' ? ['Time'] : layout === 'steps' ? ['Steps', 'Time'] : [dist, 'Time'];
+    layout === 'weight' ? [type === 'reps' ? `+${unit}` : unit, 'Reps'] : layout === 'reps' ? ['Reps'] : layout === 'time' ? ['Time'] : layout === 'steps' ? ['Steps', 'Time'] : [dist, 'Time'];
 
   return (
     <div className={`sets t-${layout} m-${mode}`}>
@@ -83,9 +86,9 @@ export function SetsTable(props: Props) {
             />
             {log && <span className="st-prev muted small">{prev[i] ? setText(prev[i], type, units) : '—'}</span>}
 
-            {type === 'weight' && (
+            {layout === 'weight' && (
               <NumberInput
-                ariaLabel={`${name} weight`}
+                ariaLabel={type === 'reps' ? `${name} added weight` : `${name} weight`}
                 value={toDisplay(s.weight, unit)}
                 onChange={(v) => onChange(i, { weight: fromDisplay(v, unit) })}
                 placeholder={hint?.weight ? String(toDisplay(hint.weight, unit)) : '0'}

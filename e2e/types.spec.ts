@@ -142,3 +142,40 @@ test('stair climber logs steps as well as time', async ({ page }) => {
   await expect(page.locator('.neu-card', { hasText: 'Best rate' })).toContainText('80');
   await expect(page.locator('.set-pill').first()).toHaveText('1,200 steps · 15:00');
 });
+
+test('bodyweight exercises can add weight: column, history, PRs and charts', async ({ page }) => {
+  const d0 = new Date(Date.now() - 2 * 86400000).toISOString();
+  await openApp(page, {
+    data: {
+      version: 1, templates: [], activeWorkout: null, settings: { unit: 'kg', theme: 'D1' },
+      exercises: [{ id: 'preset-dips', name: 'Dips', muscle: 'Chest', type: 'reps' }],
+      workouts: [{ id: 'old', date: d0, name: 'Push', notes: '', exercises: [{ exerciseId: 'preset-dips', sets: [{ weight: 0, reps: 12, done: true }] }] }],
+    },
+  });
+  await tab(page, 'Workout');
+  await page.locator('.start-empty').click();
+  await page.getByRole('button', { name: /Add exercise/ }).click();
+  await page.getByPlaceholder('Search or create…').fill('Dips');
+  await page.getByRole('button', { name: /^Dips/ }).click();
+  const dips = page.locator('.card', { hasText: 'Dips' });
+  await expect(dips.locator('.st-head')).toHaveText(/SET\s*PREVIOUS\s*REPS/i);
+  await expect(dips.getByLabel('Dips set 1 added weight')).toHaveCount(0);
+
+  await dips.getByRole('button', { name: 'Add weight' }).click();
+  await expect(dips.getByRole('button', { name: 'Added weight' })).toHaveAttribute('aria-pressed', 'true');
+  await expect(dips.locator('.st-head')).toHaveText(/SET\s*PREVIOUS\s*\+KG\s*REPS/i);
+  await dips.getByLabel('Dips set 1 added weight').fill('20');
+  await dips.getByLabel('Dips set 1 reps').fill('8');
+  await dips.getByRole('button', { name: 'Mark Dips set 1 done' }).click();
+  await skipRest(page);
+  await page.getByRole('button', { name: 'Finish workout' }).click();
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Not now' }).click();
+
+  await expect(page.locator('.banner')).toContainText('Dips: most added weight +20 kg');
+  await expect(page.locator('.ex-summary').first()).toContainText('+20 kg × 8');
+  expect((await stored(page)).exercises.find((e: { id: string }) => e.id === 'preset-dips').addedWeight).toBe(true);
+
+  await tab(page, 'Progress');
+  await page.getByRole('group', { name: 'Chart measure' }).getByRole('button', { name: 'Most added' }).click();
+  await expect(page.locator('.set-pill').first()).toHaveText('+20 kg × 8 reps');
+});

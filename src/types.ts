@@ -52,6 +52,8 @@ export interface Exercise {
   distanceUnit?: DistUnit;
   /** Distance exercises: log time only (the distance column is hidden). */
   timeOnly?: boolean;
+  /** Bodyweight (reps) exercises: show a column for added weight, e.g. a dip belt. Kept in each set's `weight`. */
+  addedWeight?: boolean;
 }
 
 /** Warm-up sets are excluded from volume, PRs and progress. Missing = working set. */

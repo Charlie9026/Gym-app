@@ -29,10 +29,10 @@ const J_PER_KCAL = 4184;
 /** Bodyweight moves (push-ups, pull-ups, dips…) lift roughly this share of your body weight. */
 const BODYWEIGHT_SHARE = 0.65;
 
-/** Calories for one lifting set. */
-export function liftSetCalories(s: SetEntry, bodyKg: number): number {
+/** Calories for one lifting set. A bodyweight move lifts part of your body weight plus any added weight. */
+export function liftSetCalories(s: SetEntry, bodyKg: number, bodyweightMove = false): number {
   const base = SET_MET * bodyKg * (SET_MINUTES / 60);
-  const load = s.weight > 0 ? s.weight : BODYWEIGHT_SHARE * bodyKg;
+  const load = bodyweightMove ? BODYWEIGHT_SHARE * bodyKg + s.weight : s.weight > 0 ? s.weight : BODYWEIGHT_SHARE * bodyKg;
   const work = (load * 9.81 * LIFT_METRES * s.reps) / MUSCLE_EFFICIENCY / J_PER_KCAL;
   return base + work;
 }
@@ -154,7 +154,7 @@ export function workoutCalories(w: Workout, exById: Map<string, Exercise>, bodyK
     if (ex.calories && ex.calories > 0) return ex.calories;
     if (!kg || !done[i].length) return 0;
     estimated = true;
-    if (isLift(i)) return done[i].reduce((n, s) => n + liftSetCalories(s, kg), 0);
+    if (isLift(i)) return done[i].reduce((n, s) => n + liftSetCalories(s, kg, typeOf(info[i]) === 'reps'), 0);
     return info[i] ? cardioCalories(done[i], activityOf(info[i]!), kg) : 0;
   });
   return { total: Math.round(byExercise.reduce((a, b) => a + b, 0)), byExercise, estimated };
