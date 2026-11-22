@@ -89,3 +89,9 @@ test('the tab bar highlight fits its tab even if the bar resizes as the app open
     )
     .toBe(true);
 });
+
+test('glass panels keep their frosted blur in the built site', async ({ page }) => {
+  await openApp(page);
+  // The CSS minifier once dropped the standard rule, leaving only Safari's, so nothing blurred in Chrome.
+  await expect.poll(() => page.locator('.tabbar').evaluate((el) => getComputedStyle(el).backdropFilter)).toContain('blur(');
+});

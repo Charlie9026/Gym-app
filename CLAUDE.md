@@ -33,6 +33,7 @@ Storage keys `gym-app-data-v1`, `gym-app-sync-v1`, `gym-app-welcome-v1`. Cache p
 
 ## Style rules
 - Look: glassy cards, rounded pills, theme colours only via CSS variables (`--accent`, `--glass`, `--edge`, `--field`, `--muted`…), font Outfit. Check new UI in a dark and a light theme.
+- Write only `backdrop-filter` (never add `-webkit-backdrop-filter` by hand): the build adds the Safari prefix, and writing both makes the minifier drop the standard one.
 - Motion: springy (`cubic-bezier(0.34, 1.56, 0.64, 1)`). Pill highlights slide, never jump (use `useSlidingHighlight`/`ChipGroup`). Respect `prefersReducedMotion`.
 - Mobile: works at 320px wide with no sideways scroll. Text fields at least 16px (stops iPhone zoom). Page zoom is disabled.
 - Destructive actions offer Undo via `notify`. Plain, friendly wording in full sentences.
