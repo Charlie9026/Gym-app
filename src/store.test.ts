@@ -30,6 +30,17 @@ describe('migrate', () => {
     expect(d.exercises.some((e) => e.id === 'mine')).toBe(true);
     expect(d.exercises.some((e) => e.id === 'preset-running' && e.type === 'distance')).toBe(true);
   });
+  it('adds the newer cardio presets for existing users', () => {
+    const d = migrate({ ...base(), exercises: [{ id: 'preset-running', name: 'Running', muscle: 'Cardio', type: 'distance' }] });
+    const find = (id: string) => d.exercises.find((e) => e.id === id);
+    expect(find('preset-swimming')).toMatchObject({ muscle: 'Cardio', type: 'distance' });
+    expect(find('preset-stair-climber')).toMatchObject({ muscle: 'Cardio', type: 'time' });
+  });
+  it("doesn't add a preset when a custom exercise already has that name", () => {
+    const d = migrate({ ...base(), exercises: [{ id: 'mine', name: 'swimming ', muscle: 'Other', custom: true }] });
+    expect(d.exercises.filter((e) => e.name.trim().toLowerCase() === 'swimming').map((e) => e.id)).toEqual(['mine']);
+    expect(migrate(d).exercises).toHaveLength(d.exercises.length);
+  });
   it('sorts workouts by date', () => {
     const w = (id: string, date: string) => ({ id, date, name: id, notes: '', exercises: [] });
     const d = migrate({ ...base(), workouts: [w('b', '2026-11-20T00:00:00Z'), w('a', '2026-11-10T00:00:00Z')] });

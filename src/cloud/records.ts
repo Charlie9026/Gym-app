@@ -13,6 +13,7 @@
  * the deletion reaches other devices instead of the record coming back.
  */
 import type { AppData } from '../types';
+import { withPresets } from '../exercises';
 
 export interface CloudRecord {
   key: string;
@@ -60,7 +61,7 @@ export function applyRecords(d: AppData, recs: Pick<CloudRecord, 'key' | 'json'>
       else if (i < 0) templates = [...rest, JSON.parse(r.json)];
       else templates = [...rest.slice(0, i), JSON.parse(r.json), ...rest.slice(i)]; // keep its place in the list
     } else if (kind === 'exercises' && r.json) {
-      exercises = JSON.parse(r.json);
+      exercises = withPresets(JSON.parse(r.json)); // a device on an older version may not have the newest presets
     } else if (kind === 'settings' && r.json) {
       settings = JSON.parse(r.json);
     }

@@ -59,6 +59,14 @@ const presets: [string, MuscleGroup, ExerciseType?][] = [
   ['Cycling', 'Cardio', 'distance'],
   ['Rowing Machine', 'Cardio', 'distance'],
   ['Jump Rope', 'Cardio', 'time'],
+  ['Walking', 'Cardio', 'distance'],
+  ['Incline Walk', 'Cardio', 'distance'],
+  ['Exercise Bike', 'Cardio', 'distance'],
+  ['Elliptical', 'Cardio', 'distance'],
+  ['Swimming', 'Cardio', 'distance'],
+  ['Ski Erg', 'Cardio', 'distance'],
+  ['Air Bike', 'Cardio', 'distance'],
+  ['Stair Climber', 'Cardio', 'time'],
 ];
 
 export const PRESET_EXERCISES: Exercise[] = presets.map(([name, muscle, type]) => ({
@@ -67,6 +75,17 @@ export const PRESET_EXERCISES: Exercise[] = presets.map(([name, muscle, type]) =
   muscle,
   ...(type ? { type } : {}),
 }));
+
+/**
+ * Adds any presets the list is missing (e.g. ones added in an app update),
+ * unless the person already made their own exercise with the same name.
+ */
+export function withPresets(exercises: Exercise[]): Exercise[] {
+  const ids = new Set(exercises.map((e) => e.id));
+  const names = new Set(exercises.map((e) => e.name.trim().toLowerCase()));
+  const missing = PRESET_EXERCISES.filter((p) => !ids.has(p.id) && !names.has(p.name.toLowerCase()));
+  return missing.length ? [...exercises, ...missing] : exercises;
+}
 
 /** Two-letter codes shown in muscle badges. */
 export const MUSCLE_CODE: Record<MuscleGroup, string> = {

@@ -1,4 +1,5 @@
 import { useMemo, useState } from 'react';
+import { createPortal } from 'react-dom';
 import { ChipGroup } from './ChipGroup';
 import { MUSCLE_GROUPS, type Exercise, type MuscleGroup } from '../types';
 import type { Update } from '../store';
@@ -39,7 +40,9 @@ export function ExercisePicker({ exercises, update, onPick, onClose }: Props) {
     onPick(ex.id, ex);
   };
 
-  return (
+  // Rendered at the top of the page so the sheet sits above the floating tab bar
+  // (inside <main> it was stuck underneath it, hiding the bottom of the list).
+  return createPortal(
     <div className="modal-backdrop" onClick={onClose}>
       <div className="modal" onClick={(e) => e.stopPropagation()} role="dialog" aria-label="Add exercise">
         <div className="modal-header">
@@ -79,6 +82,7 @@ export function ExercisePicker({ exercises, update, onPick, onClose }: Props) {
           {filtered.length === 0 && !query.trim() && <li className="muted pad">No exercises in this group.</li>}
         </ul>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

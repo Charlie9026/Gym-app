@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react';
-import { PRESET_EXERCISES } from './exercises';
+import { PRESET_EXERCISES, withPresets } from './exercises';
 import type { AppData, Exercise, MuscleGroup } from './types';
 import { systemDefaultThemeId } from './themes';
 
@@ -50,10 +50,8 @@ export function migrate(d: AppData): AppData {
     if (preset) return { ...e, muscle: preset.muscle };
     return { ...e, muscle: guessMuscle(old, e.name) };
   });
-  const known = new Set(exercises.map((e) => e.id));
-  for (const p of PRESET_EXERCISES) if (!known.has(p.id)) exercises.push(p);
   const workouts = [...d.workouts].sort((a, b) => a.date.localeCompare(b.date));
-  return { ...d, exercises, workouts };
+  return { ...d, exercises: withPresets(exercises), workouts };
 }
 
 function load(): AppData {

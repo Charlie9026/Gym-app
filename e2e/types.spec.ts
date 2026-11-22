@@ -66,3 +66,43 @@ test('pounds mode shows miles and pace per mile', async ({ page }) => {
   await pickProgressExercise(page, 'Running Cardio');
   await expect(page.locator('.neu-card', { hasText: 'Best pace' })).toContainText('8:02');
 });
+
+test('cardio presets: pick from the Cardio group and log a swim and a stair climb', async ({ page }) => {
+  // An existing user who already made their own "Swimming" shouldn't get a second one.
+  await openApp(page, {
+    data: {
+      version: 1, templates: [], workouts: [], activeWorkout: null, settings: { unit: 'kg', theme: 'D1' },
+      exercises: [{ id: 'preset-running', name: 'Running', muscle: 'Cardio', type: 'distance' }, { id: 'custom-swim', name: 'Swimming', muscle: 'Cardio', type: 'distance', custom: true }],
+    },
+  });
+  await tab(page, 'Workout');
+  await page.locator('.start-empty').click();
+  await page.getByRole('button', { name: /Add exercise/ }).click();
+  await page.locator('.modal .chip', { hasText: 'Cardio' }).click();
+  await expect(page.locator('.modal .pick-item')).toHaveText([
+    'Air BikeCardio', 'CyclingCardio', 'EllipticalCardio', 'Exercise BikeCardio', 'Incline WalkCardio', 'Jump RopeCardio',
+    'Rowing MachineCardio', 'RunningCardio', 'Ski ErgCardio', 'Stair ClimberCardio', 'SwimmingCardio', 'WalkingCardio',
+  ]);
+  await page.getByRole('button', { name: /^Swimming/ }).click();
+
+  const swim = page.locator('.card', { hasText: 'Swimming' });
+  await swim.getByLabel('Swimming set 1 distance').fill('1.5');
+  await swim.getByLabel('Swimming set 1 time').fill('30:00');
+  await swim.getByRole('button', { name: 'Mark Swimming set 1 done' }).click();
+  await skipRest(page);
+
+  await page.getByRole('button', { name: /Add exercise/ }).click();
+  await page.getByPlaceholder('Search or create…').fill('stair');
+  await page.getByRole('button', { name: /^Stair Climber/ }).click();
+  const stairs = page.locator('.card', { hasText: 'Stair Climber' });
+  await expect(stairs.locator('.st-head')).toHaveText(/SET\s*PREVIOUS\s*TIME/i);
+  await stairs.getByLabel('Stair Climber set 1 time').fill('12:00');
+  await stairs.getByRole('button', { name: 'Mark Stair Climber set 1 done' }).click();
+  await skipRest(page);
+
+  await page.getByRole('button', { name: 'Finish workout' }).click();
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Not now' }).click();
+  await tab(page, 'History');
+  await expect(page.locator('.ex-summary').first()).toContainText('1.5 km in 30:00');
+  await expect(page.locator('.ex-summary').first()).toContainText('12:00');
+});

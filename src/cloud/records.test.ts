@@ -33,6 +33,13 @@ describe('records', () => {
     expect(next.workouts.map((x) => x.id)).toEqual(['a']);
     expect(next.settings.unit).toBe('lb');
   });
+  it('tops up an exercise list from an older device with the newest presets', () => {
+    const next = applyRecords(data([]), [
+      { key: 'exercises', json: JSON.stringify([{ id: 'mine', name: 'Mine', muscle: 'Other', custom: true }]) },
+    ]);
+    expect(next.exercises[0].id).toBe('mine');
+    expect(next.exercises.some((e) => e.id === 'preset-ski-erg')).toBe(true);
+  });
   it('gives null (a deleted marker) for a record that no longer exists', () => {
     expect(recordFor(data([]), 'workout:gone')).toBeNull();
   });
