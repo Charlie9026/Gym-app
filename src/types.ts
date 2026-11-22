@@ -156,8 +156,19 @@ export interface Settings {
   stopwatchNotify?: boolean;
   /** Show calories burned (default on). */
   showCalories?: boolean;
-  /** Body weight in kg, for estimating calories. */
+  /** Body weight in kg, for estimating calories (and the strength leaderboard, as a ratio only). */
   bodyWeightKg?: number;
+  /** Leaderboards: whether you've joined, your nickname, weekly goal, friend code and friends (their account ids). */
+  leaderboard?: LeaderboardSettings;
+}
+
+export interface LeaderboardSettings {
+  joined: boolean;
+  name: string;
+  /** Workout days a week to aim for (2–6). */
+  goal: number;
+  code?: string;
+  friends: string[];
 }
 
 export interface AppData {

@@ -1,8 +1,12 @@
 rules_version = '2';
 
-// Gym Log: each signed-in person can read and write only their own records,
-// stored at users/{their uid}/records/{record}. Nobody else (and nobody signed
-// out) can read or change them.
+// Overload (first called Gym Log).
+// - users/{uid}/records: your own workouts and settings. Only you can read or
+//   write them; nobody signed out can.
+// - leaderboard/{uid}: your public leaderboard entry (nickname, points, rank,
+//   strength ratios) if you join the leaderboards. Anyone signed in can read
+//   entries; only you can write yours, within limits checked here.
+// - friendCodes/{code}: which account a friend code belongs to.
 service cloud.firestore {
   match /databases/{database}/documents {
     match /users/{uid}/records/{record} {
@@ -13,6 +17,47 @@ service cloud.firestore {
         && request.resource.data.updatedAt is number
         && (request.resource.data.json == null
             || (request.resource.data.json is string && request.resource.data.json.size() < 900000));
+    }
+
+    match /leaderboard/{uid} {
+      allow read: if request.auth != null;
+      allow delete: if request.auth != null && request.auth.uid == uid;
+      allow create, update: if request.auth != null && request.auth.uid == uid && validEntry(request.resource.data);
+    }
+
+    match /friendCodes/{code} {
+      allow read: if request.auth != null;
+      // Claim a free code for yourself; codes can't be taken over or changed.
+      allow create: if request.auth != null
+        && code.matches('^[A-HJ-NP-Z2-9]{6}$')
+        && request.resource.data.keys().hasOnly(['uid'])
+        && request.resource.data.uid == request.auth.uid;
+      allow delete: if request.auth != null && resource.data.uid == request.auth.uid;
+    }
+
+    // Limits match src/leaderboard.ts: at most 195 points a week (7 full days,
+    // goal and full streak bonus), and a strength score of at most 1000 (a total
+    // of 10× body weight).
+    function validEntry(d) {
+      return d.keys().hasOnly(['name', 'code', 'weekId', 'points', 'last4', 'streak', 'tier', 'strength', 'ratios', 'updatedAt'])
+        && d.keys().hasAll(['name', 'code', 'weekId', 'points', 'last4', 'streak', 'tier', 'updatedAt'])
+        && d.name is string && d.name.size() >= 2 && d.name.size() <= 20
+        && d.code is string && d.code.matches('^[A-HJ-NP-Z2-9]{6}$')
+        && d.weekId is string && d.weekId.matches('^[0-9]{4}-W[0-9]{2}$')
+        && d.points is int && d.points >= 0 && d.points <= 195
+        && d.last4 is int && d.last4 >= 0 && d.last4 <= 780
+        && d.streak is int && d.streak >= 0 && d.streak <= 520
+        && d.tier in ['bronze', 'silver', 'gold', 'platinum', 'diamond']
+        && (!('strength' in d) || d.strength == null || (d.strength is int && d.strength >= 0 && d.strength <= 1000))
+        && (!('ratios' in d) || d.ratios == null || validRatios(d.ratios))
+        && d.updatedAt == request.time;
+    }
+
+    function validRatios(r) {
+      return r is map && r.keys().hasOnly(['squat', 'bench', 'deadlift'])
+        && r.squat is number && r.squat >= 0 && r.squat <= 6
+        && r.bench is number && r.bench >= 0 && r.bench <= 6
+        && r.deadlift is number && r.deadlift >= 0 && r.deadlift <= 6;
     }
   }
 }

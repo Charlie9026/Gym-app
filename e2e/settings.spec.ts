@@ -103,3 +103,13 @@ test('distance and weight units are chosen separately', async ({ page }) => {
   await expect(page.locator('.card', { hasText: 'Running' }).locator('.st-head')).toHaveText(/SET\s*PREVIOUS\s*MI\s*TIME/i);
   await expect(page.locator('.card', { hasText: 'Running' }).locator('.st-prev').first()).toHaveText('3.11 mi in 25:00');
 });
+
+test('leaderboards ask you to sign in first, and point to Settings', async ({ page }) => {
+  await openApp(page);
+  await tab(page, 'Progress');
+  await page.locator('.chip', { hasText: 'Leaderboards' }).click();
+  await expect(page.getByText('Compete with friends')).toBeVisible();
+  await page.getByRole('button', { name: 'Sign in from Settings' }).click();
+  await expect(page.locator('.cloud-card')).toBeVisible();
+  await expect(page.locator('.card', { has: page.getByRole('heading', { name: 'Leaderboards' }) })).toContainText('Sign in above');
+});

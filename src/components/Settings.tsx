@@ -10,6 +10,7 @@ import { requestNotify } from '../restAlert';
 import { REST_OPTIONS, appDistanceUnit, restLabel, unitsOf } from '../sets';
 import { isEmbedded } from '../env';
 import { CloudCard } from './CloudCard';
+import { LeaderboardCard } from './LeaderboardCard';
 import { BodyWeightField } from './BodyWeightField';
 import { caloriesOn } from '../calories';
 import { useIsOwner } from '../owner';
@@ -231,6 +232,8 @@ export function Settings({ data, update, cloud }: { data: AppData; update: Updat
       </div>
 
       <CloudCard cloud={cloud} />
+
+      <LeaderboardCard data={data} update={update} cloud={cloud} />
 
       {owner && (
         <>

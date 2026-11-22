@@ -84,7 +84,7 @@ src/
   *.test.ts              unit tests
 e2e/                     end-to-end tests (Playwright)
 e2e-sync/                cloud sync tests (Firebase emulator)
-firestore.rules          who can read/write cloud data (each account only its own)
+firestore.rules          who can read/write cloud data (each account only its own; leaderboard entries readable when signed in)
 public/                  icons, manifest, service worker
 scripts/                 build helpers (service worker list, single-file build)
 ```

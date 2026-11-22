@@ -21,6 +21,7 @@ CI (`.github/workflows/deploy.yml`): test → build → deploy. All must pass be
 - `src/store.ts`: data in localStorage via `update(fn)`. `src/types.ts`: data shapes
 - `src/sets.ts`: exercise types (weight/reps/time/distance/steps; steps are stored in a set's `reps`), warm-up sets
 - `src/workout.ts`, `src/utils.ts`: workout maths, formatting
+- `src/leaderboard.ts`: consistency points/ranks and bodyweight-relative strength (pure, unit-tested); `cloud/useLeaderboard.ts` publishes your entry; UI in `Leaderboards` (Progress tab → Leaderboards) and `LeaderboardCard` (Settings). Firestore: `leaderboard/{uid}`, `friendCodes/{code}`; limits enforced in `firestore.rules` (keep them in step with the constants). Rules are published by hand in the Firebase console
 - `src/muscles.ts` + `components/BodyMap.tsx`: body diagram (own SVG, grey figures, worked muscles in `--accent`, stronger for more sets, helper muscles for compounds at half). Shown on saved workouts, plan preview and History
 - `src/planner.ts`: "Build me a plan" rules (answers → workouts from full-body / upper-lower / push-pull-legs layouts, by equipment, joints to avoid and experience), pure and unit-tested over every answer combination; UI in `PlanBuilder`
 - `src/stopwatch.ts`: the stopwatch for timing a set (saved on the active workout with its start time), pure and unit-tested; `StopwatchBar` shows it and posts a background notification if `stopwatchNotify` is on. Distance exercises can pick their own unit (`Exercise.distanceUnit`: m, km, mi, yd; `unitsFor` in `sets.ts`) or `timeOnly`

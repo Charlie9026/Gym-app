@@ -58,6 +58,8 @@ export interface CloudSync {
   createAccount: (email: string, password: string) => Promise<void>;
   resetPassword: (email: string) => Promise<void>;
   signOut: () => Promise<void>;
+  /** The Firebase module (loads it if needed), for leaderboards. */
+  getCloud: () => Promise<Cloud>;
 }
 
 export function useCloudSync(data: AppData, update: Update): CloudSync {
@@ -237,5 +239,6 @@ export function useCloudSync(data: AppData, update: Update): CloudSync {
       metaRef.current = { uid: null, stamps: {} };
       saveMeta(metaRef.current);
     },
+    getCloud: loadCloud,
   };
 }

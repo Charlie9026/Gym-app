@@ -3,7 +3,7 @@ import { useSlidingHighlight } from './slidingHighlight';
 import { useAppData } from './store';
 import { WorkoutLogger } from './components/WorkoutLogger';
 import { History } from './components/History';
-import { Progress } from './components/Progress';
+import { ProgressTab } from './components/ProgressTab';
 import { ExerciseLibrary } from './components/ExerciseLibrary';
 import { Settings } from './components/Settings';
 import { DialogHost } from './components/DialogHost';
@@ -11,6 +11,7 @@ import { RestTimer } from './components/RestTimer';
 import { primeAudio } from './restAlert';
 import { useStorageProtection, useWakeLock } from './pwa';
 import { useCloudSync } from './cloud/useCloudSync';
+import { useLeaderboardPublisher } from './cloud/useLeaderboard';
 import { Welcome } from './components/Welcome';
 import { caloriesOn, fmtKcal, workoutCalories } from './calories';
 import { useExerciseMap } from './hooks';
@@ -49,6 +50,8 @@ export default function App() {
   // Cloud backup and sync (switched off until Firebase is set up).
   const cloud = useCloudSync(data, update);
   const exById = useExerciseMap(data.exercises);
+  // Your public leaderboard entry, if you've joined.
+  useLeaderboardPublisher(data, cloud);
 
   // First open: ask to sign in or create an account (once; skippable).
   const [welcomeDone, setWelcomeDone] = useState(() => {
@@ -140,7 +143,19 @@ export default function App() {
           />
         )}
         {tab === 'history' && <History data={data} update={update} onRepeat={() => setTab('workout')} />}
-        {tab === 'progress' && <Progress key={progressEx ?? 'default'} data={data} initialExercise={progressEx} />}
+        {tab === 'progress' && (
+          <ProgressTab
+            key={progressEx ?? 'default'}
+            data={data}
+            update={update}
+            cloud={cloud}
+            initialExercise={progressEx}
+            onOpenSettings={() => {
+              setTab('settings');
+              window.scrollTo({ top: 0 });
+            }}
+          />
+        )}
         {tab === 'exercises' && (
           <ExerciseLibrary
             data={data}

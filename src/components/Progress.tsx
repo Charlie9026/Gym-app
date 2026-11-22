@@ -144,7 +144,7 @@ function sessionSummary(type: ExerciseType, sets: SetEntry[], units: Units): str
   return `${counts} · ${sumOf(w.map((x) => x.reps))} reps`;
 }
 
-export function Progress({ data, initialExercise }: { data: AppData; initialExercise?: string }) {
+export function Progress({ data, initialExercise, header }: { data: AppData; initialExercise?: string; header?: ReactNode }) {
   const appUnits = unitsOf(data.settings);
   const exById = useExerciseMap(data.exercises);
   const showKcal = caloriesOn(data.settings);
@@ -185,7 +185,7 @@ export function Progress({ data, initialExercise }: { data: AppData; initialExer
   if (trained.length === 0 || !exercise) {
     return (
       <div className="screen">
-        <h1>Progress</h1>
+        {header ?? <h1>Progress</h1>}
         <div className="card center muted">Log a workout to start seeing progress charts.</div>
       </div>
     );
@@ -225,7 +225,7 @@ export function Progress({ data, initialExercise }: { data: AppData; initialExer
 
   return (
     <div className="screen">
-      <h1>Progress</h1>
+      {header ?? <h1>Progress</h1>}
       <MorphSelect
         label="Exercise"
         hideLabel
