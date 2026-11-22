@@ -1,6 +1,6 @@
 import { useMemo, useState, type ReactNode } from 'react';
 import { ChipGroup } from './ChipGroup';
-import type { AppData, Exercise, ExerciseType, SetEntry, Units } from '../types';
+import type { AppData, ExerciseType, SetEntry, Units } from '../types';
 import { e1rm, fmtDate, fmtWeight, toDisplay } from '../utils';
 import {
   MEASURES,
@@ -207,8 +207,6 @@ export function Progress({ data, initialExercise }: { data: AppData; initialExer
         options={trained.map((e) => ({ value: e.id, label: e.name, badge: MUSCLE_CODE[e.muscle], hint: e.muscle }))}
       />
 
-      {showKcal && <CaloriesCard data={data} exById={exById} />}
-
       {sessions.length === 0 ? (
         <div className="card center muted">Only warm-up sets are logged for {exercise.name} so far.</div>
       ) : (
@@ -308,66 +306,5 @@ function SessionCard(p: {
       </div>
       {p.pills}
     </article>
-  );
-}
-
-/** Monday 00:00 of the week a date falls in. */
-function weekOf(iso: string): number {
-  const d = new Date(iso);
-  return new Date(d.getFullYear(), d.getMonth(), d.getDate() - ((d.getDay() + 6) % 7)).getTime();
-}
-
-/** Calories burned per week across all workouts. */
-function CaloriesCard({ data, exById }: { data: AppData; exById: Map<string, Exercise> }) {
-  const [range, setRange] = useState<Range>('3m');
-  const bodyKg = data.settings.bodyWeightKg;
-  const weeks = useMemo(() => {
-    const m = new Map<number, number>();
-    for (const w of data.workouts) {
-      const kcal = workoutCalories(w, exById, bodyKg).total;
-      if (kcal > 0) m.set(weekOf(w.date), (m.get(weekOf(w.date)) ?? 0) + kcal);
-    }
-    return [...m.entries()].sort((a, b) => a[0] - b[0]);
-  }, [data.workouts, exById, bodyKg]);
-
-  if (weeks.length === 0) {
-    return (
-      <div className="card kcal-card">
-        <div className="chart-title"><span>Calories burned</span></div>
-        <p className="muted small">
-          {bodyKg
-            ? 'Finish a workout to see calories burned each week.'
-            : 'Add your body weight in Settings to see roughly how many calories your workouts burn.'}
-        </p>
-      </div>
-    );
-  }
-
-  const from = rangeStart(range);
-  const shown = weeks.filter(([start]) => start + 7 * 86400000 > from);
-  const points: Point[] = shown.map(([start, kcal]) => ({ date: new Date(start).toISOString(), value: kcal }));
-  const thisWeek = weeks.find(([start]) => start === weekOf(new Date().toISOString()))?.[1] ?? 0;
-  const avg = shown.length ? sumOf(shown.map(([, k]) => k)) / shown.length : 0;
-  const fmt = (v: number) => Math.round(v).toLocaleString();
-
-  return (
-    <div className="card kcal-card">
-      <div className="chart-controls">
-        <div className="chart-title"><span>Calories burned per week</span></div>
-        <ChipGroup label="Calories date range" variant="segmented" kind="radio" value={range} onChange={setRange} options={RANGES} />
-      </div>
-      <div className="summary-chips">
-        <span className="chip-stat"><strong><CountUp value={thisWeek} format={fmt} /></strong> kcal this week</span>
-        <span className="chip-stat"><strong><CountUp value={avg} format={fmt} /></strong> kcal a week on average</span>
-      </div>
-      {points.length === 0 ? (
-        <p className="muted small center-text chart-empty">
-          No workouts {range === '1m' ? 'in the last month' : 'in the last 3 months'}. Try a longer range.
-        </p>
-      ) : (
-        <LineChart points={points} animKey={`kcal-${range}`} label="Calories burned per week" format={fmt} />
-      )}
-      <p className="muted small kcal-note">Estimates are a rough guide. Typed-in numbers from your machine or watch are used where you added them.</p>
-    </div>
   );
 }

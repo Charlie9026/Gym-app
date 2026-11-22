@@ -41,7 +41,7 @@ test('estimated calories show when you finish, in History, this week and Progres
   await expect(page.locator('.week-stats')).toContainText('kcal');
 
   await tab(page, 'Progress');
-  await expect(page.locator('.kcal-card')).toContainText('363 kcal this week');
+  await expect(page.getByText('Calories burned per week')).toHaveCount(0);
   await page.getByRole('group', { name: 'Chart measure' }).getByRole('button', { name: 'Calories' }).click();
   await expect(page.locator('.session-metric').first()).toContainText('363');
 });
@@ -89,7 +89,6 @@ test('calories can be switched off in Settings', async ({ page }) => {
   await tab(page, 'Workout');
   await expect(page.locator('.week-stats')).not.toContainText('kcal');
   await tab(page, 'Progress');
-  await expect(page.locator('.kcal-card')).toHaveCount(0);
   await expect(page.getByRole('group', { name: 'Chart measure' }).getByRole('button', { name: 'Calories' })).toHaveCount(0);
 });
 

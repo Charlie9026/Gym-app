@@ -646,5 +646,3 @@
 .kcal-input { display: flex; align-items: center; gap: 6px; }
 .kcal-input .num-input { width: 84px; }
 .banner-kcal { color: var(--accent); font-weight: 700; font-size: 0.9rem; margin-top: 2px; }
-.kcal-card p { margin: 0; }
-.kcal-note { line-height: 1.4; }
