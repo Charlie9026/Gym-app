@@ -21,6 +21,7 @@ CI (`.github/workflows/deploy.yml`): test → build → deploy. All must pass be
 - `src/store.ts`: data in localStorage via `update(fn)`. `src/types.ts`: data shapes
 - `src/sets.ts`: exercise types (weight/reps/time/distance/steps; steps are stored in a set's `reps`), warm-up sets
 - `src/workout.ts`, `src/utils.ts`: workout maths, formatting
+- `src/planner.ts`: "Build me a plan" rules (answers → workouts from full-body / upper-lower / push-pull-legs layouts, by equipment, joints to avoid and experience), pure and unit-tested over every answer combination; UI in `PlanBuilder`
 - `src/stopwatch.ts`: the stopwatch for timing a set (saved on the active workout with its start time), pure and unit-tested; `StopwatchBar` shows it and posts a background notification if `stopwatchNotify` is on. Distance exercises can pick their own unit (`Exercise.distanceUnit`: m, km, mi, yd; `unitsFor` in `sets.ts`) or `timeOnly`
 - `src/calories.ts`: calories burned (MET estimates from body weight, or numbers typed in for cardio), pure and unit-tested. Settings `showCalories` (default on) and `bodyWeightKg`
 - `src/owner.ts`: `useIsOwner`, which decides who sees the Backup, Sample data and Danger zone cards in Settings (the owner's signed-in email, checked by hash, or the owner of the claude.ai copy). e2e tests act as owner unless `openApp(page, { owner: false })`

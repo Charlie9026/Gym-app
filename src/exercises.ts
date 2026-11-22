@@ -67,6 +67,13 @@ const presets: [string, MuscleGroup, ExerciseType?][] = [
   ['Ski Erg', 'Cardio', 'distance'],
   ['Air Bike', 'Cardio', 'distance'],
   ['Stair Climber', 'Cardio', 'steps'],
+  // Beginner and at-home moves (used by the plan builder too)
+  ['Goblet Squat', 'Quads'],
+  ['Bodyweight Squat', 'Quads', 'reps'],
+  ['Dumbbell Romanian Deadlift', 'Hamstrings'],
+  ['Pike Push-Up', 'Shoulders', 'reps'],
+  ['Inverted Row', 'Back', 'reps'],
+  ['Dead Bug', 'Core', 'reps'],
 ];
 
 export const PRESET_EXERCISES: Exercise[] = presets.map(([name, muscle, type]) => ({

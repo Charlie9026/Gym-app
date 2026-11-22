@@ -4,13 +4,15 @@ import type { AppData, WorkoutTemplate } from '../types';
 import { fmtWeight, workoutVolume } from '../utils';
 import { relativeDay } from '../workout';
 import { caloriesOn, workoutCalories } from '../calories';
-import { ChevronIcon, EditIcon, PlayIcon, PlusIcon } from './Icons';
+import { ChevronIcon, EditIcon, PlayIcon, PlusIcon, SparkleIcon } from './Icons';
 
 interface Props {
   data: AppData;
   onStartEmpty: () => void;
   onStartTemplate: (t: WorkoutTemplate) => void;
   onEdit: (id: string | null) => void;
+  /** Open the plan builder (a few questions, then ready-made workouts). */
+  onBuildPlan: () => void;
 }
 
 const DAY_LETTERS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
@@ -20,7 +22,7 @@ function startOfWeek(d: Date): Date {
   return new Date(d.getFullYear(), d.getMonth(), d.getDate() - day);
 }
 
-export function WorkoutHome({ data, onStartEmpty, onStartTemplate, onEdit }: Props) {
+export function WorkoutHome({ data, onStartEmpty, onStartTemplate, onEdit, onBuildPlan }: Props) {
   const unit = data.settings.unit;
   const exById = useExerciseMap(data.exercises);
   const now = useToday();
@@ -123,19 +125,29 @@ export function WorkoutHome({ data, onStartEmpty, onStartTemplate, onEdit }: Pro
       <section className="my-workouts">
         <div className="section-head">
           <h2>My workouts</h2>
-          <button className="btn-ghost small-btn" onClick={() => onEdit(null)}>
-            <PlusIcon /> New
-          </button>
+          <div className="row-actions">
+            {data.templates.length > 0 && (
+              <button className="btn-ghost small-btn" onClick={onBuildPlan}>
+                <SparkleIcon /> Build a plan
+              </button>
+            )}
+            <button className="btn-ghost small-btn" onClick={() => onEdit(null)}>
+              <PlusIcon /> New
+            </button>
+          </div>
         </div>
 
         {data.templates.length === 0 ? (
           <div className="card center empty-templates">
             <strong>No saved workouts yet</strong>
             <p className="muted small">
-              Build one now, or start an empty workout and save it when you finish. Your saved workouts show up here
-              ready to start in one tap.
+              Not sure where to start? Answer a few quick questions and get a plan made for you. Or build your own, or
+              start an empty workout and save it when you finish.
             </p>
-            <button className="btn-secondary" onClick={() => onEdit(null)}>Create a workout</button>
+            <button className="btn-primary icon-text" onClick={onBuildPlan}>
+              <SparkleIcon /> Build me a plan
+            </button>
+            <button className="btn-ghost" onClick={() => onEdit(null)}>Create my own workout</button>
           </div>
         ) : (
           <div className="template-list">

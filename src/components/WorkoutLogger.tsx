@@ -29,6 +29,7 @@ import { lastSetsFor, newTemplate, newWorkoutFrom, structureChanged, templateExe
 import { useExerciseMap } from '../hooks';
 import { WorkoutHome } from './WorkoutHome';
 import { TemplateEditor } from './TemplateEditor';
+import { PlanBuilder } from './PlanBuilder';
 
 interface Props {
   data: AppData;
@@ -68,6 +69,20 @@ export function WorkoutLogger({ data, update, onFinished, onRest, onStopwatchSta
   const active = data.activeWorkout;
   // undefined = not editing; null = creating a new saved workout; string = editing that one
   const [editing, setEditing] = useState<string | null | undefined>(undefined);
+  const [planning, setPlanning] = useState(false);
+
+  if (planning) {
+    return (
+      <PlanBuilder
+        data={data}
+        update={update}
+        onClose={() => {
+          setPlanning(false);
+          window.scrollTo({ top: 0 });
+        }}
+      />
+    );
+  }
 
   if (editing !== undefined) {
     return (
@@ -91,6 +106,10 @@ export function WorkoutLogger({ data, update, onFinished, onRest, onStopwatchSta
         onStartEmpty={() => update((d) => ({ ...d, activeWorkout: newWorkoutFrom() }))}
         onStartTemplate={(t) => update((d) => ({ ...d, activeWorkout: newWorkoutFrom(t) }))}
         onEdit={setEditing}
+        onBuildPlan={() => {
+          setPlanning(true);
+          window.scrollTo({ top: 0 });
+        }}
       />
     );
   }
