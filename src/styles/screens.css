@@ -325,9 +325,17 @@ button.ex-row-main:hover .ex-row-name { color: var(--accent); }
 .check-opt.on .plan-tick { background: var(--accent); border-color: var(--accent); color: var(--on-accent); animation: check-pop 0.48s cubic-bezier(0.34, 1.56, 0.64, 1); }
 .plan-next { align-self: center; margin-top: 4px; }
 .plan-restart { align-self: center; }
-.plan-workout { gap: 8px; }
-.plan-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
-.plan-list li { display: flex; justify-content: space-between; gap: 12px; font-size: 0.92rem; font-weight: 600; }
-.plan-list li .muted { white-space: nowrap; font-weight: 500; font-variant-numeric: tabular-nums; }
+.plan-workout { gap: 0; padding: 0; overflow: hidden; }
+.plan-head { display: flex; align-items: center; gap: 12px; padding: 14px 16px; background: var(--accent-soft); border-bottom: 1px solid var(--line); }
+.plan-badge { flex: none; display: grid; place-items: center; width: 40px; height: 40px; border-radius: 12px; background: var(--accent); color: var(--on-accent); font-weight: 800; font-size: 1.1rem; box-shadow: 0 6px 16px var(--accent-glow); }
+.plan-title { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 1px; }
+.plan-title .eyebrow { color: var(--accent); }
+.plan-title h3 { font-size: 1.15rem; }
+.plan-list { list-style: none; margin: 0; padding: 6px 16px 10px; display: flex; flex-direction: column; }
+.plan-list li { display: flex; align-items: center; gap: 12px; padding: 8px 0; }
+.plan-list li + li { border-top: 1px solid var(--line); }
+.plan-ex { display: flex; flex-direction: column; gap: 1px; min-width: 0; }
+.plan-ex strong { font-size: 0.95rem; }
+.plan-ex .muted { font-variant-numeric: tabular-nums; }
 .plan-tips { margin: 0; padding-left: 18px; display: flex; flex-direction: column; gap: 6px; line-height: 1.45; }
 .plan-entry { display: flex; align-items: center; gap: 14px; text-align: left; width: 100%; }

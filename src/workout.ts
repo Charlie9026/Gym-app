@@ -38,6 +38,32 @@ export function newTemplate(name: string, exercises: TemplateExercise[] = []): W
   return { id: 'tpl-' + uid(), name, exercises, createdAt: now, updatedAt: now };
 }
 
+/**
+ * A saved workout updated from today's sets keeps its rep ranges: where a set
+ * had a target like 6–8 or 12+, the target stays and only the weight (and
+ * time/distance) carries forward. Sets are matched by exercise, then warm-ups
+ * with warm-ups and working sets with working sets, in order (so skipping the
+ * warm-up doesn't shift the ranges onto the wrong sets).
+ */
+export function keepRepTargets(saved: TemplateExercise[], today: TemplateExercise[]): TemplateExercise[] {
+  return today.map((ex, i) => {
+    const before = saved[i]?.exerciseId === ex.exerciseId ? saved[i] : saved.find((s) => s.exerciseId === ex.exerciseId);
+    if (!before) return ex;
+    const warm = before.sets.filter((s) => s.kind);
+    const work = before.sets.filter((s) => !s.kind);
+    let w = 0;
+    let k = 0;
+    return {
+      ...ex,
+      sets: ex.sets.map((s) => {
+        const old = s.kind ? warm[w++] : work[k++];
+        if (!old || (!old.repsTo && !old.repsOpen)) return s;
+        return { ...s, reps: old.reps, ...(old.repsTo ? { repsTo: old.repsTo } : {}), ...(old.repsOpen ? { repsOpen: true } : {}) };
+      }),
+    };
+  });
+}
+
 /** True when exercise order or set counts differ (weights/reps are ignored). */
 export function structureChanged(a: TemplateExercise[], b: TemplateExercise[]): boolean {
   if (a.length !== b.length) return true;

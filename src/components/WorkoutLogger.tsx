@@ -14,6 +14,7 @@ import {
   unitsFor,
   unitsOf,
   paceUnit,
+  repTarget,
   workingSets,
   type AnySet,
 } from '../sets';
@@ -25,7 +26,7 @@ import { StopwatchIcon } from './Icons';
 import { DistanceChip } from './DistanceChip';
 import { caloriesOn, cardioEstimate, isCardio, withCalories } from '../calories';
 import { ExercisePicker } from './ExercisePicker';
-import { lastSetsFor, newTemplate, newWorkoutFrom, structureChanged, templateExercisesFrom } from '../workout';
+import { keepRepTargets, lastSetsFor, newTemplate, newWorkoutFrom, structureChanged, templateExercisesFrom } from '../workout';
 import { useExerciseMap } from '../hooks';
 import { WorkoutHome } from './WorkoutHome';
 import { TemplateEditor } from './TemplateEditor';
@@ -229,7 +230,7 @@ function ActiveWorkout({
         ? [...d.templates, created]
         : replaceExercises && template
           ? d.templates.map((t) =>
-              t.id === template.id ? { ...t, exercises: done, updatedAt: new Date().toISOString() } : t,
+              t.id === template.id ? { ...t, exercises: keepRepTargets(t.exercises, done), updatedAt: new Date().toISOString() } : t,
             )
           : d.templates,
       activeWorkout: null,
@@ -267,6 +268,9 @@ function ActiveWorkout({
         const exName = info?.name ?? 'this exercise';
         const prev = lastSetsFor(data.workouts, ex.exerciseId);
         const targets = template?.exercises.find((t) => t.exerciseId === ex.exerciseId)?.sets ?? [];
+        // The saved workout's rep range for the working sets, e.g. "6–8" (shown as a reminder).
+        const ranged = targets.find((t) => !t.kind && (t.repsTo || t.repsOpen));
+        const target = ranged ? repTarget(ranged) : null;
         /** Faded suggestion for a set: last session, then the saved workout, then the set above. */
         const hintFor = (i: number): AnySet | undefined => {
           if (prev[i]) return prev[i];
@@ -317,6 +321,11 @@ function ActiveWorkout({
               <div className="ex-title">
                 <h3>{info?.name ?? 'Unknown exercise'}</h3>
                 <div className="ex-pills">
+                  {target && (
+                    <span className="target-chip" title="Rep range from your saved workout">
+                      Aim for {target} reps
+                    </span>
+                  )}
                   {info && <RestChip exercise={info} defaultSeconds={data.settings.restSeconds ?? DEFAULT_REST_SECONDS} update={update} />}
                   {info && typeOf(info) === 'distance' && <DistanceChip exercise={info} units={units} update={update} />}
                   {showKcal && isCardio(info) && (

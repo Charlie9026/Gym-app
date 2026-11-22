@@ -16,6 +16,8 @@ import {
   unitsOf,
   unitsFor,
   paceUnit,
+  parseRepTarget,
+  repTarget,
 } from './sets';
 import type { SetEntry } from './types';
 
@@ -97,6 +99,19 @@ describe('exercise types', () => {
     expect(hasValue(set({}), 'steps')).toBe(false);
     const rate = MEASURES.steps.find((m) => m.id === 'stepRate')!;
     expect(rate.value([set({ reps: 1200, seconds: 900 }), set({ reps: 300 })], KG)).toBe(80); // the steps-only set is left out
+  });
+  it('reads and shows rep targets: exact, ranges and "or more"', () => {
+    expect(parseRepTarget('10')).toEqual({ reps: 10 });
+    expect(parseRepTarget('6-8')).toEqual({ reps: 6, repsTo: 8 });
+    expect(parseRepTarget(' 12 – 8 ')).toEqual({ reps: 8, repsTo: 12 }); // either order, spaces and an en dash
+    expect(parseRepTarget('12+')).toEqual({ reps: 12, repsOpen: true });
+    expect(parseRepTarget('8-8')).toEqual({ reps: 8 });
+    expect(parseRepTarget('')).toEqual({ reps: 0 });
+    expect(parseRepTarget('6-')).toBeNull();
+    expect(parseRepTarget('abc')).toBeNull();
+    expect(repTarget({ reps: 6, repsTo: 8 })).toBe('6–8');
+    expect(repTarget({ reps: 12, repsOpen: true })).toBe('12+');
+    expect(repTarget({ reps: 10 })).toBe('10');
   });
   it('converts distances between km/mi and metres', () => {
     expect(toDistDisplay(1609.344, 'mi')).toBe(1);

@@ -50,16 +50,34 @@ describe('plan builder', () => {
     }
   });
 
-  it('sets reps by goal and sets by experience, with a warm-up before the first lift', () => {
+  it('gives rep ranges by goal and sets by experience, with a warm-up first on lifts with weights', () => {
     const strong = buildPlan({ goal: 'strength', experience: 'confident', days: 3, minutes: 60, equipment: 'gym', avoid: [] }).workouts[0];
     expect(strong.exercises[0].exerciseId).toBe('preset-squat');
-    expect(strong.exercises[0].sets[0]).toMatchObject({ kind: 'warmup' });
-    expect(strong.exercises[0].sets.filter((s) => !s.kind).map((s) => s.reps)).toEqual([5, 5, 5, 5]);
-    expect(strong.exercises[3].sets.map((s) => s.reps)).toEqual([8, 8, 8]);
+    expect(strong.exercises[0].sets[0]).toMatchObject({ kind: 'warmup', reps: 10 });
+    expect(strong.exercises[0].sets.slice(1)).toEqual(Array(4).fill({ weight: 0, reps: 6, repsTo: 8 }));
 
     const beginner = buildPlan({ goal: 'muscle', experience: 'new', days: 3, minutes: 45, equipment: 'gym', avoid: [] }).workouts[0];
     expect(beginner.exercises[0].exerciseId).toBe('preset-leg-press'); // no barbell squat for beginners
-    expect(beginner.exercises[1].sets).toEqual([{ weight: 0, reps: 10 }, { weight: 0, reps: 10 }]);
+    expect(beginner.exercises[1].sets).toEqual([
+      { weight: 0, reps: 10, kind: 'warmup' },
+      { weight: 0, reps: 8, repsTo: 12 },
+      { weight: 0, reps: 8, repsTo: 12 },
+    ]);
+
+    const general = buildPlan({ goal: 'general', experience: 'some', days: 2, minutes: 30, equipment: 'dumbbells', avoid: [] }).workouts[0];
+    expect(general.exercises[0].sets[1]).toEqual({ weight: 0, reps: 12, repsOpen: true });
+  });
+
+  it('warms up every exercise with weights, always as the first set', () => {
+    for (const a of everyAnswer) {
+      for (const w of buildPlan(a).workouts) {
+        for (const e of w.exercises) {
+          const weighted = option(e.exerciseId).type === 'weight';
+          expect(e.sets[0].kind === 'warmup', `${w.name} ${e.exerciseId}`).toBe(weighted);
+          expect(e.sets.slice(1).some((s) => s.kind), `${w.name} ${e.exerciseId}`).toBe(false);
+        }
+      }
+    }
   });
 
   it('puts big lifts before small ones', () => {
@@ -77,7 +95,6 @@ describe('plan builder', () => {
     // With shoulders ticked, Upper B no longer opens with a lateral raise.
     const upperB = buildPlan({ goal: 'muscle', experience: 'some', days: 4, minutes: 45, equipment: 'gym', avoid: ['shoulders'] }).workouts[2];
     expect(upperB.exercises[0].exerciseId).not.toBe('preset-lateral-raise');
-    expect(upperB.exercises.find((e) => e.exerciseId === 'preset-lateral-raise')?.sets.some((s) => s.kind)).toBeFalsy();
   });
   it('ends fat-loss workouts with steady cardio', () => {
     for (const equipment of kit) {

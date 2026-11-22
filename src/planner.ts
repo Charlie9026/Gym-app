@@ -174,6 +174,14 @@ const BIG_IDS = new Set(
 /** Movements to fill a workout that came out short, gentlest first. */
 const TOP_UP: Pattern[] = ['core', 'hpush', 'hpull', 'hinge', 'calves', 'squat', 'delts', 'triceps', 'biceps'];
 
+/** Working-set targets by goal: strength 6–8, muscle 8–12, anything else 12+. */
+const REP_RANGES: Record<Goal, TemplateSet> = {
+  strength: { weight: 0, reps: 6, repsTo: 8 },
+  muscle: { weight: 0, reps: 8, repsTo: 12 },
+  fat: { weight: 0, reps: 12, repsOpen: true },
+  general: { weight: 0, reps: 12, repsOpen: true },
+};
+
 const EXERCISES_FOR_MINUTES = { 30: 4, 45: 5, 60: 6 } as const;
 
 /** Exercises that suit the answers for a movement, in order. */
@@ -192,14 +200,10 @@ function setsFor(o: Option, slotIndex: number, a: PlanAnswers): TemplateSet[] {
     return working({ weight: 0, reps: 0, seconds });
   }
   if (o.type === 'distance') return [{ weight: 0, reps: 0, seconds: a.minutes === 60 ? 900 : 600 }]; // one steady 10–15 minutes
-  const main = slotIndex < 2; // the first two exercises are the big lifts
-  const reps =
-    o.type === 'reps'
-      ? a.experience === 'new' ? 8 : 10
-      : a.goal === 'strength' ? (main ? 5 : 8) : a.goal === 'fat' ? 12 : a.goal === 'muscle' ? 10 : 10;
-  const sets = working({ weight: 0, reps });
-  // A lighter warm-up set before the first big lift with weights.
-  if (slotIndex === 0 && o.type === 'weight' && !o.iso) sets.unshift({ weight: 0, reps: 10, kind: 'warmup' });
+  // Rep ranges by goal: work close to failure within the range, and add weight once you reach the top.
+  const sets = working(REP_RANGES[a.goal]);
+  // Exercises with weights start with a lighter warm-up set.
+  if (o.type === 'weight') sets.unshift({ weight: 0, reps: 10, kind: 'warmup' });
   return sets;
 }
 
@@ -252,10 +256,13 @@ export function buildPlan(a: PlanAnswers): Plan {
         ? `Train ${a.days} days a week, going Upper A, Lower A, Upper B, Lower B in turn.`
         : `Train ${a.days} days a week, doing ${letters} in turn, with a rest day between workouts.`;
 
+  const range = REP_RANGES[a.goal];
+  const top = range.repsOpen ? `${range.reps}+` : `${range.reps}–${range.repsTo}`;
   const tips = [
     a.experience === 'new'
-      ? 'Start light: pick weights you could lift a few more times than the reps shown. Good form first.'
-      : 'Add a little weight (or a rep) when every set feels doable. The app shows last time’s numbers to beat.',
+      ? `Start light and learn the moves. Aim for ${top} reps with good form, finishing each set with only a rep or two left in you.`
+      : `Take each working set close to failure within ${top} reps. When you hit the top of the range on every set, add a little weight.`,
+    'Start with the light warm-up set (about half the weight) to get ready for each lift.',
     a.goal === 'strength'
       ? 'Rest 2–3 minutes after the big lifts. You can set rest for each exercise from its Rest pill.'
       : a.goal === 'fat'

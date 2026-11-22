@@ -91,6 +91,32 @@ export function paceOf(s: AnySet, u: Pick<Units, 'distance' | 'paceEvery'>): num
   return d > 0 && (s.seconds ?? 0) > 0 ? (s.seconds as number) / d : 0;
 }
 
+// ---------- rep ranges (saved workouts) ----------
+/** A set's rep target: "10", "6–8" or "12+". */
+export function repTarget(s: Pick<TemplateSet, 'reps' | 'repsTo' | 'repsOpen'>): string {
+  if (s.repsOpen) return `${s.reps}+`;
+  if (s.repsTo && s.repsTo > s.reps) return `${s.reps}–${s.repsTo}`;
+  return String(s.reps);
+}
+
+/** Read "10", "6-8", "6–8" or "12+" into reps fields; null if it isn't one of those. */
+export function parseRepTarget(text: string): Pick<TemplateSet, 'reps' | 'repsTo' | 'repsOpen'> | null {
+  const t = text.trim().replace(/\s+/g, '');
+  if (t === '') return { reps: 0 };
+  let m = /^(\d{1,3})\+$/.exec(t);
+  if (m) return { reps: Number(m[1]), repsOpen: true };
+  m = /^(\d{1,3})[-–](\d{1,3})$/.exec(t);
+  if (m) {
+    const [a, b] = [Number(m[1]), Number(m[2])].sort((x, y) => x - y);
+    return a === b ? { reps: a } : { reps: a, repsTo: b };
+  }
+  m = /^(\d{1,3})$/.exec(t);
+  return m ? { reps: Number(m[1]) } : null;
+}
+
+/** True when a set has a rep range ("6–8" or "12+"). */
+export const hasRepRange = (s: AnySet) => ('repsOpen' in s && !!s.repsOpen) || ('repsTo' in s && !!s.repsTo && s.repsTo > s.reps);
+
 // ---------- describing a set ----------
 export interface SetPart {
   value: string;

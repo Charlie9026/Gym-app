@@ -5,7 +5,9 @@ import { buildPlan, type Joint, type PlanAnswers } from '../planner';
 import { newTemplate } from '../workout';
 import { notify } from '../dialog';
 import { useExerciseMap } from '../hooks';
-import { fmtTime } from '../sets';
+import { fmtTime, repTarget } from '../sets';
+import { MUSCLE_CODE } from '../exercises';
+import type { TemplateSet } from '../types';
 import { useSlidingHighlight } from '../slidingHighlight';
 import { BackIcon } from './Icons';
 
@@ -195,20 +197,25 @@ export function PlanBuilder({ data, update, onClose }: { data: AppData; update: 
           <>
             <h1 className="plan-question">Your plan</h1>
             <p className="plan-sub">{plan.howTo}</p>
-            {plan.workouts.map((w) => (
+            {plan.workouts.map((w, i) => (
               <article className="card plan-workout" key={w.name}>
-                <h3>{w.name}</h3>
+                <header className="plan-head">
+                  <span className="plan-badge" aria-hidden="true">{i + 1}</span>
+                  <span className="plan-title">
+                    <span className="eyebrow">Workout {i + 1} of {plan.workouts.length}</span>
+                    <h3>{w.name}</h3>
+                  </span>
+                  <span className="muted small">{w.exercises.length} exercises</span>
+                </header>
                 <ul className="plan-list">
                   {w.exercises.map((e) => {
-                    const working = e.sets.filter((s) => s.kind !== 'warmup');
-                    const first = working[0];
-                    const amount = first?.seconds ? fmtTime(first.seconds) : `${first?.reps ?? 0} reps`;
+                    const info = exById.get(e.exerciseId);
                     return (
                       <li key={e.exerciseId}>
-                        <span>{exById.get(e.exerciseId)?.name ?? 'Exercise'}</span>
-                        <span className="muted">
-                          {working.length > 1 ? `${working.length} × ${amount}` : amount}
-                          {e.sets.length > working.length ? ' + warm-up' : ''}
+                        <span className="muscle-badge" aria-hidden="true">{info ? MUSCLE_CODE[info.muscle] : '··'}</span>
+                        <span className="plan-ex">
+                          <strong>{info?.name ?? 'Exercise'}</strong>
+                          <span className="muted small">{describeSets(e.sets)}</span>
                         </span>
                       </li>
                     );
@@ -228,6 +235,16 @@ export function PlanBuilder({ data, update, onClose }: { data: AppData; update: 
       </div>
     </div>
   );
+}
+
+/** "Warm-up, then 3 × 8–12 reps", "3 × 0:45", "10:00 steady". */
+function describeSets(sets: TemplateSet[]): string {
+  const working = sets.filter((s) => s.kind !== 'warmup');
+  const first = working[0];
+  if (!first) return '';
+  const each = first.seconds ? fmtTime(first.seconds) : `${repTarget(first)} reps`;
+  const main = first.seconds && working.length === 1 && !first.reps ? `${each} steady` : `${working.length} × ${each}`;
+  return sets.length > working.length ? `Warm-up, then ${main}` : main;
 }
 
 /** Big single-choice options with the app's sliding highlight. */

@@ -101,7 +101,12 @@ export interface Stopwatch {
 /** A target set in a saved workout. Weight in kg. */
 export interface TemplateSet {
   weight: number;
+  /** Target reps, or the bottom of a rep range. */
   reps: number;
+  /** Top of a rep range, e.g. 8 for "6–8". */
+  repsTo?: number;
+  /** "12+": at least `reps`, as many as you can. */
+  repsOpen?: boolean;
   seconds?: number;
   meters?: number;
   kind?: SetKind;

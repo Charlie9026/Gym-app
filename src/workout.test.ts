@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import { emptyData } from './store';
-import { lastSetsFor, newTemplate, newWorkoutFrom, startingSets, structureChanged, templateExercisesFrom } from './workout';
+import { keepRepTargets, lastSetsFor, newTemplate, newWorkoutFrom, startingSets, structureChanged, templateExercisesFrom } from './workout';
 import type { Workout } from './types';
 
 const workout: Workout = {
@@ -50,5 +50,35 @@ describe('previous sets', () => {
     expect(startingSets(d, 'x', 'weight')).toHaveLength(3);
     expect(startingSets(d, 'x', 'time')[0].seconds).toBe(30);
     expect(startingSets(d, 'x', 'distance')).toHaveLength(1);
+  });
+});
+
+describe('keepRepTargets', () => {
+  it('keeps a saved rep range while today’s weights carry forward', () => {
+    const saved = [{ exerciseId: 'preset-squat', sets: [
+      { weight: 40, reps: 10, kind: 'warmup' as const },
+      { weight: 90, reps: 6, repsTo: 8 },
+      { weight: 90, reps: 12, repsOpen: true },
+    ] }];
+    const today = [{ exerciseId: 'preset-squat', sets: [
+      { weight: 50, reps: 10, kind: 'warmup' as const },
+      { weight: 100, reps: 7 },
+      { weight: 100, reps: 15 },
+    ] }];
+    expect(keepRepTargets(saved, today)[0].sets).toEqual([
+      { weight: 50, reps: 10, kind: 'warmup' }, // no range: today's numbers
+      { weight: 100, reps: 6, repsTo: 8 },
+      { weight: 100, reps: 12, repsOpen: true },
+    ]);
+  });
+  it('matches working sets in order when the warm-up was skipped', () => {
+    const saved = [{ exerciseId: 'preset-squat', sets: [{ weight: 40, reps: 10, kind: 'warmup' as const }, { weight: 90, reps: 6, repsTo: 8 }] }];
+    const today = [{ exerciseId: 'preset-squat', sets: [{ weight: 100, reps: 7 }] }];
+    expect(keepRepTargets(saved, today)[0].sets).toEqual([{ weight: 100, reps: 6, repsTo: 8 }]);
+  });
+  it('leaves exercises and sets without a range alone', () => {
+    const today = [{ exerciseId: 'preset-bench-press', sets: [{ weight: 60, reps: 9 }] }];
+    expect(keepRepTargets([{ exerciseId: 'preset-squat', sets: [{ weight: 1, reps: 6, repsTo: 8 }] }], today)).toEqual(today);
+    expect(keepRepTargets([{ exerciseId: 'preset-bench-press', sets: [{ weight: 50, reps: 8 }] }], today)).toEqual(today);
   });
 });

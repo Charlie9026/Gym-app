@@ -11,7 +11,7 @@ import { RestChip } from './RestChip';
 import { CaloriesChip } from './CaloriesChip';
 import { DistanceChip } from './DistanceChip';
 import { caloriesOn, cardioEstimate, isCardio, withCalories } from '../calories';
-import { SetsTable } from './SetsTable';
+import { SetsTable, type SetPatch } from './SetsTable';
 
 /**
  * Editable list of exercises and their sets, shared by the saved-workout editor
@@ -33,9 +33,11 @@ interface Props<S extends AnySet> {
   emptyText: string;
   /** Past workouts: show a calories pill on cardio to type in a machine's number. */
   calories?: boolean;
+  /** Saved workouts: reps can be a range like 6–8 or 12+. */
+  repRanges?: boolean;
 }
 
-export function ExerciseListEditor<S extends AnySet>({ data, update, exercises, onChange, blankSet, emptyText, calories }: Props<S>) {
+export function ExerciseListEditor<S extends AnySet>({ data, update, exercises, onChange, blankSet, emptyText, calories, repRanges }: Props<S>) {
   const [picking, setPicking] = useState(false);
   const units = unitsOf(data.settings);
   const exById = useExerciseMap(data.exercises);
@@ -102,10 +104,11 @@ export function ExerciseListEditor<S extends AnySet>({ data, update, exercises, 
               type={type}
               units={unitsFor(info, units)}
               timeOnly={!!info?.timeOnly}
+              repRanges={repRanges}
               exerciseName={exName}
               sets={ex.sets}
               mode="edit"
-              onChange={(k, patch: Partial<SetEntry>) =>
+              onChange={(k, patch: SetPatch) =>
                 setEx(i, (e) => ({ ...e, sets: e.sets.map((x, n) => (n === k ? ({ ...x, ...patch } as S) : x)) }))
               }
               onToggleWarmup={(k) =>

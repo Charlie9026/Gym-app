@@ -30,6 +30,9 @@ test('a beginner answers a few questions and gets ready-made workouts', async ({
   // Knee-heavy and barbell moves are left out for a beginner with sore knees.
   for (const list of await page.locator('.plan-list').allInnerTexts()) expect(list).not.toMatch(/Squat|Lunge|Leg Press/);
   await expect(workouts.first().locator('li')).toHaveCount(5);
+  // Rep ranges for the goal, with the warm-up first on lifts with weights.
+  await expect(workouts.first().locator('li').first()).toContainText('Warm-up, then 2 × 8–12 reps');
+  await expect(workouts.first().locator('.eyebrow')).toHaveText('Workout 1 of 3');
   await expect(page.locator('.plan-tips')).toContainText('knees were left out');
 
   await page.getByRole('button', { name: 'Add 3 workouts to My workouts' }).click();
@@ -71,4 +74,40 @@ test('a plan can be started straight away, and the builder is still there once y
   await page.getByRole('button', { name: 'Nothing to avoid, show my plan' }).click();
   await page.getByRole('button', { name: 'Add 2 workouts to My workouts' }).click();
   await expect(page.locator('.template-card h3')).toHaveText(['Full body A', 'Full body B', 'Full body A (2)', 'Full body B (2)']);
+});
+
+test('rep ranges show while training, can be edited, and stay when weights carry forward', async ({ page }) => {
+  await openApp(page);
+  await tab(page, 'Workout');
+  await page.getByRole('button', { name: 'Build me a plan' }).click();
+  for (const c of [/^Get stronger/, /^A bit/, /^2 days/, /^About 30 minutes/, /^A full gym/]) await choose(page, c);
+  await page.getByRole('button', { name: 'Nothing to avoid, show my plan' }).click();
+  await page.getByRole('button', { name: 'Add 2 workouts to My workouts' }).click();
+
+  // Editing a saved workout: reps can be typed as a range.
+  await page.getByRole('button', { name: 'Edit Full body A' }).click();
+  const first = page.locator('.card').first();
+  const name = (await first.locator('h3').innerText()).trim();
+  await expect(first.getByLabel(`${name} set 2 reps`)).toHaveValue('6–8');
+  await first.getByLabel(`${name} set 2 reps`).fill('5-7');
+  await first.getByLabel(`${name} set 2 reps`).blur();
+  await expect(first.getByLabel(`${name} set 2 reps`)).toHaveValue('5–7');
+  await page.getByRole('button', { name: 'Save' }).click();
+  expect((await stored(page)).templates[0].exercises[0].sets[2]).toMatchObject({ reps: 5, repsTo: 7 }); // sets[0] is the warm-up
+
+  // Training it: the range is a reminder and the faded hint.
+  await page.locator('.template-card', { hasText: 'Full body A' }).getByRole('button', { name: 'Start' }).click();
+  const card = page.locator('.card', { hasText: name }).first();
+  await expect(card.locator('.target-chip')).toHaveText('Aim for 6–8 reps'); // from the first working set
+  await expect(card.getByLabel(`${name} set 3 reps`)).toHaveAttribute('placeholder', '6–8');
+  await card.getByLabel(`${name} set 2 weight`).fill('100');
+  await card.getByLabel(`${name} set 2 reps`).fill('7');
+  await card.getByRole('button', { name: `Mark ${name} set 2 done` }).click();
+  const skip = page.getByRole('button', { name: 'Skip', exact: true });
+  if (await skip.isVisible()) await skip.click();
+  await page.getByRole('button', { name: 'Finish workout' }).click();
+  // Only one set was done, so it asks; updating carries the weight forward but keeps the range.
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Update' }).click();
+  const saved = (await stored(page)).templates[0].exercises[0].sets;
+  expect(saved).toEqual([{ weight: 100, reps: 6, repsTo: 8 }]); // today's one set was the first working set's 6–8 slot
 });

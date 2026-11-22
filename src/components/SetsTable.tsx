@@ -1,9 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
-import type { ExerciseType, SetEntry, Units } from '../types';
-import { fmtTime, fromDistDisplay, isWarmup, setText, toDistDisplay, type AnySet } from '../sets';
+import type { ExerciseType, SetEntry, TemplateSet, Units } from '../types';
+import { fmtTime, fromDistDisplay, isWarmup, repTarget, setText, toDistDisplay, type AnySet } from '../sets';
 import { fromDisplay, toDisplay } from '../utils';
 import { DurationInput } from './DurationInput';
 import { NumberInput } from './NumberInput';
+import { RepsInput } from './RepsInput';
 
 /**
  * The rows of sets for one exercise, laid out for its type. Used by the active
@@ -23,17 +24,22 @@ interface Props {
   prev?: AnySet[];
   /** Faded placeholder values for a set. */
   hintFor?: (i: number) => AnySet | undefined;
-  onChange: (i: number, patch: Partial<SetEntry>) => void;
+  onChange: (i: number, patch: SetPatch) => void;
   onToggleDone?: (i: number) => void;
   onToggleWarmup: (i: number) => void;
   onRemove: (i: number) => void;
   onAdd: () => void;
   /** Log mode: the set the stopwatch is timing. */
   timingIndex?: number;
+  /** Saved workouts: reps can be a range like 6–8 or 12+. */
+  repRanges?: boolean;
 }
 
+/** A change to one set (rep range fields only apply to saved workouts). */
+export type SetPatch = Partial<SetEntry> & Partial<Pick<TemplateSet, 'repsTo' | 'repsOpen'>>;
+
 export function SetsTable(props: Props) {
-  const { type, units, timeOnly, timingIndex, sets, mode, prev = [], hintFor, onChange, onToggleDone, exerciseName } = props;
+  const { type, units, timeOnly, timingIndex, repRanges, sets, mode, prev = [], hintFor, onChange, onToggleDone, exerciseName } = props;
   const [menuFor, setMenuFor] = useState<number | null>(null);
   const log = mode === 'log';
   const unit = units.weight;
@@ -85,15 +91,24 @@ export function SetsTable(props: Props) {
                 placeholder={hint?.weight ? String(toDisplay(hint.weight, unit)) : '0'}
               />
             )}
-            {(type === 'weight' || type === 'reps') && (
-              <NumberInput
-                ariaLabel={`${name} reps`}
-                value={s.reps}
-                decimals={false}
-                onChange={(v) => onChange(i, { reps: v })}
-                placeholder={hint?.reps ? String(hint.reps) : '0'}
-              />
-            )}
+            {(type === 'weight' || type === 'reps') &&
+              (repRanges && !isWarmup(s) ? (
+                <RepsInput
+                  ariaLabel={`${name} reps`}
+                  value={s as TemplateSet}
+                  onChange={(t) => onChange(i, t)}
+                  placeholder="8–12"
+                />
+              ) : (
+                <NumberInput
+                  ariaLabel={`${name} reps`}
+                  value={s.reps}
+                  decimals={false}
+                  onChange={(v) => onChange(i, { reps: v })}
+                  // A saved workout's range shows as the hint, e.g. "6–8".
+                  placeholder={hint?.reps ? repTarget(hint) : '0'}
+                />
+              ))}
             {layout === 'distance' && (
               <NumberInput
                 ariaLabel={`${name} distance`}

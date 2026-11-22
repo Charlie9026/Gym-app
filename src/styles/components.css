@@ -664,3 +664,4 @@
 .stopwatch-bar .rest-text { min-width: 0; }
 .stopwatch-bar .row-actions { flex: none; }
 .stopwatch-bar.stacked { bottom: calc(92px + 64px + env(safe-area-inset-bottom, 0px)); }
+.target-chip { display: inline-flex; align-items: center; padding: 4px 10px; border-radius: 999px; font-size: 0.74rem; font-weight: 700; color: var(--accent); background: var(--accent-soft); }

@@ -89,6 +89,7 @@ export function TemplateEditor({ data, update, templateId, onClose }: Props) {
         exercises={exercises}
         onChange={setExercises}
         blankSet={() => ({ weight: 0, reps: 0 })}
+        repRanges
         emptyText="Add the exercises for this workout. You can set target weights, reps or times for each set."
       />
 
