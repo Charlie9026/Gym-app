@@ -95,3 +95,13 @@ test('glass panels keep their frosted blur in the built site', async ({ page }) 
   // The CSS minifier once dropped the standard rule, leaving only Safari's, so nothing blurred in Chrome.
   await expect.poll(() => page.locator('.tabbar').evaluate((el) => getComputedStyle(el).backdropFilter)).toContain('blur(');
 });
+
+test('pill rows that scroll sideways leave room for the active pill’s glow', async ({ page }) => {
+  await openApp(page);
+  await tab(page, 'Exercises');
+  const row = page.getByRole('group', { name: 'Filter exercises' });
+  // The glow (box-shadow 0 4px 14px) would be cut off by a scrolling row with less room than this.
+  const pad = await row.evaluate((el) => parseFloat(getComputedStyle(el).paddingTop));
+  expect(pad).toBeGreaterThanOrEqual(12);
+  expect(await row.evaluate((el) => getComputedStyle(el).overflowX)).toBe('auto');
+});
