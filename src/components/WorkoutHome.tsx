@@ -1,6 +1,7 @@
 import { useExerciseMap, useToday } from '../hooks';
-import { useMemo } from 'react';
-import type { AppData, WorkoutTemplate } from '../types';
+import { useMemo, useRef, useState } from 'react';
+import { useSlidingHighlight } from '../slidingHighlight';
+import type { AppData, Workout, WorkoutTemplate } from '../types';
 import { fmtWeight, workoutVolume } from '../utils';
 import { relativeDay } from '../workout';
 import { WorkoutBody } from './BodyMap';
@@ -18,6 +19,11 @@ interface Props {
 
 const DAY_LETTERS = ['M', 'T', 'W', 'T', 'F', 'S', 'S'];
 
+const NO_WORKOUTS: Workout[] = [];
+
+/** "45 min" or "1h 5m". */
+const fmtMinutes = (m: number) => (m < 60 ? `${m} min` : `${Math.floor(m / 60)}h ${m % 60}m`);
+
 function startOfWeek(d: Date): Date {
   const day = (d.getDay() + 6) % 7; // Monday = 0
   return new Date(d.getFullYear(), d.getMonth(), d.getDate() - day);
@@ -33,6 +39,7 @@ export function WorkoutHome({ data, onStartEmpty, onStartTemplate, onEdit, onBui
   const week = useMemo(() => {
     const start = startOfWeek(now).getTime();
     const trained = new Set<number>();
+    const byDay: Workout[][] = Array.from({ length: 7 }, () => []);
     let volume = 0;
     let count = 0;
     let kcal = 0;
@@ -41,15 +48,36 @@ export function WorkoutHome({ data, onStartEmpty, onStartTemplate, onEdit, onBui
       if (t < start) continue;
       // Whole calendar days since Monday; rounding absorbs clock-change days (23h/25h).
       const d = new Date(t);
-      trained.add(Math.round((new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime() - start) / 86400000));
+      const day = Math.round((new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime() - start) / 86400000);
+      trained.add(day);
+      byDay[day]?.push(w);
       volume += workoutVolume(w);
       kcal += workoutCalories(w, exById, bodyKg).total;
       count++;
     }
-    return { trained, volume, count, kcal, today: (now.getDay() + 6) % 7 };
+    return { start, trained, byDay, volume, count, kcal, today: (now.getDay() + 6) % 7 };
   }, [data.workouts, now, exById, bodyKg]);
 
   const lastWorkout = data.workouts[data.workouts.length - 1];
+
+  // Tapping a day shows that day's stats in the card; tapping it again goes back to the week.
+  const [selected, setSelected] = useState<number | null>(null);
+  const daysRef = useRef<HTMLDivElement>(null);
+  const dayPillRef = useRef<HTMLSpanElement>(null);
+  useSlidingHighlight(daysRef, dayPillRef, { active: '.week-day.selected', axis: 'x' }, [selected]);
+  const dayDate = selected === null ? null : new Date(week.start + selected * 86400000 + 12 * 3600000); // midday: safe on clock-change days
+  const dayWorkouts = selected === null ? NO_WORKOUTS : week.byDay[selected];
+  const day = useMemo(() => {
+    let volume = 0;
+    let kcal = 0;
+    let mins = 0;
+    for (const w of dayWorkouts) {
+      volume += workoutVolume(w);
+      kcal += workoutCalories(w, exById, bodyKg).total;
+      if (w.finishedAt) mins += Math.max(0, Math.round((Date.parse(w.finishedAt) - Date.parse(w.date)) / 60000));
+    }
+    return { volume, kcal, mins };
+  }, [dayWorkouts, exById, bodyKg]);
 
   // Per saved workout: last time it was done and typical duration.
   const usage = useMemo(() => {
@@ -74,41 +102,120 @@ export function WorkoutHome({ data, onStartEmpty, onStartTemplate, onEdit, onBui
       </header>
 
       <section className="card week-card" aria-label="This week">
-        <div className="eyebrow">This week</div>
-        <div className="week-days">
-          {DAY_LETTERS.map((l, i) => (
-            <div
-              key={i}
-              className={
-                'week-day' + (week.trained.has(i) ? ' trained' : '') + (i === week.today ? ' today' : '')
-              }
-              aria-label={`${l}${week.trained.has(i) ? ', trained' : ''}`}
-            >
-              <span>{l}</span>
-              <i />
-            </div>
-          ))}
-        </div>
-        <div className={'week-stats' + (showKcal ? ' four' : '')}>
-          <div>
-            <div className="week-num">{week.count}</div>
-            <div className="muted small">workout{week.count === 1 ? '' : 's'}</div>
+        <div className="week-head">
+          <div className="eyebrow">
+            {dayDate ? dayDate.toLocaleDateString(undefined, { weekday: 'long', day: 'numeric', month: 'short' }) : 'This week'}
           </div>
-          <div>
-            <div className="week-num">{week.volume ? fmtWeight(week.volume, unit) : '—'}</div>
-            <div className="muted small">lifted</div>
-          </div>
-          {showKcal && (
-            <div>
-              <div className="week-num">{week.kcal ? week.kcal.toLocaleString() : '—'}</div>
-              <div className="muted small">kcal burned</div>
-            </div>
+          {selected !== null && (
+            <button className="btn-ghost small-btn week-back" onClick={() => setSelected(null)}>
+              Show week
+            </button>
           )}
-          <div>
-            <div className="week-num">{lastWorkout ? relativeDay(lastWorkout.date) : '—'}</div>
-            <div className="muted small">last session</div>
-          </div>
         </div>
+        <div className="week-days" ref={daysRef}>
+          <span className={'week-pill' + (selected === null ? ' off' : '')} ref={dayPillRef} aria-hidden="true" />
+          {DAY_LETTERS.map((l, i) => {
+            const name = new Date(week.start + i * 86400000 + 12 * 3600000).toLocaleDateString(undefined, { weekday: 'long' });
+            return (
+              <button
+                key={i}
+                type="button"
+                className={
+                  'week-day' +
+                  (week.trained.has(i) ? ' trained' : '') +
+                  (i === week.today ? ' today' : '') +
+                  (i === selected ? ' selected' : '')
+                }
+                aria-pressed={i === selected}
+                aria-label={`${name}${week.trained.has(i) ? ', trained' : ''}${i === week.today ? ', today' : ''}`}
+                onClick={() => setSelected((s) => (s === i ? null : i))}
+              >
+                <span>{l}</span>
+                <i />
+              </button>
+            );
+          })}
+        </div>
+        <div className={'week-stats' + (showKcal ? ' four' : '')} key={selected ?? 'week'}>
+          {selected === null ? (
+            <>
+              <div>
+                <div className="week-num">{week.count}</div>
+                <div className="muted small">workout{week.count === 1 ? '' : 's'}</div>
+              </div>
+              <div>
+                <div className="week-num">{week.volume ? fmtWeight(week.volume, unit) : '—'}</div>
+                <div className="muted small">lifted</div>
+              </div>
+              {showKcal && (
+                <div>
+                  <div className="week-num">{week.kcal ? week.kcal.toLocaleString() : '—'}</div>
+                  <div className="muted small">kcal burned</div>
+                </div>
+              )}
+              <div>
+                <div className="week-num">{lastWorkout ? relativeDay(lastWorkout.date) : '—'}</div>
+                <div className="muted small">last session</div>
+              </div>
+            </>
+          ) : (
+            <>
+              <div>
+                <div className="week-num">{dayWorkouts.length}</div>
+                <div className="muted small">workout{dayWorkouts.length === 1 ? '' : 's'}</div>
+              </div>
+              <div>
+                <div className="week-num">{day.volume ? fmtWeight(day.volume, unit) : '—'}</div>
+                <div className="muted small">lifted</div>
+              </div>
+              {showKcal && (
+                <div>
+                  <div className="week-num">{day.kcal ? day.kcal.toLocaleString() : '—'}</div>
+                  <div className="muted small">kcal burned</div>
+                </div>
+              )}
+              <div>
+                <div className="week-num">{day.mins ? fmtMinutes(day.mins) : '—'}</div>
+                <div className="muted small">time</div>
+              </div>
+            </>
+          )}
+        </div>
+        {selected !== null && (
+          <div className="day-detail" key={`d${selected}`}>
+            {dayWorkouts.length > 0 ? (
+              <ul className="day-list">
+                {dayWorkouts.map((w) => {
+                  const sets = w.exercises.reduce((n, e) => n + e.sets.filter((s) => s.kind !== 'warmup').length, 0);
+                  const mins = w.finishedAt ? Math.round((Date.parse(w.finishedAt) - Date.parse(w.date)) / 60000) : 0;
+                  return (
+                    <li key={w.id}>
+                      <strong>{w.name}</strong>
+                      <span className="muted small">
+                        {[
+                          mins > 0 ? fmtMinutes(mins) : null,
+                          `${w.exercises.length} exercise${w.exercises.length === 1 ? '' : 's'}`,
+                          `${sets} set${sets === 1 ? '' : 's'}`,
+                        ].filter(Boolean).join(' · ')}
+                      </span>
+                      <span className="muted small day-exercises">
+                        {w.exercises.map((e) => exById.get(e.exerciseId)?.name ?? 'Exercise').join(' · ')}
+                      </span>
+                    </li>
+                  );
+                })}
+              </ul>
+            ) : (
+              <p className="muted small day-empty">
+                {selected > week.today
+                  ? 'Still to come. Nothing planned yet.'
+                  : selected === week.today
+                    ? 'Nothing logged yet today.'
+                    : 'Rest day. No workouts logged.'}
+              </p>
+            )}
+          </div>
+        )}
         {showKcal && !bodyKg && (
           <p className="muted small week-hint">Add your body weight in Settings to see calories burned.</p>
         )}
