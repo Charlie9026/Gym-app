@@ -98,7 +98,7 @@ export function WorkoutHome({ data, onStartEmpty, onStartTemplate, onEdit }: Pro
           {showKcal && (
             <div>
               <div className="week-num">{week.kcal ? week.kcal.toLocaleString() : '—'}</div>
-              <div className="muted small">kcal</div>
+              <div className="muted small">kcal burned</div>
             </div>
           )}
           <div>

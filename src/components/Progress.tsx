@@ -34,7 +34,7 @@ interface Session {
 /** Extra chart measure for every exercise once calories can be shown. */
 const KCAL_MEASURE: Measure = {
   id: 'calories',
-  label: 'Calories',
+  label: 'Calories burned',
   unitLabel: () => 'kcal',
   value: () => 0, // filled in from the session (needs the whole workout)
   format: (v) => Math.round(v).toLocaleString(),

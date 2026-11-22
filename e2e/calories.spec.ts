@@ -38,11 +38,12 @@ test('estimated calories show when you finish, in History, this week and Progres
 
   await tab(page, 'Workout');
   await expect(page.locator('.week-stats')).toContainText('363');
-  await expect(page.locator('.week-stats')).toContainText('kcal');
+  await expect(page.locator('.week-stats')).toContainText('kcal burned');
 
   await tab(page, 'Progress');
   await expect(page.getByText('Calories burned per week')).toHaveCount(0);
-  await page.getByRole('group', { name: 'Chart measure' }).getByRole('button', { name: 'Calories' }).click();
+  await page.getByRole('group', { name: 'Chart measure' }).getByRole('button', { name: 'Calories burned' }).click();
+  await expect(page.locator('.session').first()).toContainText('Calories burned');
   await expect(page.locator('.session-metric').first()).toContainText('363');
 });
 
@@ -89,7 +90,7 @@ test('calories can be switched off in Settings', async ({ page }) => {
   await tab(page, 'Workout');
   await expect(page.locator('.week-stats')).not.toContainText('kcal');
   await tab(page, 'Progress');
-  await expect(page.getByRole('group', { name: 'Chart measure' }).getByRole('button', { name: 'Calories' })).toHaveCount(0);
+  await expect(page.getByRole('group', { name: 'Chart measure' }).getByRole('button', { name: 'Calories burned' })).toHaveCount(0);
 });
 
 test('body weight follows the weight unit', async ({ page }) => {
@@ -100,4 +101,29 @@ test('body weight follows the weight unit', async ({ page }) => {
   await expect(page.getByLabel('Body weight in lb')).toHaveValue('176.4');
   await page.getByLabel('Body weight in lb').fill('');
   expect((await stored(page)).settings.bodyWeightKg).toBeUndefined();
+});
+
+test('lifting calories rise with weight and reps, whatever the workout length', async ({ page }) => {
+  const day = 86400000;
+  const now = Date.now();
+  const bench = (ago: number, minutes: number, sets: [number, number][]) => ({
+    id: 'b' + ago, name: 'Push', notes: '', date: new Date(now - ago * day).toISOString(),
+    finishedAt: new Date(now - ago * day + minutes * 60000).toISOString(),
+    exercises: [{ exerciseId: 'preset-bench-press', sets: sets.map(([weight, reps]) => ({ weight, reps, done: true })) }],
+  });
+  // Like the report: the heaviest, most-reps session was the shortest one.
+  await openApp(page, { data: base({ bodyWeightKg: 75 }, [
+    bench(7, 60, [[70, 8], [70, 8], [70, 8], [70, 7]]),
+    bench(4, 30, [[72.5, 8], [72.5, 8], [72.5, 8], [72.5, 7]]),
+    bench(1, 6, [[72.5, 10], [72.5, 9], [72.5, 8], [72.5, 7]]),
+  ]) });
+  await tab(page, 'Progress');
+  await page.getByRole('group', { name: 'Chart measure' }).getByRole('button', { name: 'Calories burned' }).click();
+  const values = await page.locator('.session-metric .ms-sr').allTextContents(); // final values, newest first
+  const [newest, middle, oldest] = values.map((v) => Number(v.replace(/[^0-9]/g, '')));
+  expect(oldest).toBeGreaterThan(40); // about 54 kcal each at 75 kg
+  expect(newest).toBeLessThan(70);
+  expect(newest).toBeGreaterThanOrEqual(middle);
+  expect(middle).toBeGreaterThanOrEqual(oldest);
+  expect(newest).toBeGreaterThan(oldest);
 });

@@ -14,10 +14,28 @@ import { completedSets } from './utils';
 /** Calories are shown unless switched off in Settings. */
 export const caloriesOn = (s: Pick<Settings, 'showCalories'>) => s.showCalories !== false;
 
-/** Lifting, counting the rest between sets (Compendium 02052, vigorous resistance training). */
-const STRENGTH_MET = 5;
-/** Per set of lifting when the workout's length isn't known: the set plus its rest. */
-const STRENGTH_MIN_PER_SET = 2.5;
+/**
+ * Lifting is estimated per set from what you did, never from how long the app was open:
+ *  - the set and its rest: 2.5 minutes at MET 3.5 (Compendium 02054, resistance training
+ *    with rest between sets), which scales with body weight;
+ *  - plus the work itself: weight × reps × a typical 0.4 m bar path, at about 20% muscle
+ *    efficiency, so more weight or more reps always means more calories.
+ */
+const SET_MINUTES = 2.5;
+const SET_MET = 3.5;
+const LIFT_METRES = 0.4;
+const MUSCLE_EFFICIENCY = 0.2;
+const J_PER_KCAL = 4184;
+/** Bodyweight moves (push-ups, pull-ups, dips…) lift roughly this share of your body weight. */
+const BODYWEIGHT_SHARE = 0.65;
+
+/** Calories for one lifting set. */
+export function liftSetCalories(s: SetEntry, bodyKg: number): number {
+  const base = SET_MET * bodyKg * (SET_MINUTES / 60);
+  const load = s.weight > 0 ? s.weight : BODYWEIGHT_SHARE * bodyKg;
+  const work = (load * 9.81 * LIFT_METRES * s.reps) / MUSCLE_EFFICIENCY / J_PER_KCAL;
+  return base + work;
+}
 
 type Activity = 'run' | 'walk' | 'incline' | 'cycle' | 'bike' | 'row' | 'elliptical' | 'swim' | 'ski' | 'airbike' | 'stairs' | 'rope' | 'hold' | 'cardio';
 
@@ -117,10 +135,7 @@ export interface WorkoutCalories {
   estimated: boolean;
 }
 
-/**
- * Calories for a workout. Lifting is shared out by sets over the time not
- * spent on cardio; without a body weight only typed-in numbers count.
- */
+/** Calories for a workout; without a body weight only typed-in numbers count. */
 export function workoutCalories(w: Workout, exById: Map<string, Exercise>, bodyKg: number | undefined): WorkoutCalories {
   const kg = bodyKg && bodyKg > 0 ? bodyKg : 0;
   const done = w.exercises.map((ex) => completedSets(ex.sets));
@@ -130,26 +145,12 @@ export function workoutCalories(w: Workout, exById: Map<string, Exercise>, bodyK
     return t === 'weight' || t === 'reps';
   };
 
-  // Time spent on timed and distance exercises, and lifting sets, across the workout.
-  let cardioSec = 0;
-  let liftSets = 0;
-  done.forEach((sets, i) => {
-    if (isLift(i)) liftSets += sets.length;
-    else if (info[i]) cardioSec += sets.reduce((n, s) => n + setSeconds(s, activityOf(info[i]!)), 0);
-  });
-  // Lifting minutes: the workout's length minus cardio, kept within 1-5 minutes per set
-  // (so a workout left running overnight or edited later still gives a sensible number).
-  const lengthMin = w.finishedAt ? (Date.parse(w.finishedAt) - Date.parse(w.date)) / 60000 : NaN;
-  const liftMin =
-    lengthMin > 0 ? Math.min(Math.max(lengthMin - cardioSec / 60, liftSets), liftSets * 5) : liftSets * STRENGTH_MIN_PER_SET;
-  const perSetKcal = liftSets ? (STRENGTH_MET * kg * (liftMin / 60)) / liftSets : 0;
-
   let estimated = false;
   const byExercise = w.exercises.map((ex: WorkoutExercise, i) => {
     if (ex.calories && ex.calories > 0) return ex.calories;
     if (!kg || !done[i].length) return 0;
     estimated = true;
-    if (isLift(i)) return perSetKcal * done[i].length;
+    if (isLift(i)) return done[i].reduce((n, s) => n + liftSetCalories(s, kg), 0);
     return info[i] ? cardioCalories(done[i], activityOf(info[i]!), kg) : 0;
   });
   return { total: Math.round(byExercise.reduce((a, b) => a + b, 0)), byExercise, estimated };

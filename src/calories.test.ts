@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { activityOf, caloriesOn, cardioEstimate, workoutCalories } from './calories';
+import { activityOf, caloriesOn, cardioEstimate, liftSetCalories, workoutCalories } from './calories';
 import { PRESET_EXERCISES } from './exercises';
 import type { Exercise, SetEntry, Workout } from './types';
 
@@ -21,25 +21,35 @@ describe('calories', () => {
     // 5 km at 5 km/h = 1 hour
     expect(workoutCalories(w, exById, 80).total).toBe(Math.round(((3.5 + 0.1 * (5000 / 60)) / 3.5) * 80));
   });
-  it('shares lifting by sets over the workout time left after cardio', () => {
-    const w = workout(
-      [
-        { exerciseId: 'preset-bench-press', sets: [set({ weight: 80, reps: 8 }), set({ weight: 80, reps: 8 }), set({ weight: 80, reps: 8, done: false })] },
-        { exerciseId: 'preset-squat', sets: [set({ weight: 100, reps: 5 }), set({ weight: 100, reps: 5 })] },
-        { exerciseId: 'preset-exercise-bike', sets: [set({ seconds: 600 })] },
-      ],
-      25,
-    );
-    const c = workoutCalories(w, exById, 75);
-    const lifting = 5 * 75 * (15 / 60); // 25 min − 10 min of bike, MET 5
-    expect(c.byExercise[0]).toBeCloseTo(lifting / 2);
-    expect(c.byExercise[1]).toBeCloseTo(lifting / 2);
-    expect(c.byExercise[2]).toBeCloseTo(6.8 * 75 * (10 / 60));
-    expect(c.estimated).toBe(true);
+  it('estimates lifting from each set: more weight or more reps always burns more', () => {
+    const bench = (sets: Partial<SetEntry>[], minutes: number) =>
+      workoutCalories(workout([{ exerciseId: 'preset-bench-press', sets: sets.map(set) }], minutes), exById, 75).byExercise[0];
+    const light = bench([{ weight: 70, reps: 8 }, { weight: 70, reps: 8 }, { weight: 70, reps: 8 }, { weight: 70, reps: 7 }], 60);
+    const heavier = bench([{ weight: 72.5, reps: 8 }, { weight: 72.5, reps: 8 }, { weight: 72.5, reps: 8 }, { weight: 72.5, reps: 7 }], 30);
+    const moreReps = bench([{ weight: 72.5, reps: 10 }, { weight: 72.5, reps: 9 }, { weight: 72.5, reps: 8 }, { weight: 72.5, reps: 7 }], 10);
+    expect(light).toBeLessThan(heavier);
+    expect(heavier).toBeLessThan(moreReps);
   });
-  it('keeps lifting time sensible when a workout was left running', () => {
-    const w = workout([{ exerciseId: 'preset-squat', sets: [set({ weight: 100, reps: 5 }), set({ weight: 100, reps: 5 })] }], 600);
-    expect(workoutCalories(w, exById, 70).total).toBe(Math.round(5 * 70 * (10 / 60))); // capped at 5 min per set
+  it("doesn't depend on how long the workout was open", () => {
+    const ex = [{ exerciseId: 'preset-squat', sets: [set({ weight: 100, reps: 5 })] }];
+    expect(workoutCalories(workout(ex, 5), exById, 70).total).toBe(workoutCalories(workout(ex, 600), exById, 70).total);
+    expect(workoutCalories(workout(ex), exById, 70).total).toBe(workoutCalories(workout(ex, 45), exById, 70).total);
+  });
+  it('works out a lifting set as its time plus the work done', () => {
+    // 2.5 min at MET 3.5 for 80 kg, plus 100 kg × 9.81 × 0.4 m × 5 reps at 20% efficiency.
+    expect(liftSetCalories(set({ weight: 100, reps: 5 }), 80)).toBeCloseTo(3.5 * 80 * (2.5 / 60) + (100 * 9.81 * 0.4 * 5) / 0.2 / 4184);
+    // Bodyweight sets lift part of your body weight.
+    expect(liftSetCalories(set({ reps: 10 }), 80)).toBeCloseTo(3.5 * 80 * (2.5 / 60) + (0.65 * 80 * 9.81 * 0.4 * 10) / 0.2 / 4184);
+  });
+  it('adds cardio on top of lifting', () => {
+    const w = workout([
+      { exerciseId: 'preset-squat', sets: [set({ weight: 100, reps: 5 })] },
+      { exerciseId: 'preset-exercise-bike', sets: [set({ seconds: 600 })] },
+    ], 30);
+    const c = workoutCalories(w, exById, 75);
+    expect(c.byExercise[0]).toBeCloseTo(liftSetCalories(set({ weight: 100, reps: 5 }), 75));
+    expect(c.byExercise[1]).toBeCloseTo(6.8 * 75 * (10 / 60));
+    expect(c.estimated).toBe(true);
   });
   it('uses typed-in calories instead of the estimate, even without a body weight', () => {
     const w = workout([
