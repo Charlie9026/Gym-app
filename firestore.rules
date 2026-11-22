@@ -4,7 +4,7 @@ rules_version = '2';
 // - users/{uid}/records: your own workouts and settings. Only you can read or
 //   write them; nobody signed out can.
 // - leaderboard/{uid}: your public leaderboard entry (nickname, points, rank,
-//   strength ratios) if you join the leaderboards. Anyone signed in can read
+//   strength scores) if you join the leaderboards. Anyone signed in can read
 //   entries; only you can write yours, within limits checked here.
 // - friendCodes/{code}: which account a friend code belongs to.
 service cloud.firestore {
@@ -36,10 +36,10 @@ service cloud.firestore {
     }
 
     // Limits match src/leaderboard.ts: at most 195 points a week (7 full days,
-    // goal and full streak bonus), and a strength score of at most 1000 (a total
-    // of 10× body weight).
+    // goal and full streak bonus), and strength scores of at most 300 (three
+    // times the intermediate standard for a lift).
     function validEntry(d) {
-      return d.keys().hasOnly(['name', 'code', 'weekId', 'points', 'last4', 'streak', 'tier', 'strength', 'ratios', 'updatedAt'])
+      return d.keys().hasOnly(['name', 'code', 'weekId', 'points', 'last4', 'streak', 'tier', 'strength', 'lifts', 'updatedAt'])
         && d.keys().hasAll(['name', 'code', 'weekId', 'points', 'last4', 'streak', 'tier', 'updatedAt'])
         && d.name is string && d.name.size() >= 2 && d.name.size() <= 20
         && d.code is string && d.code.matches('^[A-HJ-NP-Z2-9]{6}$')
@@ -48,16 +48,23 @@ service cloud.firestore {
         && d.last4 is int && d.last4 >= 0 && d.last4 <= 780
         && d.streak is int && d.streak >= 0 && d.streak <= 520
         && d.tier in ['bronze', 'silver', 'gold', 'platinum', 'diamond']
-        && (!('strength' in d) || d.strength == null || (d.strength is int && d.strength >= 0 && d.strength <= 1000))
-        && (!('ratios' in d) || d.ratios == null || validRatios(d.ratios))
+        && (!('strength' in d) || d.strength == null || (d.strength is int && d.strength >= 0 && d.strength <= 300))
+        && (!('lifts' in d) || d.lifts == null || validLifts(d.lifts))
         && d.updatedAt == request.time;
     }
 
-    function validRatios(r) {
-      return r is map && r.keys().hasOnly(['squat', 'bench', 'deadlift'])
-        && r.squat is number && r.squat >= 0 && r.squat <= 6
-        && r.bench is number && r.bench >= 0 && r.bench <= 6
-        && r.deadlift is number && r.deadlift >= 0 && r.deadlift <= 6;
+    // Your best (up to) 3 lifts: l1, l2, l3, each an exercise id and its score.
+    function validLifts(l) {
+      return l is map && l.keys().hasOnly(['l1', 'l2', 'l3'])
+        && (!('l1' in l) || validLift(l.l1))
+        && (!('l2' in l) || validLift(l.l2))
+        && (!('l3' in l) || validLift(l.l3));
+    }
+
+    function validLift(x) {
+      return x is map && x.keys().hasOnly(['id', 'score'])
+        && x.id is string && x.id.matches('^preset-[a-z0-9-]{1,40}$')
+        && x.score is int && x.score >= 0 && x.score <= 300;
     }
   }
 }

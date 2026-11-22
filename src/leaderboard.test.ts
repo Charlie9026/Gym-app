@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { MAX_WEEK_POINTS, checkName, cleanCode, consistency, newFriendCode, publicEntry, strength, tierFor, weekId } from './leaderboard';
+import { MAX_STRENGTH, MAX_WEEK_POINTS, STRENGTH_STANDARDS, checkName, cleanCode, consistency, newFriendCode, publicEntry, strength, tierFor, weekId } from './leaderboard';
 import { PRESET_EXERCISES } from './exercises';
 import type { Exercise, SetEntry, Workout } from './types';
 
@@ -62,20 +62,44 @@ describe('consistency points', () => {
 });
 
 describe('strength', () => {
-  it('adds the best squat, bench and deadlift and divides by body weight', () => {
-    const w = [
-      { ...lift(2026, 11, 20), exercises: [
-        { exerciseId: 'preset-squat', sets: [set({ weight: 120, reps: 1 }), set({ weight: 100, reps: 5 })] }, // best: 120 (1 rep) vs 116.7
-        { exerciseId: 'preset-bench-press', sets: [set({ weight: 80, reps: 1 }), set({ weight: 200, reps: 20 })] }, // 20 reps don't count
-        { exerciseId: 'preset-deadlift', sets: [set({ weight: 160, reps: 1, kind: 'warmup' }), set({ weight: 150, reps: 1 })] }, // warm-ups don't count
-      ] },
-    ];
-    expect(strength(w, 80, NOW)).toEqual({ score: Math.round(((120 + 80 + 150) / 80) * 100), ratios: { squat: 1.5, bench: 1, deadlift: 1.88 } });
+  const session = (exercises: Workout['exercises'], daysAgo = 2): Workout => ({
+    id: 'w' + n++, name: 'W', notes: '', date: new Date(NOW.getTime() - daysAgo * 86400000).toISOString(), exercises,
   });
-  it('only counts the last 90 days, and needs a body weight', () => {
-    const old = { ...lift(2026, 6, 1), exercises: [{ exerciseId: 'preset-squat', sets: [set({ weight: 200, reps: 1 })] }] };
-    expect(strength([old], 80, NOW)?.score).toBe(0);
+  it('averages your best 3 lifts, each compared to its own standard', () => {
+    const w = [session([
+      { exerciseId: 'preset-squat', sets: [set({ weight: 120, reps: 1 })] }, // 1.5× / 1.25 → 120
+      { exerciseId: 'preset-bench-press', sets: [set({ weight: 80, reps: 1 }), set({ weight: 200, reps: 20 })] }, // 20 reps don't count → 1.0× / 1.0 → 100
+      { exerciseId: 'preset-deadlift', sets: [set({ weight: 200, reps: 1, kind: 'warmup' }), set({ weight: 150, reps: 1 })] }, // warm-ups don't count → 1.875 / 1.5 → 125
+      { exerciseId: 'preset-overhead-press', sets: [set({ weight: 40, reps: 1 })] }, // 0.5 / 0.65 → 77, not in the best 3
+      { exerciseId: 'preset-chest-fly', sets: [set({ weight: 60, reps: 1 })] }, // small single-muscle moves don't count
+    ])];
+    const s = strength(w, 80, NOW)!;
+    expect(s.top.map((l) => [l.id, l.score])).toEqual([['preset-deadlift', 125], ['preset-squat', 120], ['preset-bench-press', 100]]);
+    expect(s.score).toBe(Math.round((125 + 120 + 100) / 3));
+    expect(s.top[0].ratio).toBe(1.88);
+  });
+  it('doesn’t let a big machine number win: leg press is compared to a leg press standard', () => {
+    const s = strength([session([{ exerciseId: 'preset-leg-press', sets: [set({ weight: 200, reps: 1 })] }])], 80, NOW)!;
+    expect(s.top[0].score).toBe(100); // 2.5× body weight is just the intermediate standard
+    expect(s.score).toBe(33); // one lift: the other two count as 0
+  });
+  it('counts body weight plus added weight for pull-ups, chin-ups and dips', () => {
+    const s = strength([session([{ exerciseId: 'preset-pull-up', sets: [set({ weight: 20, reps: 5 })] }])], 80, NOW)!;
+    expect(s.top[0].ratio).toBe(Math.round(((100 * (1 + 5 / 30)) / 80) * 100) / 100);
+  });
+  it('only counts the last 90 days and known exercises, and needs a body weight', () => {
+    const old = session([{ exerciseId: 'preset-squat', sets: [set({ weight: 200, reps: 1 })] }], 120);
+    const custom = session([{ exerciseId: 'custom-x', sets: [set({ weight: 500, reps: 1 })] }]);
+    expect(strength([old, custom], 80, NOW)).toEqual({ score: 0, top: [] });
     expect(strength([old], undefined, NOW)).toBeNull();
+  });
+  it('only counts big multi-joint lifts, has standards for real exercises only, and caps silly numbers', () => {
+    for (const small of ['preset-chest-fly', 'preset-dumbbell-curl', 'preset-leg-curl', 'preset-lateral-raise', 'preset-calf-raise']) {
+      expect(STRENGTH_STANDARDS[small], small).toBeUndefined();
+    }
+    for (const id of Object.keys(STRENGTH_STANDARDS)) expect(exById.has(id), id).toBe(true);
+    const s = strength([session([{ exerciseId: 'preset-overhead-press', sets: [set({ weight: 300, reps: 1 })] }])], 80, NOW)!;
+    expect(s.top[0].score).toBe(MAX_STRENGTH);
   });
 });
 
@@ -100,8 +124,9 @@ describe('names and codes', () => {
 describe('public entry', () => {
   it('shares points, rank and strength ratios, never body weight or weights', () => {
     const e = publicEntry([lift(2026, 11, 20, 3, 100, 5)], exById, { name: 'Sam', code: 'ABCDEF', goal: 3, bodyKg: 80 }, NOW);
-    expect(Object.keys(e).sort()).toEqual(['code', 'last4', 'name', 'points', 'ratios', 'streak', 'strength', 'tier', 'weekId']);
+    expect(Object.keys(e).sort()).toEqual(['code', 'last4', 'lifts', 'name', 'points', 'streak', 'strength', 'tier', 'weekId']);
     expect(JSON.stringify(e)).not.toContain('80'); // body weight isn't in it
-    expect(e).toMatchObject({ name: 'Sam', weekId: '2026-W47', points: 10, tier: 'bronze', ratios: { squat: 0, bench: 1.46, deadlift: 0 } });
+    expect(JSON.stringify(e)).not.toContain('ratio'); // nor anything it could be worked out from
+    expect(e).toMatchObject({ name: 'Sam', weekId: '2026-W47', points: 10, tier: 'bronze', strength: 49, lifts: { l1: { id: 'preset-bench-press', score: 146 } } });
   });
 });

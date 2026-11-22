@@ -422,3 +422,8 @@ button.ex-row-main:hover .ex-row-name { color: var(--accent); }
 /* My progress / Leaderboards: full width so it fits a 320px phone. */
 .page-head > .chips.seg { align-self: stretch; }
 .page-head > .chips.seg .chip { flex: 1; padding: 8px 6px; font-size: 0.92rem; }
+.lb-top-lifts { list-style: none; margin: 0; padding: 10px 0 0; border-top: 1px solid var(--line); display: flex; flex-direction: column; gap: 8px; }
+.lb-top-lifts li { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: 'name score' 'ratio score'; column-gap: 12px; align-items: center; }
+.lb-lift-name { grid-area: name; font-weight: 700; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.lb-top-lifts .muted { grid-area: ratio; }
+.lb-top-lifts strong { grid-area: score; font-size: 1.15rem; font-variant-numeric: tabular-nums; }

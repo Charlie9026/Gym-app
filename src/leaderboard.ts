@@ -6,9 +6,10 @@
  * cardio), +25 for reaching your weekly goal, and +5% for each week in a row you
  * reached it before (up to +50%). Your rank comes from your last 4 weeks.
  *
- * Strength: your best estimated one-rep max on squat, bench press and deadlift
- * in the last 90 days, added up and divided by your body weight. Only these
- * ratios are shared, never your body weight or the weights you lift.
+ * Strength: each lift's best estimated one-rep max in the last 90 days, as a
+ * multiple of body weight compared to a typical standard for that exercise
+ * (100 = a solid intermediate lifter), with your best 3 averaged. Only the
+ * scores are shared, never your body weight or the weights you lift.
  */
 import type { Exercise, Workout } from './types';
 import { e1rm, completedSets } from './utils';
@@ -130,44 +131,84 @@ export function consistency(workouts: Workout[], exById: Map<string, Exercise>, 
 }
 
 // ---------- strength ----------
-export const STRENGTH_LIFTS = [
-  { key: 'squat', id: 'preset-squat', name: 'Squat' },
-  { key: 'bench', id: 'preset-bench-press', name: 'Bench press' },
-  { key: 'deadlift', id: 'preset-deadlift', name: 'Deadlift' },
-] as const;
-export type LiftKey = (typeof STRENGTH_LIFTS)[number]['key'];
+/**
+ * A typical one-rep max for a solid intermediate lifter, as a multiple of body
+ * weight, for each exercise that counts. Comparing each lift to its own standard
+ * keeps it fair: a big leg press number isn't worth more than a deadlift.
+ * Only big multi-joint lifts count: standards for small single-muscle moves
+ * (curls, flyes, raises, leg curls) vary too much to compare fairly.
+ * Dumbbell lifts are for one dumbbell, as people log them. Pull-ups, chin-ups
+ * and dips count your body weight plus any added weight.
+ */
+export const STRENGTH_STANDARDS: Record<string, number> = {
+  // Squats and lunges
+  'preset-squat': 1.25, 'preset-front-squat': 1.0, 'preset-hack-squat': 1.5, 'preset-leg-press': 2.5,
+  'preset-goblet-squat': 0.5, 'preset-bulgarian-split-squat': 0.4, 'preset-lunge': 0.4,
+  // Hinges
+  'preset-deadlift': 1.5, 'preset-romanian-deadlift': 1.1, 'preset-dumbbell-romanian-deadlift': 0.45, 'preset-hip-thrust': 1.5,
+  // Presses
+  'preset-bench-press': 1.0, 'preset-incline-bench-press': 0.85, 'preset-close-grip-bench-press': 0.85,
+  'preset-dumbbell-bench-press': 0.4, 'preset-incline-dumbbell-press': 0.35,
+  'preset-overhead-press': 0.65, 'preset-dumbbell-shoulder-press': 0.3,
+  // Pulls
+  'preset-barbell-row': 0.9, 'preset-dumbbell-row': 0.45, 'preset-lat-pulldown': 0.85, 'preset-seated-cable-row': 0.85,
+  // Bodyweight moves: body weight plus added weight.
+  'preset-pull-up': 1.4, 'preset-chin-up': 1.45, 'preset-dips': 1.5,
+};
+const BODYWEIGHT_LIFTS = new Set(['preset-pull-up', 'preset-chin-up', 'preset-dips']);
 
-/** Highest score the database accepts (a total of 10× body weight). */
-export const MAX_STRENGTH = 1000;
+/** How many of your best lifts are averaged. */
+export const LIFTS_COUNTED = 3;
+/** Highest score a single lift (and so the average) can have. Checked by the database too. */
+export const MAX_STRENGTH = 300;
 const DAYS_COUNTED = 90;
 
-export interface Strength {
-  /** Total ÷ body weight × 100, e.g. 450 for a total of 4.5× body weight. */
+export interface LiftScore {
+  /** Exercise id. */
+  id: string;
+  /** 100 = the intermediate standard for this exercise. */
   score: number;
-  /** Each lift as a multiple of body weight (2 decimals); 0 if not done lately. */
-  ratios: Record<LiftKey, number>;
+  /** One-rep max as a multiple of body weight (2 decimals), for your own view. */
+  ratio: number;
 }
 
-/** Strength from the last 90 days, or null without a body weight. Sets of more than 12 reps don't count (estimates get unreliable). */
+export interface Strength {
+  /** Average of your best 3 lift scores (missing ones count as 0). */
+  score: number;
+  /** Your best lifts, best first (up to 3). */
+  top: LiftScore[];
+}
+
+/**
+ * Strength from the last 90 days, or null without a body weight. Each exercise's
+ * best estimated one-rep max (sets of 12 reps or fewer; warm-ups left out) is
+ * compared to body weight and to the exercise's standard, then the best 3 are averaged.
+ */
 export function strength(workouts: Workout[], bodyKg: number | undefined, now = new Date()): Strength | null {
   if (!bodyKg || bodyKg < 30) return null;
   const since = now.getTime() - DAYS_COUNTED * 86400000;
-  const best: Record<LiftKey, number> = { squat: 0, bench: 0, deadlift: 0 };
+  const best = new Map<string, number>();
   for (const w of workouts) {
     if (Date.parse(w.date) < since) continue;
     for (const ex of w.exercises) {
-      const lift = STRENGTH_LIFTS.find((l) => l.id === ex.exerciseId);
-      if (!lift) continue;
+      if (!STRENGTH_STANDARDS[ex.exerciseId]) continue;
+      const withBody = BODYWEIGHT_LIFTS.has(ex.exerciseId);
       for (const s of completedSets(ex.sets)) {
         if (s.kind === 'warmup' || s.reps > 12) continue;
-        best[lift.key] = Math.max(best[lift.key], e1rm(s));
+        const max = e1rm({ weight: withBody ? bodyKg + s.weight : s.weight, reps: s.reps });
+        if (max > (best.get(ex.exerciseId) ?? 0)) best.set(ex.exerciseId, max);
       }
     }
   }
-  const ratio = (kg: number) => Math.round((kg / bodyKg) * 100) / 100;
-  const ratios = { squat: ratio(best.squat), bench: ratio(best.bench), deadlift: ratio(best.deadlift) };
-  const score = Math.min(MAX_STRENGTH, Math.round(((best.squat + best.bench + best.deadlift) / bodyKg) * 100));
-  return { score, ratios };
+  const top = [...best.entries()]
+    .map(([id, kg]) => {
+      const ratio = kg / bodyKg;
+      return { id, ratio: Math.round(ratio * 100) / 100, score: Math.min(MAX_STRENGTH, Math.round((ratio / STRENGTH_STANDARDS[id]) * 100)) };
+    })
+    .sort((a, b) => b.score - a.score)
+    .slice(0, LIFTS_COUNTED);
+  const score = Math.round(top.reduce((n, l) => n + l.score, 0) / LIFTS_COUNTED);
+  return { score, top };
 }
 
 // ---------- names and friend codes ----------
@@ -209,7 +250,8 @@ export interface PublicEntry {
   tier: TierId;
   /** null when you haven't added your body weight. */
   strength: number | null;
-  ratios: Record<LiftKey, number> | null;
+  /** Your best lifts' scores (exercise id and score), keyed l1–l3; null without a body weight. */
+  lifts: Partial<Record<'l1' | 'l2' | 'l3', { id: string; score: number }>> | null;
 }
 
 export function publicEntry(
@@ -229,6 +271,6 @@ export function publicEntry(
     streak: Math.min(520, c.streak),
     tier: c.tier,
     strength: s ? s.score : null,
-    ratios: s ? s.ratios : null,
+    lifts: s ? Object.fromEntries(s.top.map((l, i) => [`l${i + 1}`, { id: l.id, score: l.score }])) : null,
   };
 }

@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useState } from 'react';
-import type { AppData, LeaderboardSettings } from '../types';
+import type { AppData, Exercise, LeaderboardSettings } from '../types';
 import type { Update } from '../store';
 import type { CloudSync } from '../cloud/useCloudSync';
 import type { BoardEntry } from '../cloud/firebase';
 import {
   MAX_WEEK_POINTS,
-  STRENGTH_LIFTS,
+  LIFTS_COUNTED,
   TIERS,
   checkName,
   cleanCode,
@@ -196,7 +196,7 @@ function Boards({ data, update, cloud, lb, onOpenSettings }: { data: AppData; up
         <ChipGroup label="Who to compare with" variant="segmented" kind="radio" value={scope} onChange={setScope} options={[{ value: 'friends', label: 'Friends' }, { value: 'global', label: 'Global' }]} />
       </div>
 
-      {board === 'consistency' ? <MyRank c={mine} /> : <MyStrength s={myStrength} onOpenSettings={onOpenSettings} />}
+      {board === 'consistency' ? <MyRank c={mine} /> : <MyStrength s={myStrength} exById={exById} onOpenSettings={onOpenSettings} />}
 
       <section className="card lb-list-card" aria-label={`${scope === 'friends' ? 'Friends' : 'Global'} ${board} leaderboard`}>
         <div className="card-head">
@@ -231,7 +231,7 @@ function Boards({ data, update, cloud, lb, onOpenSettings }: { data: AppData; up
       <p className="muted small lb-foot">
         {board === 'consistency'
           ? `10 points a training day, +5 for a full session (10+ sets or 20+ min cardio), +25 for reaching your weekly goal, and up to +50% for a streak. Resets every Monday; most a week can score is ${MAX_WEEK_POINTS}.`
-          : 'Your best squat, bench press and deadlift (estimated one-rep max) from the last 90 days, added up and divided by your body weight. Only these ratios are shared.'}
+          : 'Each lift’s best estimated one-rep max from the last 90 days, divided by your body weight and compared to a typical standard for that exercise (so a leg press isn’t worth more than a deadlift). Your best 3 are averaged; 100 is a solid intermediate lifter. Only the scores are shared.'}
       </p>
     </div>
   );
@@ -254,7 +254,7 @@ function Row({ e, pos, board, you, onRemove }: { e: PublicEntry & { uid: string 
           </>
         ) : (
           <>
-            <strong>{((e.strength ?? 0) / 100).toFixed(2)}×</strong> <span className="muted small">bw</span>
+            <strong>{e.strength ?? 0}</strong> <span className="muted small">score</span>
           </>
         )}
       </span>
@@ -294,7 +294,7 @@ function MyRank({ c }: { c: ReturnType<typeof consistency> }) {
   );
 }
 
-function MyStrength({ s, onOpenSettings }: { s: ReturnType<typeof strengthOf>; onOpenSettings: () => void }) {
+function MyStrength({ s, exById, onOpenSettings }: { s: ReturnType<typeof strengthOf>; exById: Map<string, Exercise>; onOpenSettings: () => void }) {
   if (!s) {
     return (
       <div className="card lb-me">
@@ -304,25 +304,35 @@ function MyStrength({ s, onOpenSettings }: { s: ReturnType<typeof strengthOf>; o
       </div>
     );
   }
+  const missing = LIFTS_COUNTED - s.top.length;
   return (
     <div className="card lb-me">
       <div className="lb-me-top">
         <span className="lb-me-icon" aria-hidden="true">💪</span>
         <div className="lb-me-text">
-          <span className="eyebrow">Your strength</span>
-          <strong className="lb-me-tier">{(s.score / 100).toFixed(2)}× body weight</strong>
-          <span className="muted small">Squat, bench press and deadlift added up</span>
+          <span className="eyebrow">Your strength score</span>
+          <strong className="lb-me-tier">{s.score}</strong>
+          <span className="muted small">Average of your best {LIFTS_COUNTED} lifts. 100 is a solid intermediate lifter for their size.</span>
         </div>
       </div>
-      <div className="lb-lifts">
-        {STRENGTH_LIFTS.map((l) => (
-          <div key={l.key}>
-            <strong>{s.ratios[l.key] ? `${s.ratios[l.key].toFixed(2)}×` : '—'}</strong>
-            <span className="muted small">{l.name}</span>
-          </div>
-        ))}
-      </div>
-      {s.score === 0 && <p className="muted small">Log a squat, bench press or deadlift (12 reps or fewer) to get a score.</p>}
+      {s.top.length > 0 && (
+        <ol className="lb-top-lifts">
+          {s.top.map((l) => (
+            <li key={l.id}>
+              <span className="lb-lift-name">{exById.get(l.id)?.name ?? 'Exercise'}</span>
+              <span className="muted small">{l.ratio.toFixed(2)}× body weight</span>
+              <strong>{l.score}</strong>
+            </li>
+          ))}
+        </ol>
+      )}
+      {missing > 0 && (
+        <p className="muted small">
+          {s.top.length === 0
+            ? 'Log a lift with weights (12 reps or fewer) to get a score: squat, bench press, deadlift, rows, pull-ups and more all count.'
+            : `Log ${missing} more lift${missing === 1 ? '' : 's'} to get your full score (missing ones count as 0).`}
+        </p>
+      )}
     </div>
   );
 }

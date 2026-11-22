@@ -65,7 +65,7 @@ test('two friends join, add each other by code and see each other on both boards
 
   // Strength: Sam has a body weight and the big three in the sample week; Alex has neither.
   await alex.locator('.chip', { hasText: 'Strength' }).click();
-  await expect(alex.locator('.lb-row', { hasText: SAM })).toContainText('× bw', { timeout: 15_000 });
+  await expect(alex.locator('.lb-row', { hasText: SAM })).toContainText('score', { timeout: 15_000 });
   await expect(alex.getByText('Add your body weight to join')).toBeVisible();
   await expect(alex.locator('.lb-row', { hasText: ALEX })).toHaveCount(0);
 
@@ -92,8 +92,11 @@ test('leaderboard rules: only your own entry, within the limits, and only for si
     const fields: Record<string, unknown> = {
       name: { stringValue: 'Alice' }, code: { stringValue: 'ABCDEF' }, weekId: { stringValue: '2026-W47' },
       points: { integerValue: '55' }, last4: { integerValue: '200' }, streak: { integerValue: '2' }, tier: { stringValue: 'gold' },
-      strength: { integerValue: '420' },
-      ratios: { mapValue: { fields: { squat: { doubleValue: 1.5 }, bench: { doubleValue: 1.1 }, deadlift: { doubleValue: 1.6 } } } },
+      strength: { integerValue: '112' },
+      lifts: { mapValue: { fields: {
+        l1: { mapValue: { fields: { id: { stringValue: 'preset-deadlift' }, score: { integerValue: '125' } } } },
+        l2: { mapValue: { fields: { id: { stringValue: 'preset-squat' }, score: { integerValue: '110' } } } },
+      } } },
       ...overrides,
     };
     return fields;
@@ -117,7 +120,12 @@ test('leaderboard rules: only your own entry, within the limits, and only for si
   expect((await write(bob.idToken, alice.localId, entry({ name: { stringValue: 'Hacked' } }))).status()).toBe(403);
   // Points, strength, names and extra fields outside the limits are refused.
   expect((await write(alice.idToken, alice.localId, entry({ points: { integerValue: '196' } }))).status()).toBe(403);
-  expect((await write(alice.idToken, alice.localId, entry({ strength: { integerValue: '5000' } }))).status()).toBe(403);
+  expect((await write(alice.idToken, alice.localId, entry({ strength: { integerValue: '301' } }))).status()).toBe(403);
+  const badLift = (fields: Record<string, unknown>) => ({ lifts: { mapValue: { fields: { l1: { mapValue: { fields } } } } } });
+  expect((await write(alice.idToken, alice.localId, entry(badLift({ id: { stringValue: 'preset-squat' }, score: { integerValue: '999' } })))).status()).toBe(403);
+  expect((await write(alice.idToken, alice.localId, entry(badLift({ id: { stringValue: '<b>hi</b>' }, score: { integerValue: '50' } })))).status()).toBe(403);
+  expect((await write(alice.idToken, alice.localId, entry(badLift({ id: { stringValue: 'preset-squat' }, score: { integerValue: '50' }, kg: { integerValue: '140' } })))).status()).toBe(403);
+  expect((await write(alice.idToken, alice.localId, entry({ ratios: { mapValue: { fields: {} } } }))).status()).toBe(403); // the old format isn't accepted
   expect((await write(alice.idToken, alice.localId, entry({ name: { stringValue: 'x' } }))).status()).toBe(403);
   expect((await write(alice.idToken, alice.localId, entry({ bodyWeight: { integerValue: '80' } }))).status()).toBe(403);
   expect((await write(alice.idToken, alice.localId, entry({ tier: { stringValue: 'legend' } }))).status()).toBe(403);
