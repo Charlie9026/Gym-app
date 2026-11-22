@@ -10,6 +10,7 @@ import { newTemplate, newWorkoutFrom, templateExercisesFrom } from '../workout';
 import { ChevronIcon, TrashIcon } from './Icons';
 import { SetPills } from './SetPills';
 import { CountUp } from './CountUp';
+import { WorkoutBody } from './BodyMap';
 import { caloriesOn, fmtKcal, workoutCalories } from '../calories';
 
 interface Props {
@@ -186,6 +187,9 @@ export function History({ data, update, onRepeat }: Props) {
                 <div className={'collapse' + (isOpen ? ' open' : '')} inert={!isOpen} aria-hidden={!isOpen}>
                   <div className="collapse-inner">
                   <div className="workout-detail">
+                    <div className="detail-body">
+                      <WorkoutBody exercises={w.exercises} exById={exById} size="large" />
+                    </div>
                     {w.exercises.map((ex, i) => (
                       <div key={i} className="detail-ex">
                         <div className="detail-ex-head">

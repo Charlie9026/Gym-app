@@ -111,3 +111,27 @@ test('rep ranges show while training, can be edited, and stay when weights carry
   const saved = (await stored(page)).templates[0].exercises[0].sets;
   expect(saved).toEqual([{ weight: 100, reps: 6, repsTo: 8 }]); // today's one set was the first working set's 6–8 slot
 });
+
+test('body diagrams show the muscles worked: saved workouts, plans and history', async ({ page }) => {
+  await openApp(page);
+  await tab(page, 'Settings');
+  await page.getByRole('button', { name: 'Load sample week' }).click();
+  await tab(page, 'Workout');
+  const legDay = page.locator('.template-card', { hasText: 'Leg day' });
+  await expect(legDay.getByRole('img', { name: /^Body diagram: works .*quads/ })).toBeVisible();
+  await expect(legDay.locator('.bm-muscle.on').first()).toBeVisible();
+  await expect(page.locator('.template-card', { hasText: 'Chest and arms' }).getByRole('img', { name: /works .*chest/ })).toBeVisible();
+
+  await page.getByRole('button', { name: 'Build a plan' }).click();
+  for (const c of [/^Build muscle/, /^A bit/, /^4 days/, /^About 45 minutes/, /^A full gym/]) await choose(page, c);
+  await page.getByRole('button', { name: 'Nothing to avoid, show my plan' }).click();
+  // Upper days light up the upper body, lower days the legs.
+  await expect(page.locator('.plan-workout', { hasText: 'Upper A' }).getByRole('img', { name: /works .*chest/ })).toBeVisible();
+  await expect(page.locator('.plan-workout', { hasText: 'Lower A' }).getByRole('img', { name: /works .*quads/ })).toBeVisible();
+  await page.getByRole('button', { name: 'Back' }).click();
+  await page.getByRole('button', { name: 'Back' }).click();
+
+  await tab(page, 'History');
+  await page.locator('.workout-head').first().click();
+  await expect(page.locator('.workout-card').first().locator('.body-map.large')).toBeVisible();
+});

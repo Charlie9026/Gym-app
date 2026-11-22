@@ -3,6 +3,7 @@ import { useMemo } from 'react';
 import type { AppData, WorkoutTemplate } from '../types';
 import { fmtWeight, workoutVolume } from '../utils';
 import { relativeDay } from '../workout';
+import { WorkoutBody } from './BodyMap';
 import { caloriesOn, workoutCalories } from '../calories';
 import { ChevronIcon, EditIcon, PlayIcon, PlusIcon, SparkleIcon } from './Icons';
 
@@ -171,18 +172,23 @@ export function WorkoutHome({ data, onStartEmpty, onStartTemplate, onEdit, onBui
                       <EditIcon />
                     </button>
                   </div>
-                  {muscles.length > 0 && (
-                    <div className="tags">
-                      {muscles.slice(0, 4).map((m) => (
-                        <span className="tag" key={m}>{m}</span>
-                      ))}
+                  <div className="tpl-body">
+                    <div className="tpl-text">
+                      {muscles.length > 0 && (
+                        <div className="tags">
+                          {muscles.slice(0, 4).map((m) => (
+                            <span className="tag" key={m}>{m}</span>
+                          ))}
+                        </div>
+                      )}
+                      <p className="tpl-exercises muted small">
+                        {names.length === 0
+                          ? 'No exercises yet. Tap edit to add some.'
+                          : names.slice(0, 3).join(' · ') + (names.length > 3 ? ` · +${names.length - 3} more` : '')}
+                      </p>
                     </div>
-                  )}
-                  <p className="tpl-exercises muted small">
-                    {names.length === 0
-                      ? 'No exercises yet. Tap edit to add some.'
-                      : names.slice(0, 3).join(' · ') + (names.length > 3 ? ` · +${names.length - 3} more` : '')}
-                  </p>
+                    {t.exercises.length > 0 && <WorkoutBody exercises={t.exercises} exById={exById} />}
+                  </div>
                   <div className="tpl-foot">
                     <span className="muted small">{u ? `Last done ${relativeDay(u.last)}` : 'Not done yet'}</span>
                     <button

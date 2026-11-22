@@ -10,6 +10,7 @@ import { MUSCLE_CODE } from '../exercises';
 import type { TemplateSet } from '../types';
 import { useSlidingHighlight } from '../slidingHighlight';
 import { BackIcon } from './Icons';
+import { WorkoutBody } from './BodyMap';
 
 interface Choice<T> {
   value: T;
@@ -205,7 +206,7 @@ export function PlanBuilder({ data, update, onClose }: { data: AppData; update: 
                     <span className="eyebrow">Workout {i + 1} of {plan.workouts.length}</span>
                     <h3>{w.name}</h3>
                   </span>
-                  <span className="muted small">{w.exercises.length} exercises</span>
+                  <WorkoutBody exercises={w.exercises} exById={exById} />
                 </header>
                 <ul className="plan-list">
                   {w.exercises.map((e) => {

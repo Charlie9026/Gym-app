@@ -665,3 +665,18 @@
 .stopwatch-bar .row-actions { flex: none; }
 .stopwatch-bar.stacked { bottom: calc(92px + 64px + env(safe-area-inset-bottom, 0px)); }
 .target-chip { display: inline-flex; align-items: center; padding: 4px 10px; border-radius: 999px; font-size: 0.74rem; font-weight: 700; color: var(--accent); background: var(--accent-soft); }
+
+/* Body diagram: grey figures, worked muscles in the theme colour */
+.body-map { display: flex; gap: 2px; flex: none; }
+.body-map.small .bm-figure { width: 34px; height: 68px; }
+.body-map.large { gap: 10px; }
+.body-map.large .bm-figure { width: 60px; height: 120px; }
+.bm-figure { display: block; overflow: visible; }
+.bm-skin { fill: color-mix(in srgb, var(--muted) 26%, transparent); }
+.bm-muscle {
+  fill: color-mix(in srgb, var(--muted) 42%, transparent);
+  stroke: var(--bg); stroke-width: 0.6; stroke-opacity: 0.5;
+  transition: fill 0.4s ease, fill-opacity 0.4s ease;
+}
+.bm-muscle.on { fill: var(--accent); filter: drop-shadow(0 0 2px var(--accent-glow)); animation: bm-in 0.6s cubic-bezier(0.34, 1.56, 0.64, 1) both; }
+@keyframes bm-in { from { fill-opacity: 0; } }
