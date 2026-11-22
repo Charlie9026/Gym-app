@@ -15,7 +15,7 @@ export default defineConfig({
     serviceWorkers: 'block',
   },
   webServer: {
-    command: 'VITE_FIREBASE_EMULATOR=1 npx vite build --outDir dist-sync && npx vite preview --outDir dist-sync --port 4174 --strictPort',
+    command: 'VITE_FIREBASE_EMULATOR=1 VITE_OWNER_EMAIL_SHA256=c8cd3c6427301eaf6665bccacd65ddb614527acc843a15463e3faba57124c351 npx vite build --outDir dist-sync && npx vite preview --outDir dist-sync --port 4174 --strictPort',
     url: 'http://localhost:4174/',
     reuseExistingServer: false,
     timeout: 120_000,

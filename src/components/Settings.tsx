@@ -10,10 +10,13 @@ import { requestNotify } from '../restAlert';
 import { REST_OPTIONS, restLabel } from '../sets';
 import { isEmbedded } from '../env';
 import { CloudCard } from './CloudCard';
+import { useIsOwner } from '../owner';
 import type { CloudSync } from '../cloud/useCloudSync';
 import { addDemoWeek, hasDemoData, removeDemoWeek } from '../demo';
 
 export function Settings({ data, update, cloud }: { data: AppData; update: Update; cloud: CloudSync }) {
+  // Backup, sample data and reset are only shown to the app's owner.
+  const owner = useIsOwner(cloud.user?.email);
   const fileRef = useRef<HTMLInputElement>(null);
   const [pasting, setPasting] = useState(false);
   const [pasted, setPasted] = useState('');
@@ -168,116 +171,120 @@ export function Settings({ data, update, cloud }: { data: AppData; update: Updat
 
       <CloudCard cloud={cloud} />
 
-      <div className="card">
-        <h3>Backup</h3>
-        <p className="muted small">
-          Your data lives only in this browser. Back it up now and then so you don’t lose it.
-        </p>
-        {protection !== 'unknown' && !isEmbedded && (
-          <div className={'protect-row' + (protection === 'protected' ? ' ok' : '')}>
-            <span className="protect-dot" aria-hidden="true" />
-            <span className="small">
-              {protection === 'protected'
-                ? 'Storage protected: your browser won’t clear this data when space runs low.'
-                : 'Storage not protected yet: your browser may clear this data if your phone runs low on space.'}
-            </span>
-            {protection !== 'protected' && (
-              <button className="btn-ghost small-btn" onClick={() => void requestStorageProtection().then((r) => {
-                setProtection(r);
-                notify(r === 'protected' ? 'Storage protected' : 'Your browser didn’t allow it yet. Adding the app to your home screen usually does.');
-              })}>
-                Protect
+      {owner && (
+        <>
+        <div className="card">
+          <h3>Backup</h3>
+          <p className="muted small">
+            Your data lives only in this browser. Back it up now and then so you don’t lose it.
+          </p>
+          {protection !== 'unknown' && !isEmbedded && (
+            <div className={'protect-row' + (protection === 'protected' ? ' ok' : '')}>
+              <span className="protect-dot" aria-hidden="true" />
+              <span className="small">
+                {protection === 'protected'
+                  ? 'Storage protected: your browser won’t clear this data when space runs low.'
+                  : 'Storage not protected yet: your browser may clear this data if your phone runs low on space.'}
+              </span>
+              {protection !== 'protected' && (
+                <button className="btn-ghost small-btn" onClick={() => void requestStorageProtection().then((r) => {
+                  setProtection(r);
+                  notify(r === 'protected' ? 'Storage protected' : 'Your browser didn’t allow it yet. Adding the app to your home screen usually does.');
+                })}>
+                  Protect
+                </button>
+              )}
+            </div>
+          )}
+          <div className="finish-row">
+            {!isEmbedded && <button className="btn-secondary" onClick={exportData}>Export JSON</button>}
+            <button className="btn-secondary" onClick={copyData}>Copy backup</button>
+            <button className="btn-secondary" onClick={() => fileRef.current?.click()}>Import JSON</button>
+            <button className="btn-secondary" onClick={() => setPasting((p) => !p)} aria-expanded={pasting}>Paste backup</button>
+          </div>
+          <div className={'collapse' + (pasting ? ' open' : '')} inert={!pasting} aria-hidden={!pasting}>
+            <div className="collapse-inner">
+              <div className="paste-box">
+                <label htmlFor="paste-backup" className="muted small">
+                  Paste the text you copied with “Copy backup” on your other copy of the app.
+                </label>
+                <textarea
+                  id="paste-backup"
+                  className="notes"
+                  placeholder="Paste backup here…"
+                  value={pasted}
+                  onChange={(e) => setPasted(e.target.value)}
+                />
+                <button className="btn-primary" disabled={!pasted.trim()} onClick={() => restore(pasted, 'paste')}>
+                  Restore from pasted backup
+                </button>
+              </div>
+            </div>
+          </div>
+          <input
+            ref={fileRef}
+            type="file"
+            accept="application/json,.json"
+            hidden
+            onChange={(e) => {
+              const f = e.target.files?.[0];
+              if (f) importData(f);
+              e.target.value = '';
+            }}
+          />
+        </div>
+
+        <div className="card">
+          <h3>Sample data</h3>
+          <p className="muted small">
+            Fill the app with a sample week: chest and arms, back and shoulders, and leg days twice each, with Thursday
+            off. It also adds the three as saved workouts. You can remove it again here.
+          </p>
+          <div className="finish-row">
+            {hasDemoData(data) ? (
+              <button
+                className="btn-secondary"
+                onClick={async () => {
+                  const ok = await ask('Remove the sample week and its saved workouts?', {
+                    confirmLabel: 'Remove',
+                    detail: 'Workouts you logged yourself are kept.',
+                  });
+                  if (!ok) return;
+                  update(removeDemoWeek);
+                  notify('Sample week removed');
+                }}
+              >
+                Remove sample week
+              </button>
+            ) : (
+              <button
+                className="btn-secondary"
+                onClick={() => {
+                  update(addDemoWeek);
+                  notify('Sample week added. Check the Workout and Progress tabs.');
+                }}
+              >
+                Load sample week
               </button>
             )}
           </div>
-        )}
-        <div className="finish-row">
-          {!isEmbedded && <button className="btn-secondary" onClick={exportData}>Export JSON</button>}
-          <button className="btn-secondary" onClick={copyData}>Copy backup</button>
-          <button className="btn-secondary" onClick={() => fileRef.current?.click()}>Import JSON</button>
-          <button className="btn-secondary" onClick={() => setPasting((p) => !p)} aria-expanded={pasting}>Paste backup</button>
         </div>
-        <div className={'collapse' + (pasting ? ' open' : '')} inert={!pasting} aria-hidden={!pasting}>
-          <div className="collapse-inner">
-            <div className="paste-box">
-              <label htmlFor="paste-backup" className="muted small">
-                Paste the text you copied with “Copy backup” on your other copy of the app.
-              </label>
-              <textarea
-                id="paste-backup"
-                className="notes"
-                placeholder="Paste backup here…"
-                value={pasted}
-                onChange={(e) => setPasted(e.target.value)}
-              />
-              <button className="btn-primary" disabled={!pasted.trim()} onClick={() => restore(pasted, 'paste')}>
-                Restore from pasted backup
-              </button>
-            </div>
-          </div>
-        </div>
-        <input
-          ref={fileRef}
-          type="file"
-          accept="application/json,.json"
-          hidden
-          onChange={(e) => {
-            const f = e.target.files?.[0];
-            if (f) importData(f);
-            e.target.value = '';
-          }}
-        />
-      </div>
 
-      <div className="card">
-        <h3>Sample data</h3>
-        <p className="muted small">
-          Fill the app with a sample week: chest and arms, back and shoulders, and leg days twice each, with Thursday
-          off. It also adds the three as saved workouts. You can remove it again here.
-        </p>
-        <div className="finish-row">
-          {hasDemoData(data) ? (
-            <button
-              className="btn-secondary"
-              onClick={async () => {
-                const ok = await ask('Remove the sample week and its saved workouts?', {
-                  confirmLabel: 'Remove',
-                  detail: 'Workouts you logged yourself are kept.',
-                });
-                if (!ok) return;
-                update(removeDemoWeek);
-                notify('Sample week removed');
-              }}
-            >
-              Remove sample week
-            </button>
-          ) : (
-            <button
-              className="btn-secondary"
-              onClick={() => {
-                update(addDemoWeek);
-                notify('Sample week added. Check the Workout and Progress tabs.');
-              }}
-            >
-              Load sample week
-            </button>
-          )}
+        <div className="card">
+          <h3>Danger zone</h3>
+          <button
+            className="btn-danger"
+            onClick={() =>
+              ask('Delete ALL workouts and custom exercises? This cannot be undone.', { confirmLabel: 'Delete everything' }).then(
+                (ok) => ok && update((d) => ({ ...emptyData(), settings: d.settings })),
+              )
+            }
+          >
+            Reset all data
+          </button>
         </div>
-      </div>
-
-      <div className="card">
-        <h3>Danger zone</h3>
-        <button
-          className="btn-danger"
-          onClick={() =>
-            ask('Delete ALL workouts and custom exercises? This cannot be undone.', { confirmLabel: 'Delete everything' }).then(
-              (ok) => ok && update((d) => ({ ...emptyData(), settings: d.settings })),
-            )
-          }
-        >
-          Reset all data
-        </button>
-      </div>
+        </>
+      )}
     </div>
   );
 }

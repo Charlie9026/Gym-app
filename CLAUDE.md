@@ -21,6 +21,7 @@ CI (`.github/workflows/deploy.yml`): test → build → deploy. All must pass be
 - `src/store.ts`: data in localStorage via `update(fn)`. `src/types.ts`: data shapes
 - `src/sets.ts`: exercise types (weight/reps/time/distance), warm-up sets
 - `src/workout.ts`, `src/utils.ts`: workout maths, formatting
+- `src/owner.ts`: `useIsOwner`, which decides who sees the Backup, Sample data and Danger zone cards in Settings (the owner's signed-in email, checked by hash, or the owner of the claude.ai copy). e2e tests act as owner unless `openApp(page, { owner: false })`
 - `src/dialog.ts`: `ask`, `askText`, `notify(msg, { undo })`. Use these, never `alert`/`confirm`
 - `src/slidingHighlight.ts`: the springy sliding pill used by the tab bar and every ChipGroup
 - `src/cloud/`: sync engine (`records.ts`, pure and unit-tested), `firebase.ts`, `useCloudSync.ts`, `config.ts` (public web config, project `overload-b750c`)

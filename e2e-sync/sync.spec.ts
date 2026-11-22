@@ -160,3 +160,19 @@ test('first open: creating an account on the welcome screen backs up and closes 
   await expect(page.locator('.tabbar')).toBeVisible();
   await expect(page.getByRole('dialog', { name: 'Overload' })).toHaveCount(0);
 });
+
+test('only the owner’s account sees backup, sample data and reset', async ({ browser }) => {
+  // This build treats owner@example.com as the owner (see playwright.sync.config.ts).
+  const titles = ['Backup', 'Sample data', 'Danger zone'];
+  const someoneElse = await (await browser.newContext()).newPage();
+  await openApp(someoneElse, { owner: false });
+  await signUp(someoneElse, newEmail());
+  for (const t of titles) await expect(someoneElse.getByRole('heading', { name: t, exact: true })).toHaveCount(0);
+
+  const owner = await (await browser.newContext()).newPage();
+  await openApp(owner, { owner: false });
+  await tab(owner, 'Settings');
+  for (const t of titles) await expect(owner.getByRole('heading', { name: t, exact: true })).toHaveCount(0);
+  await signUp(owner, 'owner@example.com');
+  for (const t of titles) await expect(owner.getByRole('heading', { name: t, exact: true })).toBeVisible();
+});

@@ -48,3 +48,16 @@ test('paste a backup to restore data', async ({ page }) => {
   await answerDialog(page, 'Replace');
   expect((await stored(page)).workouts).toHaveLength(6);
 });
+
+test('backup, sample data and reset only show for the owner', async ({ page }) => {
+  await openApp(page, { owner: false });
+  await tab(page, 'Settings');
+  await expect(page.locator('.cloud-card')).toBeVisible();
+  for (const title of ['Backup', 'Sample data', 'Danger zone']) await expect(page.getByRole('heading', { name: title, exact: true })).toHaveCount(0);
+});
+
+test('the owner sees backup, sample data and reset', async ({ page }) => {
+  await openApp(page);
+  await tab(page, 'Settings');
+  for (const title of ['Backup', 'Sample data', 'Danger zone']) await expect(page.getByRole('heading', { name: title, exact: true })).toBeVisible();
+});

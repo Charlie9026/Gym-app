@@ -5,7 +5,7 @@ export const STORAGE_KEY = 'gym-app-data-v1';
 /** Open the app with a fresh (or given) data set. Seeding happens only once per test. */
 export async function openApp(
   page: Page,
-  opts: { theme?: string; data?: Record<string, unknown>; settings?: Record<string, unknown>; welcome?: boolean } = {},
+  opts: { theme?: string; data?: Record<string, unknown>; settings?: Record<string, unknown>; welcome?: boolean; owner?: boolean } = {},
 ) {
   const seed = opts.data ?? {
     version: 1,
@@ -15,6 +15,8 @@ export async function openApp(
     activeWorkout: null,
     settings: { unit: 'kg', theme: opts.theme ?? 'D1', ...(opts.settings ?? {}) },
   };
+  // Most tests act as the owner, who sees the Backup, Sample data and Danger zone cards.
+  if (opts.owner !== false) await page.addInitScript(() => Object.assign(window, { __overloadTestOwner: true }));
   await page.addInitScript(
     ([key, value, skipWelcome]) => {
       if (!sessionStorage.getItem('e2e-seeded')) {
