@@ -73,6 +73,12 @@ describe('calories', () => {
     expect(cardioEstimate(ex, exById.get('preset-stair-climber'), undefined)).toBeNull();
     expect(cardioEstimate(ex, exById.get('preset-stair-climber'), 70)).toBe(Math.round(9 * 70 * (20 / 60)));
   });
+  it('estimates stair climbing from time, or from steps when no time is logged', () => {
+    const climb = (p: Partial<SetEntry>) =>
+      workoutCalories(workout([{ exerciseId: 'preset-stair-climber', sets: [set(p)] }]), exById, 70).total;
+    expect(climb({ reps: 1400, seconds: 1200 })).toBe(Math.round(9 * 70 * (20 / 60))); // the time counts when there is one
+    expect(climb({ reps: 1400 })).toBe(Math.round(9 * 70 * (20 / 60))); // 1,400 steps at 70 a minute = 20 minutes
+  });
   it('is on unless switched off', () => {
     expect(caloriesOn({})).toBe(true);
     expect(caloriesOn({ showCalories: false })).toBe(false);

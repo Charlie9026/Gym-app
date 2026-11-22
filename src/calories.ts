@@ -109,8 +109,12 @@ function metAt(a: Activity, mPerMin: number): number {
 }
 
 /** Seconds a set of a timed or distance exercise took (estimated from distance when no time was logged). */
+/** Steps a minute on a stair climber, to estimate the time when only steps were logged. */
+const STEPS_PER_MIN = 70;
+
 function setSeconds(s: SetEntry, a: Activity): number {
   if (s.seconds) return s.seconds;
+  if (s.reps > 0 && !s.meters) return (s.reps / STEPS_PER_MIN) * 60; // steps exercises keep steps in reps
   const kmh = TYPICAL_KMH[a];
   return s.meters && kmh ? (s.meters / 1000 / kmh) * 3600 : 0;
 }
@@ -169,7 +173,7 @@ export const fmtKcal = (n: number) => `${Math.round(n).toLocaleString()} kcal`;
 export function isCardio(ex: Exercise | undefined): boolean {
   if (!ex) return false;
   const t = typeOf(ex);
-  return t === 'distance' || (t === 'time' && activityOf(ex) !== 'hold');
+  return t === 'distance' || t === 'steps' || (t === 'time' && activityOf(ex) !== 'hold');
 }
 
 /** The exercise with its typed-in calories set, or removed (back to the estimate). */

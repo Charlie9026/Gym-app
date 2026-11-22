@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { loadSampleWeek, openApp, pickProgressExercise, skipRest, tab } from './helpers.ts';
+import { loadSampleWeek, openApp, pickProgressExercise, skipRest, stored, tab } from './helpers.ts';
 
 test('timed exercise: time column, m:ss entry and a PR', async ({ page }) => {
   await openApp(page);
@@ -96,7 +96,7 @@ test('cardio presets: pick from the Cardio group and log a swim and a stair clim
   await page.getByPlaceholder('Search or create…').fill('stair');
   await page.getByRole('button', { name: /^Stair Climber/ }).click();
   const stairs = page.locator('.card', { hasText: 'Stair Climber' });
-  await expect(stairs.locator('.st-head')).toHaveText(/SET\s*PREVIOUS\s*TIME/i);
+  await expect(stairs.locator('.st-head')).toHaveText(/SET\s*PREVIOUS\s*STEPS\s*TIME/i);
   await stairs.getByLabel('Stair Climber set 1 time').fill('12:00');
   await stairs.getByRole('button', { name: 'Mark Stair Climber set 1 done' }).click();
   await skipRest(page);
@@ -106,4 +106,39 @@ test('cardio presets: pick from the Cardio group and log a swim and a stair clim
   await tab(page, 'History');
   await expect(page.locator('.ex-summary').first()).toContainText('1.5 km in 30:00');
   await expect(page.locator('.ex-summary').first()).toContainText('12:00');
+});
+
+test('stair climber logs steps as well as time', async ({ page }) => {
+  const d0 = new Date(Date.now() - 86400000).toISOString();
+  // An existing user whose Stair Climber was saved as a timed exercise, with a past session.
+  await openApp(page, {
+    data: {
+      version: 1, templates: [], activeWorkout: null, settings: { unit: 'kg', theme: 'D1' },
+      exercises: [{ id: 'preset-stair-climber', name: 'Stair Climber', muscle: 'Cardio', type: 'time' }],
+      workouts: [{ id: 'old', date: d0, name: 'Cardio', notes: '', exercises: [{ exerciseId: 'preset-stair-climber', sets: [{ weight: 0, reps: 0, seconds: 600, done: true }] }] }],
+    },
+  });
+  await tab(page, 'Workout');
+  await page.locator('.start-empty').click();
+  await page.getByRole('button', { name: /Add exercise/ }).click();
+  await page.getByPlaceholder('Search or create…').fill('stair');
+  await page.getByRole('button', { name: /^Stair Climber/ }).click();
+  const stairs = page.locator('.card', { hasText: 'Stair Climber' });
+  await expect(stairs.locator('.st-prev').first()).toHaveText('10:00'); // last time's time still shows
+  await stairs.getByRole('button', { name: 'Mark Stair Climber set 1 done' }).click(); // accepts the faded 10:00
+  await stairs.getByRole('button', { name: 'Mark Stair Climber set 1 not done' }).click();
+  await stairs.getByLabel('Stair Climber set 1 steps').fill('1200');
+  await stairs.getByLabel('Stair Climber set 1 time').fill('15:00');
+  await stairs.getByRole('button', { name: 'Mark Stair Climber set 1 done' }).click();
+  await skipRest(page);
+  await page.getByRole('button', { name: 'Finish workout' }).click();
+  await page.getByRole('alertdialog').getByRole('button', { name: 'Not now' }).click();
+  await expect(page.locator('.banner')).toContainText('Stair Climber: most steps 1,200');
+  await expect(page.locator('.ex-summary').first()).toContainText('1,200 steps in 15:00');
+  expect((await stored(page)).workouts.at(-1).exercises[0].sets[0]).toMatchObject({ reps: 1200, seconds: 900 });
+
+  await tab(page, 'Progress');
+  await expect(page.locator('.neu-card', { hasText: 'Most steps' })).toContainText('1,200');
+  await expect(page.locator('.neu-card', { hasText: 'Best rate' })).toContainText('80');
+  await expect(page.locator('.set-pill').first()).toHaveText('1,200 steps · 15:00');
 });

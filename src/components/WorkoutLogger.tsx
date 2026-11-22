@@ -47,6 +47,7 @@ const MISSING_VALUE: Record<ExerciseType, string> = {
   reps: 'Enter the reps for this set first.',
   time: 'Enter a time for this set first.',
   distance: 'Enter a distance or time for this set first.',
+  steps: 'Enter the steps or a time for this set first.',
 };
 
 function useElapsed(startIso: string) {
@@ -333,7 +334,7 @@ function ActiveWorkout({
               onAdd={() => setExercise(exIdx, (e) => ({ ...e, sets: [...e.sets, { weight: 0, reps: 0, done: false }] }))}
               timingIndex={timing?.exIdx === exIdx ? timing.setIdx : undefined}
             />
-            {(type === 'time' || type === 'distance') && !active.stopwatch && (
+            {(type === 'time' || type === 'distance' || type === 'steps') && !active.stopwatch && (
               <button
                 className="btn-secondary stopwatch-start"
                 onClick={() => {
@@ -407,6 +408,9 @@ function findPRs(
       if (best(now, (s) => s.reps) > best(prior, (s) => s.reps)) prs.push(`${name}: most reps ${best(now, (s) => s.reps)}`);
     } else if (type === 'time') {
       if (best(now, (s) => s.seconds ?? 0) > best(prior, (s) => s.seconds ?? 0)) prs.push(`${name}: longest ${fmtTime(best(now, (s) => s.seconds ?? 0))}`);
+    } else if (type === 'steps') {
+      if (best(now, (s) => s.reps) > best(prior, (s) => s.reps)) prs.push(`${name}: most steps ${best(now, (s) => s.reps).toLocaleString()}`);
+      else if (best(now, (s) => s.seconds ?? 0) > best(prior, (s) => s.seconds ?? 0)) prs.push(`${name}: longest ${fmtTime(best(now, (s) => s.seconds ?? 0))}`);
     } else {
       const far = (s: SetEntry) => s.meters ?? 0;
       const pace = (s: SetEntry) => paceOf(s, u) || Infinity;

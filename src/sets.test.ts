@@ -87,6 +87,17 @@ describe('exercise types', () => {
     expect(toDistDisplay(91.44, 'yd')).toBe(100);
     expect(fromDistDisplay(100, 'yd')).toBeCloseTo(91.44);
   });
+  it('describes steps sets and their measures', () => {
+    const KG = { weight: 'kg', distance: 'km' } as const;
+    expect(setText(set({ reps: 1200, seconds: 900 }), 'steps', KG)).toBe('1,200 steps in 15:00');
+    expect(setText(set({ reps: 800 }), 'steps', KG)).toBe('800 steps');
+    expect(setText(set({ seconds: 600 }), 'steps', KG)).toBe('10:00');
+    expect(hasValue(set({ seconds: 600 }), 'steps')).toBe(true);
+    expect(hasValue(set({ reps: 500 }), 'steps')).toBe(true);
+    expect(hasValue(set({}), 'steps')).toBe(false);
+    const rate = MEASURES.steps.find((m) => m.id === 'stepRate')!;
+    expect(rate.value([set({ reps: 1200, seconds: 900 }), set({ reps: 300 })], KG)).toBe(80); // the steps-only set is left out
+  });
   it('converts distances between km/mi and metres', () => {
     expect(toDistDisplay(1609.344, 'mi')).toBe(1);
     expect(fromDistDisplay(5, 'km')).toBe(5000);

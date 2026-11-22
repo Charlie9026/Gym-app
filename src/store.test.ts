@@ -34,12 +34,16 @@ describe('migrate', () => {
     const d = migrate({ ...base(), exercises: [{ id: 'preset-running', name: 'Running', muscle: 'Cardio', type: 'distance' }] });
     const find = (id: string) => d.exercises.find((e) => e.id === id);
     expect(find('preset-swimming')).toMatchObject({ muscle: 'Cardio', type: 'distance' });
-    expect(find('preset-stair-climber')).toMatchObject({ muscle: 'Cardio', type: 'time' });
+    expect(find('preset-stair-climber')).toMatchObject({ muscle: 'Cardio', type: 'steps' });
   });
   it("doesn't add a preset when a custom exercise already has that name", () => {
     const d = migrate({ ...base(), exercises: [{ id: 'mine', name: 'swimming ', muscle: 'Other', custom: true }] });
     expect(d.exercises.filter((e) => e.name.trim().toLowerCase() === 'swimming').map((e) => e.id)).toEqual(['mine']);
     expect(migrate(d).exercises).toHaveLength(d.exercises.length);
+  });
+  it('moves a saved Stair Climber to logging steps, keeping its rest time', () => {
+    const d = migrate({ ...base(), exercises: [{ id: 'preset-stair-climber', name: 'Stair Climber', muscle: 'Cardio', type: 'time', restSeconds: 60 }] });
+    expect(d.exercises.find((e) => e.id === 'preset-stair-climber')).toMatchObject({ type: 'steps', restSeconds: 60 });
   });
   it('sorts workouts by date', () => {
     const w = (id: string, date: string) => ({ id, date, name: id, notes: '', exercises: [] });

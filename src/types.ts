@@ -35,8 +35,9 @@ export const MUSCLE_GROUPS: MuscleGroup[] = [
  * - reps: reps only, bodyweight (e.g. Push-Up)
  * - time: a duration (e.g. Plank)
  * - distance: distance and time (e.g. Running)
+ * - steps: steps and time (e.g. Stair Climber); steps are kept in the set's `reps`
  */
-export type ExerciseType = 'weight' | 'reps' | 'time' | 'distance';
+export type ExerciseType = 'weight' | 'reps' | 'time' | 'distance' | 'steps';
 
 export interface Exercise {
   id: string;

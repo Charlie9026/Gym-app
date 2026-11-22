@@ -70,6 +70,7 @@ export function startingSets(data: AppData, exerciseId: string, type: ExerciseTy
   if (last.length) return last.map(({ weight, reps, seconds, meters, kind }) => ({ weight, reps, seconds, meters, kind }));
   if (type === 'time') return [{ weight: 0, reps: 0, seconds: 30 }, { weight: 0, reps: 0, seconds: 30 }];
   if (type === 'distance') return [{ weight: 0, reps: 0, meters: 0, seconds: 0 }];
+  if (type === 'steps') return [{ weight: 0, reps: 0, seconds: 0 }];
   const reps = type === 'reps' ? 10 : 8;
   return [0, 1, 2].map(() => ({ weight: 0, reps }));
 }

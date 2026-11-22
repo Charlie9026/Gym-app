@@ -66,7 +66,7 @@ const presets: [string, MuscleGroup, ExerciseType?][] = [
   ['Swimming', 'Cardio', 'distance'],
   ['Ski Erg', 'Cardio', 'distance'],
   ['Air Bike', 'Cardio', 'distance'],
-  ['Stair Climber', 'Cardio', 'time'],
+  ['Stair Climber', 'Cardio', 'steps'],
 ];
 
 export const PRESET_EXERCISES: Exercise[] = presets.map(([name, muscle, type]) => ({
@@ -80,11 +80,29 @@ export const PRESET_EXERCISES: Exercise[] = presets.map(([name, muscle, type]) =
  * Adds any presets the list is missing (e.g. ones added in an app update),
  * unless the person already made their own exercise with the same name.
  */
-export function withPresets(exercises: Exercise[]): Exercise[] {
+export function withPresets(saved: Exercise[]): Exercise[] {
+  const exercises = upgradePresets(saved);
   const ids = new Set(exercises.map((e) => e.id));
   const names = new Set(exercises.map((e) => e.name.trim().toLowerCase()));
   const missing = PRESET_EXERCISES.filter((p) => !ids.has(p.id) && !names.has(p.name.toLowerCase()));
   return missing.length ? [...exercises, ...missing] : exercises;
+}
+
+/** Presets whose way of logging changed in an update: [id, old type, new type]. */
+const TYPE_UPGRADES: [string, ExerciseType, ExerciseType][] = [
+  ['preset-stair-climber', 'time', 'steps'], // now logs steps as well as time; past times still count
+];
+
+/** Move saved presets to their new way of logging (the same list back if nothing changed). */
+function upgradePresets(exercises: Exercise[]): Exercise[] {
+  let changed = false;
+  const next = exercises.map((e) => {
+    const up = TYPE_UPGRADES.find(([id, from]) => id === e.id && (e.type ?? 'weight') === from);
+    if (!up) return e;
+    changed = true;
+    return { ...e, type: up[2] };
+  });
+  return changed ? next : exercises;
 }
 
 /** Two-letter codes shown in muscle badges. */

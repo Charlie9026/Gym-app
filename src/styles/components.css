@@ -430,10 +430,10 @@
 
 .m-log.t-time .st-row     { grid-template-columns: 34px minmax(0, 1fr) 96px 38px; }
 
-.m-log.t-distance .st-row { grid-template-columns: 34px minmax(0, 1fr) 64px 76px 38px; }
+.m-log.t-distance .st-row, .m-log.t-steps .st-row { grid-template-columns: 34px minmax(0, 1fr) 64px 76px 38px; }
 
 /* edit: set | fields */
-.m-edit.t-weight .st-row, .m-edit.t-distance .st-row { grid-template-columns: 34px 1fr 1fr; }
+.m-edit.t-weight .st-row, .m-edit.t-distance .st-row, .m-edit.t-steps .st-row { grid-template-columns: 34px 1fr 1fr; }
 
 .m-edit.t-reps .st-row, .m-edit.t-time .st-row { grid-template-columns: 34px 1fr; }
 
@@ -442,7 +442,7 @@
   .st-head { font-size: .6rem; letter-spacing: .04em; }
   .m-log.t-weight .st-row   { grid-template-columns: 28px minmax(0, 1fr) 56px 46px 36px; }
   .m-log.t-reps .st-row, .m-log.t-time .st-row { grid-template-columns: 28px minmax(0, 1fr) 84px 36px; }
-  .m-log.t-distance .st-row { grid-template-columns: 28px minmax(0, 1fr) 52px 64px 36px; }
+  .m-log.t-distance .st-row, .m-log.t-steps .st-row { grid-template-columns: 28px minmax(0, 1fr) 52px 64px 36px; }
   .check { width: 36px; height: 36px; }
 }
 

@@ -13,6 +13,7 @@ export const EXERCISE_TYPES: { value: ExerciseType; label: string }[] = [
   { value: 'reps', label: 'Reps only' },
   { value: 'time', label: 'Time' },
   { value: 'distance', label: 'Distance' },
+  { value: 'steps', label: 'Steps' },
 ];
 
 export const typeOf = (ex?: Pick<Exercise, 'type'>): ExerciseType => ex?.type ?? 'weight';
@@ -23,6 +24,7 @@ export const workingSets = <T extends AnySet>(sets: T[]): T[] => sets.filter((s)
 export function hasValue(s: AnySet, type: ExerciseType): boolean {
   if (type === 'time') return (s.seconds ?? 0) > 0;
   if (type === 'distance') return (s.meters ?? 0) > 0 || (s.seconds ?? 0) > 0;
+  if (type === 'steps') return s.reps > 0 || (s.seconds ?? 0) > 0;
   return s.reps > 0;
 }
 
@@ -107,6 +109,12 @@ export function setParts(s: AnySet, type: ExerciseType, units: Units): SetPart[]
     if (s.seconds) parts.push({ value: fmtTime(s.seconds), unit: parts.length ? 'time' : undefined });
     return parts.length ? parts : [{ value: '0', unit: dist }];
   }
+  if (type === 'steps') {
+    const parts: SetPart[] = [];
+    if (s.reps) parts.push({ value: s.reps.toLocaleString(), unit: s.reps === 1 ? 'step' : 'steps' });
+    if (s.seconds) parts.push({ value: fmtTime(s.seconds), unit: parts.length ? 'time' : undefined });
+    return parts.length ? parts : [{ value: '0', unit: 'steps' }];
+  }
   const reps = { value: String(s.reps), unit: s.reps === 1 ? 'rep' : 'reps' };
   if (type === 'weight' && s.weight > 0) return [{ value: n(toDisplay(s.weight, unit)), unit }, reps];
   return [reps];
@@ -121,6 +129,11 @@ export function setText(s: AnySet, type: ExerciseType, units: Units): string {
     const t = s.seconds ? fmtTime(s.seconds) : '';
     return d && t ? `${d} in ${t}` : d || t || '—';
   }
+  if (type === 'steps') {
+    const st = s.reps ? `${s.reps.toLocaleString()} step${s.reps === 1 ? '' : 's'}` : '';
+    const t = s.seconds ? fmtTime(s.seconds) : '';
+    return st && t ? `${st} in ${t}` : st || t || '—';
+  }
   if (type === 'weight' && s.weight > 0) return `${toDisplay(s.weight, unit).toLocaleString()} ${unit} × ${s.reps}`;
   return `${s.reps} reps`;
 }
@@ -129,6 +142,7 @@ export function setText(s: AnySet, type: ExerciseType, units: Units): string {
 export function setScore(s: AnySet, type: ExerciseType): number {
   if (type === 'time') return s.seconds ?? 0;
   if (type === 'distance') return (s.meters ?? 0) * 1e6 + (s.seconds ? 1e6 / s.seconds : 0);
+  if (type === 'steps') return s.reps * 1e6 + (s.seconds ?? 0); // most steps, then longest
   if (type === 'reps') return s.reps;
   return e1rm(s) || s.reps / 1000; // bodyweight-style sets in a weight exercise still rank by reps
 }
@@ -187,6 +201,19 @@ export const MEASURES: Record<ExerciseType, Measure[]> = {
         return paceOf({ weight: 0, reps: 0, meters: sum(w.map((x) => x.meters ?? 0)), seconds: sum(w.map((x) => x.seconds ?? 0)) }, u);
       },
       format: fmtTime,
+    },
+    { id: 'duration', label: 'Time', unitLabel: () => '', value: (s) => sum(workingSets(s).map((x) => x.seconds ?? 0)), format: fmtTime },
+  ],
+  steps: [
+    { id: 'steps', label: 'Steps', unitLabel: () => 'steps', value: (s) => sum(workingSets(s).map((x) => x.reps)), format: (v) => Math.round(v).toLocaleString() },
+    {
+      id: 'stepRate', label: 'Steps per min', unitLabel: () => '/min',
+      value: (s) => {
+        const w = workingSets(s).filter((x) => x.reps > 0 && (x.seconds ?? 0) > 0);
+        const t = sum(w.map((x) => x.seconds ?? 0));
+        return t > 0 ? sum(w.map((x) => x.reps)) / (t / 60) : 0;
+      },
+      format: (v) => Math.round(v).toLocaleString(),
     },
     { id: 'duration', label: 'Time', unitLabel: () => '', value: (s) => sum(workingSets(s).map((x) => x.seconds ?? 0)), format: fmtTime },
   ],

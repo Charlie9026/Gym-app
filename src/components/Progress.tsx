@@ -86,6 +86,25 @@ function statsFor(type: ExerciseType, sessions: Session[], units: Units): StatIt
       { label: 'Sessions', icon: <CalendarIcon />, value: sessions.length, sub: `since ${fmtDate(sessions[0].date)}` },
     ];
   }
+  if (type === 'steps') {
+    const mostSteps = bestBy(sessions, (s) => sumOf(s.sets.map((x) => x.reps)));
+    const rateOf = (s: Session) => {
+      const w = s.sets.filter((x) => x.reps > 0 && (x.seconds ?? 0) > 0);
+      const t = sumOf(w.map((x) => x.seconds ?? 0));
+      return t > 0 ? sumOf(w.map((x) => x.reps)) / (t / 60) : 0;
+    };
+    const fastest = bestBy(sessions, rateOf);
+    const whole = (n: number) => Math.round(n).toLocaleString();
+    return [
+      { label: 'Most steps', icon: <RouteIcon />, value: sumOf(mostSteps.sets.map((x) => x.reps)), format: whole, unit: 'steps', sub: fmtDate(mostSteps.date) },
+      {
+        label: 'Best rate', icon: <ClockIcon />, value: rateOf(fastest), format: (n) => (n ? whole(n) : '—'),
+        unit: rateOf(fastest) ? '/min' : undefined, sub: rateOf(fastest) ? fmtDate(fastest.date) : 'needs steps and time',
+      },
+      { label: 'Total steps', icon: <StackIcon />, value: sumOf(all.map((x) => x.reps)), format: whole, unit: 'steps', sub: count },
+      { label: 'Sessions', icon: <CalendarIcon />, value: sessions.length, sub: `since ${fmtDate(sessions[0].date)}` },
+    ];
+  }
   if (type === 'distance') {
     const dist = (s: Session) => toDistDisplay(sumOf(s.sets.map((x) => x.meters ?? 0)), d);
     const km = (n: number) => (Math.round(n * 100) / 100).toLocaleString(); // distances keep 2 decimals, as elsewhere
@@ -120,6 +139,7 @@ function sessionSummary(type: ExerciseType, sets: SetEntry[], units: Units): str
   const w = workingSets(sets);
   const counts = setCountText(sets);
   if (type === 'time') return `${counts} · ${fmtTime(sumOf(w.map((x) => x.seconds ?? 0)))} total`;
+  if (type === 'steps') return `${counts} · ${sumOf(w.map((x) => x.reps)).toLocaleString()} steps`;
   if (type === 'distance') return `${counts} · ${toDistDisplay(sumOf(w.map((x) => x.meters ?? 0)), units.distance)} ${units.distance}`;
   return `${counts} · ${sumOf(w.map((x) => x.reps))} reps`;
 }

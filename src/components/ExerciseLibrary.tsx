@@ -19,7 +19,7 @@ interface Props {
 
 type Filter = 'All' | 'Logged' | MuscleGroup;
 
-const TYPE_BADGE: Record<ExerciseType, string> = { weight: 'weight', reps: 'reps only', time: 'time', distance: 'distance' };
+const TYPE_BADGE: Record<ExerciseType, string> = { weight: 'weight', reps: 'reps only', time: 'time', distance: 'distance', steps: 'steps' };
 
 interface Usage {
   sessions: number;

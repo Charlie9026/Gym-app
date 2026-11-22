@@ -26,7 +26,7 @@ export function SetText({ set, type, units }: { set: AnySet; type: ExerciseType;
     <>
       {parts.map((p, i) => (
         <span key={i}>
-          {i > 0 && <span className="x">{type === 'distance' ? ' · ' : ' × '}</span>}
+          {i > 0 && <span className="x">{type === 'distance' || type === 'steps' ? ' · ' : ' × '}</span>}
           <strong>{p.value}</strong>
           {p.unit && p.unit !== 'time' && <span className="unit"> {p.unit}</span>}
         </span>

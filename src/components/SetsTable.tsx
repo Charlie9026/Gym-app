@@ -45,7 +45,7 @@ export function SetsTable(props: Props) {
   // A time-only distance exercise is laid out like a timed one.
   const layout = type === 'distance' && timeOnly ? 'time' : type;
   const fieldHeads =
-    layout === 'weight' ? [unit, 'Reps'] : layout === 'reps' ? ['Reps'] : layout === 'time' ? ['Time'] : [dist, 'Time'];
+    layout === 'weight' ? [unit, 'Reps'] : layout === 'reps' ? ['Reps'] : layout === 'time' ? ['Time'] : layout === 'steps' ? ['Steps', 'Time'] : [dist, 'Time'];
 
   return (
     <div className={`sets t-${layout} m-${mode}`}>
@@ -102,7 +102,16 @@ export function SetsTable(props: Props) {
                 placeholder={hint?.meters ? String(toDistDisplay(hint.meters, dist)) : '0'}
               />
             )}
-            {(type === 'time' || type === 'distance') && (
+            {type === 'steps' && (
+              <NumberInput
+                ariaLabel={`${name} steps`}
+                value={s.reps}
+                decimals={false}
+                onChange={(v) => onChange(i, { reps: v })}
+                placeholder={hint?.reps ? String(hint.reps) : '0'}
+              />
+            )}
+            {(type === 'time' || type === 'distance' || type === 'steps') && (
               <DurationInput
                 ariaLabel={`${name} time`}
                 value={s.seconds ?? 0}
